@@ -17,6 +17,8 @@ var (
 	ErrInvalid            = errors.New("invalid")
 	ErrUnauthenticated    = errors.New("unauthenticated")
 	ErrFailedPrecondition = errors.New("failed precondition")
+	// ErrUnavailable: a dependency such as the media server is down; retrying later may work.
+	ErrUnavailable = errors.New("unavailable")
 )
 
 // Reasons are stable codes the client maps to localized messages.
@@ -52,6 +54,10 @@ const (
 	ReasonGuildLimitReached    = "guild_limit_reached"
 	ReasonChannelLimitReached  = "channel_limit_reached"
 	ReasonGuildFull            = "guild_full"
+	ReasonChannelFull          = "channel_full"
+	ReasonNotVoiceChannel      = "not_voice_channel"
+	ReasonNotInVoice           = "not_in_voice"
+	ReasonVoiceUnavailable     = "voice_unavailable"
 	ReasonBanned               = "banned"
 	ReasonUnsupportedFile      = "unsupported_file"
 	ReasonFileTooLarge         = "file_too_large"
@@ -109,6 +115,7 @@ func NotFound(reason string) error        { return newError(ErrNotFound, reason)
 func Forbidden(reason string) error       { return newError(ErrForbidden, reason) }
 func Unauthenticated(reason string) error { return newError(ErrUnauthenticated, reason) }
 func Precondition(reason string) error    { return newError(ErrFailedPrecondition, reason) }
+func Unavailable(reason string) error     { return newError(ErrUnavailable, reason) }
 
 // Invalid reports request fields that break a rule.
 func Invalid(fields ...FieldViolation) error {

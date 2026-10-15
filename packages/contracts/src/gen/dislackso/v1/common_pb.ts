@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dislackso/v1/common.proto.
  */
 export const file_dislackso_v1_common: GenFile = /*@__PURE__*/
-  fileDesc("ChlkaXNsYWNrc28vdjEvY29tbW9uLnByb3RvEgxkaXNsYWNrc28udjEiYgoEVXNlchIKCgJpZBgBIAEoCRIQCgh1c2VybmFtZRgCIAEoCRIUCgxkaXNwbGF5X25hbWUYAyABKAkSEgoKYXZhdGFyX3VybBgEIAEoCRISCgp1cGRhdGVkX2F0GAUgASgDIsABCgJNZRIgCgR1c2VyGAEgASgLMhIuZGlzbGFja3NvLnYxLlVzZXISDQoFZW1haWwYAiABKAkSFgoOZW1haWxfdmVyaWZpZWQYAyABKAgSLgoGc3RhdHVzGAQgASgOMh4uZGlzbGFja3NvLnYxLlN0YXR1c1ByZWZlcmVuY2USFQoNY3VzdG9tX3N0YXR1cxgFIAEoCRIWCg5pbnN0YW5jZV9hZG1pbhgGIAEoCBISCgpjcmVhdGVkX2F0GAcgASgDImAKCFByZXNlbmNlEg8KB3VzZXJfaWQYASABKAkSLAoGc3RhdHVzGAIgASgOMhwuZGlzbGFja3NvLnYxLlByZXNlbmNlU3RhdHVzEhUKDWN1c3RvbV9zdGF0dXMYAyABKAkiXQoHRmlsZVJlZhIKCgJpZBgBIAEoCRILCgN1cmwYAiABKAkSDAoEbWltZRgDIAEoCRIMCgRzaXplGAQgASgDEg0KBXdpZHRoGAUgASgFEg4KBmhlaWdodBgGIAEoBSIdCgtFcnJvclJlYXNvbhIOCgZyZWFzb24YASABKAkiQwoPRmllbGRWaW9sYXRpb25zEjAKCnZpb2xhdGlvbnMYASADKAsyHC5kaXNsYWNrc28udjEuRmllbGRWaW9sYXRpb24iLwoORmllbGRWaW9sYXRpb24SDQoFZmllbGQYASABKAkSDgoGcmVhc29uGAIgASgJIiUKC1JhdGVMaW1pdGVkEhYKDnJldHJ5X2FmdGVyX21zGAEgASgDKqsBChBTdGF0dXNQcmVmZXJlbmNlEiEKHVNUQVRVU19QUkVGRVJFTkNFX1VOU1BFQ0lGSUVEEAASHAoYU1RBVFVTX1BSRUZFUkVOQ0VfT05MSU5FEAESGgoWU1RBVFVTX1BSRUZFUkVOQ0VfSURMRRACEhkKFVNUQVRVU19QUkVGRVJFTkNFX0RORBADEh8KG1NUQVRVU19QUkVGRVJFTkNFX0lOVklTSUJMRRAEKp0BCg5QcmVzZW5jZVN0YXR1cxIfChtQUkVTRU5DRV9TVEFUVVNfVU5TUEVDSUZJRUQQABIbChdQUkVTRU5DRV9TVEFUVVNfT0ZGTElORRABEhoKFlBSRVNFTkNFX1NUQVRVU19PTkxJTkUQAhIYChRQUkVTRU5DRV9TVEFUVVNfSURMRRADEhcKE1BSRVNFTkNFX1NUQVRVU19ETkQQBCqSAQoQUmVnaXN0cmF0aW9uTW9kZRIhCh1SRUdJU1RSQVRJT05fTU9ERV9VTlNQRUNJRklFRBAAEiEKHVJFR0lTVFJBVElPTl9NT0RFX0lOVklURV9PTkxZEAESGgoWUkVHSVNUUkFUSU9OX01PREVfT1BFThACEhwKGFJFR0lTVFJBVElPTl9NT0RFX0NMT1NFRBADQsABChBjb20uZGlzbGFja3NvLnYxQgtDb21tb25Qcm90b1ABWk5naXRodWIuY29tL3Rvcm5lbGxpaGVucmlxdWUvZGlzbGFja3NvLXJlYmlydGgvaHViL2dlbi9kaXNsYWNrc28vdjE7ZGlzbGFja3NvdjGiAgNEWFiqAgxEaXNsYWNrc28uVjHKAgxEaXNsYWNrc29cVjHiAhhEaXNsYWNrc29cVjFcR1BCTWV0YWRhdGHqAg1EaXNsYWNrc286OlYxYgZwcm90bzM");
+  fileDesc("ChlkaXNsYWNrc28vdjEvY29tbW9uLnByb3RvEgxkaXNsYWNrc28udjEiYgoEVXNlchIKCgJpZBgBIAEoCRIQCgh1c2VybmFtZRgCIAEoCRIUCgxkaXNwbGF5X25hbWUYAyABKAkSEgoKYXZhdGFyX3VybBgEIAEoCRISCgp1cGRhdGVkX2F0GAUgASgDIsABCgJNZRIgCgR1c2VyGAEgASgLMhIuZGlzbGFja3NvLnYxLlVzZXISDQoFZW1haWwYAiABKAkSFgoOZW1haWxfdmVyaWZpZWQYAyABKAgSLgoGc3RhdHVzGAQgASgOMh4uZGlzbGFja3NvLnYxLlN0YXR1c1ByZWZlcmVuY2USFQoNY3VzdG9tX3N0YXR1cxgFIAEoCRIWCg5pbnN0YW5jZV9hZG1pbhgGIAEoCBISCgpjcmVhdGVkX2F0GAcgASgDImAKCFByZXNlbmNlEg8KB3VzZXJfaWQYASABKAkSLAoGc3RhdHVzGAIgASgOMhwuZGlzbGFja3NvLnYxLlByZXNlbmNlU3RhdHVzEhUKDWN1c3RvbV9zdGF0dXMYAyABKAkiXQoHRmlsZVJlZhIKCgJpZBgBIAEoCRILCgN1cmwYAiABKAkSDAoEbWltZRgDIAEoCRIMCgRzaXplGAQgASgDEg0KBXdpZHRoGAUgASgFEg4KBmhlaWdodBgGIAEoBSIdCgtFcnJvclJlYXNvbhIOCgZyZWFzb24YASABKAkiQwoPRmllbGRWaW9sYXRpb25zEjAKCnZpb2xhdGlvbnMYASADKAsyHC5kaXNsYWNrc28udjEuRmllbGRWaW9sYXRpb24iLwoORmllbGRWaW9sYXRpb24SDQoFZmllbGQYASABKAkSDgoGcmVhc29uGAIgASgJIiUKC1JhdGVMaW1pdGVkEhYKDnJldHJ5X2FmdGVyX21zGAEgASgDIuYBCgpWb2ljZVN0YXRlEg8KB3VzZXJfaWQYASABKAkSEAoIZ3VpbGRfaWQYAiABKAkSEgoKY2hhbm5lbF9pZBgDIAEoCRIYChB2b2ljZV9zZXNzaW9uX2lkGAQgASgJEhEKCXNlbGZfbXV0ZRgFIAEoCBIRCglzZWxmX2RlYWYYBiABKAgSEwoLc2VydmVyX211dGUYByABKAgSEwoLc2VydmVyX2RlYWYYCCABKAgSEQoJc3RyZWFtaW5nGAkgASgIEhEKCWNvbm5lY3RlZBgKIAEoCBIRCglqb2luZWRfYXQYCyABKAMqqwEKEFN0YXR1c1ByZWZlcmVuY2USIQodU1RBVFVTX1BSRUZFUkVOQ0VfVU5TUEVDSUZJRUQQABIcChhTVEFUVVNfUFJFRkVSRU5DRV9PTkxJTkUQARIaChZTVEFUVVNfUFJFRkVSRU5DRV9JRExFEAISGQoVU1RBVFVTX1BSRUZFUkVOQ0VfRE5EEAMSHwobU1RBVFVTX1BSRUZFUkVOQ0VfSU5WSVNJQkxFEAQqnQEKDlByZXNlbmNlU3RhdHVzEh8KG1BSRVNFTkNFX1NUQVRVU19VTlNQRUNJRklFRBAAEhsKF1BSRVNFTkNFX1NUQVRVU19PRkZMSU5FEAESGgoWUFJFU0VOQ0VfU1RBVFVTX09OTElORRACEhgKFFBSRVNFTkNFX1NUQVRVU19JRExFEAMSFwoTUFJFU0VOQ0VfU1RBVFVTX0RORBAEKpIBChBSZWdpc3RyYXRpb25Nb2RlEiEKHVJFR0lTVFJBVElPTl9NT0RFX1VOU1BFQ0lGSUVEEAASIQodUkVHSVNUUkFUSU9OX01PREVfSU5WSVRFX09OTFkQARIaChZSRUdJU1RSQVRJT05fTU9ERV9PUEVOEAISHAoYUkVHSVNUUkFUSU9OX01PREVfQ0xPU0VEEANCwAEKEGNvbS5kaXNsYWNrc28udjFCC0NvbW1vblByb3RvUAFaTmdpdGh1Yi5jb20vdG9ybmVsbGloZW5yaXF1ZS9kaXNsYWNrc28tcmViaXJ0aC9odWIvZ2VuL2Rpc2xhY2tzby92MTtkaXNsYWNrc292MaICA0RYWKoCDERpc2xhY2tzby5WMcoCDERpc2xhY2tzb1xWMeICGERpc2xhY2tzb1xWMVxHUEJNZXRhZGF0YeoCDURpc2xhY2tzbzo6VjFiBnByb3RvMw");
 
 /**
  * User is the public profile shown to anyone who shares a guild with the user.
@@ -266,6 +266,87 @@ export type RateLimited = Message<"dislackso.v1.RateLimited"> & {
  */
 export const RateLimitedSchema: GenMessage<RateLimited> = /*@__PURE__*/
   messageDesc(file_dislackso_v1_common, 7);
+
+/**
+ * VoiceState is one member connected to (or connecting to) a voice channel.
+ * A user has at most one voice state on the whole instance.
+ *
+ * @generated from message dislackso.v1.VoiceState
+ */
+export type VoiceState = Message<"dislackso.v1.VoiceState"> & {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: string guild_id = 2;
+   */
+  guildId: string;
+
+  /**
+   * Empty in an update means the user left voice in that guild.
+   *
+   * @generated from field: string channel_id = 3;
+   */
+  channelId: string;
+
+  /**
+   * New on every join. A client that sees its own user with a session it
+   * did not start knows voice moved to another device.
+   *
+   * @generated from field: string voice_session_id = 4;
+   */
+  voiceSessionId: string;
+
+  /**
+   * @generated from field: bool self_mute = 5;
+   */
+  selfMute: boolean;
+
+  /**
+   * @generated from field: bool self_deaf = 6;
+   */
+  selfDeaf: boolean;
+
+  /**
+   * @generated from field: bool server_mute = 7;
+   */
+  serverMute: boolean;
+
+  /**
+   * @generated from field: bool server_deaf = 8;
+   */
+  serverDeaf: boolean;
+
+  /**
+   * Sharing their screen, as the media server reports it.
+   *
+   * @generated from field: bool streaming = 9;
+   */
+  streaming: boolean;
+
+  /**
+   * False until the media server confirms the connection.
+   *
+   * @generated from field: bool connected = 10;
+   */
+  connected: boolean;
+
+  /**
+   * Unix ms.
+   *
+   * @generated from field: int64 joined_at = 11;
+   */
+  joinedAt: bigint;
+};
+
+/**
+ * Describes the message dislackso.v1.VoiceState.
+ * Use `create(VoiceStateSchema)` to create a new message.
+ */
+export const VoiceStateSchema: GenMessage<VoiceState> = /*@__PURE__*/
+  messageDesc(file_dislackso_v1_common, 8);
 
 /**
  * @generated from enum dislackso.v1.StatusPreference

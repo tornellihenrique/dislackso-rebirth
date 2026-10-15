@@ -87,6 +87,10 @@ type Presence interface {
 	SetIdle(ctx context.Context, userID domain.ID, connID string, idle bool)
 }
 
+type Voice interface {
+	UpdateSelf(ctx context.Context, userID domain.ID, sessionID string, mute, deaf bool)
+}
+
 type Subscriber interface {
 	Subscribe(fn func(events.Event)) (cancel func())
 }
@@ -96,6 +100,7 @@ type Options struct {
 	Auth      Authenticator
 	Snapshots Snapshots
 	Presence  Presence
+	Voice     Voice
 	// Tokens generates session IDs.
 	Tokens       ports.TokenGen
 	Clock        ports.Clock
@@ -506,6 +511,9 @@ func (s *Server) serve(ctx context.Context, c *connection, sess *session, token 
 			c.send(heartbeatAckFrame)
 		case *gatewayv1.ClientFrame_UpdatePresence:
 			s.o.Presence.SetIdle(ctx, sess.userID, sess.id, k.UpdatePresence.GetIdle())
+		case *gatewayv1.ClientFrame_UpdateVoiceSelfState:
+			u := k.UpdateVoiceSelfState
+			s.o.Voice.UpdateSelf(ctx, sess.userID, u.GetVoiceSessionId(), u.GetSelfMute(), u.GetSelfDeaf())
 		case *gatewayv1.ClientFrame_Identify, *gatewayv1.ClientFrame_Resume:
 			c.close(closeAlreadyIdentify, "already identified")
 			return errClosed

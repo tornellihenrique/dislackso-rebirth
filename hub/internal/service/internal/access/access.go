@@ -21,6 +21,11 @@ type Presences interface {
 	Presences(userIDs []domain.ID) []domain.Presence
 }
 
+// VoiceStates reports who is in a guild's voice channels.
+type VoiceStates interface {
+	GuildVoiceStates(guildID domain.ID) []domain.VoiceState
+}
+
 type Guilds struct {
 	Guilds       ports.GuildRepo
 	Members      ports.MemberRepo
@@ -28,6 +33,8 @@ type Guilds struct {
 	Users        ports.UserRepo
 	Presence     Presences
 	Verification Verification
+	// Voice is optional; without it guild states carry no voice states.
+	Voice VoiceStates
 }
 
 // Verified refuses accounts that still have to confirm their email.
@@ -96,10 +103,14 @@ func (g Guilds) State(ctx context.Context, guild domain.Guild) (domain.GuildStat
 	for i, m := range members {
 		ids[i] = m.UserID
 	}
-	return domain.GuildState{
+	state := domain.GuildState{
 		Guild: guild, Channels: channels, Members: members, Users: users,
 		Presences: g.Presence.Presences(ids),
-	}, nil
+	}
+	if g.Voice != nil {
+		state.VoiceStates = g.Voice.GuildVoiceStates(guild.ID)
+	}
+	return state, nil
 }
 
 // OwnFile checks that id is a file the caller uploaded for purpose; field

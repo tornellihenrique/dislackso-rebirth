@@ -23,6 +23,7 @@ message ClientFrame {
     Resume resume = 2;
     Heartbeat heartbeat = 3;
     UpdatePresence update_presence = 4;
+    UpdateVoiceSelfState update_voice_self_state = 5;
   }
 }
 
@@ -92,6 +93,14 @@ message UpdatePresence {
   bool idle = 1;
 }
 
+// UpdateVoiceSelfState reports the client's own mute and deafen while in voice.
+message UpdateVoiceSelfState {
+  // The voice session the client is connected with; other sessions are ignored.
+  string voice_session_id = 1;
+  bool self_mute = 2;
+  bool self_deaf = 3;
+}
+
 message InstanceInfo {
   string name = 1;
   bool members_can_invite = 2;
@@ -147,7 +156,28 @@ message Event {
     dislackso.v1.AuditEntry audit_entry = 17;
     // The receiver's own account changed, possibly from another device.
     dislackso.v1.Me me_update = 18;
+    // Someone joined, changed or left (empty channel_id) voice in a guild.
+    dislackso.v1.VoiceState voice_state_update = 19;
+    // The receiver's voice connection was ended or moved by someone else.
+    VoiceForced voice_forced = 20;
   }
+}
+
+enum VoiceForcedAction {
+  VOICE_FORCED_ACTION_UNSPECIFIED = 0;
+  VOICE_FORCED_ACTION_DISCONNECTED = 1;
+  // Connect to channel_id, with a new Join.
+  VOICE_FORCED_ACTION_MOVED = 2;
+}
+
+message VoiceForced {
+  VoiceForcedAction action = 1;
+  string guild_id = 2;
+  // The target channel when moved.
+  string channel_id = 3;
+  string by_user_id = 4;
+  // The session that was ended or moved.
+  string voice_session_id = 5;
 }
 
 enum GuildDeleteReason {

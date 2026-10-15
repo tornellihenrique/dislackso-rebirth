@@ -159,6 +159,19 @@ func (s *Store) UpdateMemberRole(_ context.Context, guildID, userID domain.ID, r
 	return nil
 }
 
+func (s *Store) UpdateMemberVoiceModeration(_ context.Context, guildID, userID domain.ID, serverMute, serverDeaf bool, at time.Time) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	k := memberKey{guildID, userID}
+	m, ok := s.members[k]
+	if !ok {
+		return domain.ErrNotFound
+	}
+	m.ServerMute, m.ServerDeaf, m.UpdatedAt = serverMute, serverDeaf, at
+	s.members[k] = m
+	return nil
+}
+
 func (s *Store) RemoveMember(_ context.Context, guildID, userID domain.ID) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

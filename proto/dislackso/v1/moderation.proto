@@ -45,6 +45,11 @@ enum AuditAction {
   AUDIT_ACTION_MEMBER_UNBAN = 10;
   AUDIT_ACTION_MEMBER_ROLE_UPDATE = 11;
   AUDIT_ACTION_OWNERSHIP_TRANSFER = 12;
+  // data: "server_mute" or "server_deaf", "true" or "false".
+  AUDIT_ACTION_MEMBER_VOICE_UPDATE = 13;
+  // data: "channel_id", "name" (the channel moved to).
+  AUDIT_ACTION_MEMBER_VOICE_MOVE = 14;
+  AUDIT_ACTION_MEMBER_VOICE_DISCONNECT = 15;
 }
 
 enum AuditTargetType {

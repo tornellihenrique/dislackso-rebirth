@@ -168,7 +168,11 @@ type Member struct {
 	// Unix ms.
 	JoinedAt int64 `protobuf:"varint,4,opt,name=joined_at,json=joinedAt,proto3" json:"joined_at,omitempty"`
 	// Unix ms; clients keep the newest copy they have seen.
-	UpdatedAt     int64 `protobuf:"varint,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	UpdatedAt int64 `protobuf:"varint,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// Set by an owner or admin; holds in every voice channel of the guild
+	// until lifted.
+	ServerMute    bool `protobuf:"varint,6,opt,name=server_mute,json=serverMute,proto3" json:"server_mute,omitempty"`
+	ServerDeaf    bool `protobuf:"varint,7,opt,name=server_deaf,json=serverDeaf,proto3" json:"server_deaf,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -238,6 +242,20 @@ func (x *Member) GetUpdatedAt() int64 {
 	return 0
 }
 
+func (x *Member) GetServerMute() bool {
+	if x != nil {
+		return x.ServerMute
+	}
+	return false
+}
+
+func (x *Member) GetServerDeaf() bool {
+	if x != nil {
+		return x.ServerDeaf
+	}
+	return false
+}
+
 // GuildState is everything a member needs to show a guild.
 type GuildState struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
@@ -245,8 +263,10 @@ type GuildState struct {
 	Channels []*Channel             `protobuf:"bytes,2,rep,name=channels,proto3" json:"channels,omitempty"`
 	Members  []*Member              `protobuf:"bytes,3,rep,name=members,proto3" json:"members,omitempty"`
 	// Public profiles of every member.
-	Users         []*User     `protobuf:"bytes,4,rep,name=users,proto3" json:"users,omitempty"`
-	Presences     []*Presence `protobuf:"bytes,5,rep,name=presences,proto3" json:"presences,omitempty"`
+	Users     []*User     `protobuf:"bytes,4,rep,name=users,proto3" json:"users,omitempty"`
+	Presences []*Presence `protobuf:"bytes,5,rep,name=presences,proto3" json:"presences,omitempty"`
+	// Everyone in the guild's voice channels.
+	VoiceStates   []*VoiceState `protobuf:"bytes,6,rep,name=voice_states,json=voiceStates,proto3" json:"voice_states,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -312,6 +332,13 @@ func (x *GuildState) GetUsers() []*User {
 func (x *GuildState) GetPresences() []*Presence {
 	if x != nil {
 		return x.Presences
+	}
+	return nil
+}
+
+func (x *GuildState) GetVoiceStates() []*VoiceState {
+	if x != nil {
+		return x.VoiceStates
 	}
 	return nil
 }
@@ -1005,21 +1032,26 @@ const file_dislackso_v1_guild_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x05 \x01(\x03R\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\x06 \x01(\x03R\tupdatedAt\"\xa5\x01\n" +
+	"updated_at\x18\x06 \x01(\x03R\tupdatedAt\"\xe7\x01\n" +
 	"\x06Member\x12\x19\n" +
 	"\bguild_id\x18\x01 \x01(\tR\aguildId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12+\n" +
 	"\x04role\x18\x03 \x01(\x0e2\x17.dislackso.v1.GuildRoleR\x04role\x12\x1b\n" +
 	"\tjoined_at\x18\x04 \x01(\x03R\bjoinedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\x05 \x01(\x03R\tupdatedAt\"\xfa\x01\n" +
+	"updated_at\x18\x05 \x01(\x03R\tupdatedAt\x12\x1f\n" +
+	"\vserver_mute\x18\x06 \x01(\bR\n" +
+	"serverMute\x12\x1f\n" +
+	"\vserver_deaf\x18\a \x01(\bR\n" +
+	"serverDeaf\"\xb7\x02\n" +
 	"\n" +
 	"GuildState\x12)\n" +
 	"\x05guild\x18\x01 \x01(\v2\x13.dislackso.v1.GuildR\x05guild\x121\n" +
 	"\bchannels\x18\x02 \x03(\v2\x15.dislackso.v1.ChannelR\bchannels\x12.\n" +
 	"\amembers\x18\x03 \x03(\v2\x14.dislackso.v1.MemberR\amembers\x12(\n" +
 	"\x05users\x18\x04 \x03(\v2\x12.dislackso.v1.UserR\x05users\x124\n" +
-	"\tpresences\x18\x05 \x03(\v2\x16.dislackso.v1.PresenceR\tpresences\"J\n" +
+	"\tpresences\x18\x05 \x03(\v2\x16.dislackso.v1.PresenceR\tpresences\x12;\n" +
+	"\fvoice_states\x18\x06 \x03(\v2\x18.dislackso.v1.VoiceStateR\vvoiceStates\"J\n" +
 	"\x12CreateGuildRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\ficon_file_id\x18\x02 \x01(\tR\n" +
@@ -1112,6 +1144,7 @@ var file_dislackso_v1_guild_proto_goTypes = []any{
 	(*Channel)(nil),                   // 18: dislackso.v1.Channel
 	(*User)(nil),                      // 19: dislackso.v1.User
 	(*Presence)(nil),                  // 20: dislackso.v1.Presence
+	(*VoiceState)(nil),                // 21: dislackso.v1.VoiceState
 }
 var file_dislackso_v1_guild_proto_depIdxs = []int32{
 	0,  // 0: dislackso.v1.Member.role:type_name -> dislackso.v1.GuildRole
@@ -1120,33 +1153,34 @@ var file_dislackso_v1_guild_proto_depIdxs = []int32{
 	2,  // 3: dislackso.v1.GuildState.members:type_name -> dislackso.v1.Member
 	19, // 4: dislackso.v1.GuildState.users:type_name -> dislackso.v1.User
 	20, // 5: dislackso.v1.GuildState.presences:type_name -> dislackso.v1.Presence
-	3,  // 6: dislackso.v1.CreateGuildResponse.state:type_name -> dislackso.v1.GuildState
-	1,  // 7: dislackso.v1.UpdateGuildResponse.guild:type_name -> dislackso.v1.Guild
-	1,  // 8: dislackso.v1.TransferOwnershipResponse.guild:type_name -> dislackso.v1.Guild
-	0,  // 9: dislackso.v1.SetMemberRoleRequest.role:type_name -> dislackso.v1.GuildRole
-	2,  // 10: dislackso.v1.SetMemberRoleResponse.member:type_name -> dislackso.v1.Member
-	2,  // 11: dislackso.v1.ListMembersResponse.members:type_name -> dislackso.v1.Member
-	19, // 12: dislackso.v1.ListMembersResponse.users:type_name -> dislackso.v1.User
-	20, // 13: dislackso.v1.ListMembersResponse.presences:type_name -> dislackso.v1.Presence
-	4,  // 14: dislackso.v1.GuildService.CreateGuild:input_type -> dislackso.v1.CreateGuildRequest
-	6,  // 15: dislackso.v1.GuildService.UpdateGuild:input_type -> dislackso.v1.UpdateGuildRequest
-	8,  // 16: dislackso.v1.GuildService.DeleteGuild:input_type -> dislackso.v1.DeleteGuildRequest
-	10, // 17: dislackso.v1.GuildService.LeaveGuild:input_type -> dislackso.v1.LeaveGuildRequest
-	12, // 18: dislackso.v1.GuildService.TransferOwnership:input_type -> dislackso.v1.TransferOwnershipRequest
-	14, // 19: dislackso.v1.GuildService.SetMemberRole:input_type -> dislackso.v1.SetMemberRoleRequest
-	16, // 20: dislackso.v1.GuildService.ListMembers:input_type -> dislackso.v1.ListMembersRequest
-	5,  // 21: dislackso.v1.GuildService.CreateGuild:output_type -> dislackso.v1.CreateGuildResponse
-	7,  // 22: dislackso.v1.GuildService.UpdateGuild:output_type -> dislackso.v1.UpdateGuildResponse
-	9,  // 23: dislackso.v1.GuildService.DeleteGuild:output_type -> dislackso.v1.DeleteGuildResponse
-	11, // 24: dislackso.v1.GuildService.LeaveGuild:output_type -> dislackso.v1.LeaveGuildResponse
-	13, // 25: dislackso.v1.GuildService.TransferOwnership:output_type -> dislackso.v1.TransferOwnershipResponse
-	15, // 26: dislackso.v1.GuildService.SetMemberRole:output_type -> dislackso.v1.SetMemberRoleResponse
-	17, // 27: dislackso.v1.GuildService.ListMembers:output_type -> dislackso.v1.ListMembersResponse
-	21, // [21:28] is the sub-list for method output_type
-	14, // [14:21] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	21, // 6: dislackso.v1.GuildState.voice_states:type_name -> dislackso.v1.VoiceState
+	3,  // 7: dislackso.v1.CreateGuildResponse.state:type_name -> dislackso.v1.GuildState
+	1,  // 8: dislackso.v1.UpdateGuildResponse.guild:type_name -> dislackso.v1.Guild
+	1,  // 9: dislackso.v1.TransferOwnershipResponse.guild:type_name -> dislackso.v1.Guild
+	0,  // 10: dislackso.v1.SetMemberRoleRequest.role:type_name -> dislackso.v1.GuildRole
+	2,  // 11: dislackso.v1.SetMemberRoleResponse.member:type_name -> dislackso.v1.Member
+	2,  // 12: dislackso.v1.ListMembersResponse.members:type_name -> dislackso.v1.Member
+	19, // 13: dislackso.v1.ListMembersResponse.users:type_name -> dislackso.v1.User
+	20, // 14: dislackso.v1.ListMembersResponse.presences:type_name -> dislackso.v1.Presence
+	4,  // 15: dislackso.v1.GuildService.CreateGuild:input_type -> dislackso.v1.CreateGuildRequest
+	6,  // 16: dislackso.v1.GuildService.UpdateGuild:input_type -> dislackso.v1.UpdateGuildRequest
+	8,  // 17: dislackso.v1.GuildService.DeleteGuild:input_type -> dislackso.v1.DeleteGuildRequest
+	10, // 18: dislackso.v1.GuildService.LeaveGuild:input_type -> dislackso.v1.LeaveGuildRequest
+	12, // 19: dislackso.v1.GuildService.TransferOwnership:input_type -> dislackso.v1.TransferOwnershipRequest
+	14, // 20: dislackso.v1.GuildService.SetMemberRole:input_type -> dislackso.v1.SetMemberRoleRequest
+	16, // 21: dislackso.v1.GuildService.ListMembers:input_type -> dislackso.v1.ListMembersRequest
+	5,  // 22: dislackso.v1.GuildService.CreateGuild:output_type -> dislackso.v1.CreateGuildResponse
+	7,  // 23: dislackso.v1.GuildService.UpdateGuild:output_type -> dislackso.v1.UpdateGuildResponse
+	9,  // 24: dislackso.v1.GuildService.DeleteGuild:output_type -> dislackso.v1.DeleteGuildResponse
+	11, // 25: dislackso.v1.GuildService.LeaveGuild:output_type -> dislackso.v1.LeaveGuildResponse
+	13, // 26: dislackso.v1.GuildService.TransferOwnership:output_type -> dislackso.v1.TransferOwnershipResponse
+	15, // 27: dislackso.v1.GuildService.SetMemberRole:output_type -> dislackso.v1.SetMemberRoleResponse
+	17, // 28: dislackso.v1.GuildService.ListMembers:output_type -> dislackso.v1.ListMembersResponse
+	22, // [22:29] is the sub-list for method output_type
+	15, // [15:22] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_dislackso_v1_guild_proto_init() }

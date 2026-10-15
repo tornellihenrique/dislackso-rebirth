@@ -29,12 +29,13 @@ const (
 const DefaultHTTPAddr = "127.0.0.1:7300"
 
 type Config struct {
-	DataDir string `yaml:"data_dir"`
-	HTTP    HTTP   `yaml:"http"`
-	Log     Log    `yaml:"log"`
-	Web     Web    `yaml:"web"`
-	Mail    Mail   `yaml:"mail"`
-	Setup   Setup  `yaml:"setup"`
+	DataDir string  `yaml:"data_dir"`
+	HTTP    HTTP    `yaml:"http"`
+	Log     Log     `yaml:"log"`
+	Web     Web     `yaml:"web"`
+	Mail    Mail    `yaml:"mail"`
+	Setup   Setup   `yaml:"setup"`
+	LiveKit LiveKit `yaml:"livekit"`
 }
 
 type HTTP struct {
@@ -68,6 +69,23 @@ type Setup struct {
 	Token string `yaml:"token"`
 }
 
+// LiveKit configures the media server the hub runs as a sidecar.
+type LiveKit struct {
+	// Disabled runs the hub without voice.
+	Disabled bool `yaml:"disabled"`
+	// Binary is the livekit-server executable; empty looks next to the hub
+	// executable, then on PATH.
+	Binary string `yaml:"binary"`
+	// Port is the signaling and API port, bound to localhost only; clients
+	// reach it through the hub at /lk.
+	Port    int `yaml:"port"`
+	UDPPort int `yaml:"udp_port"`
+	TCPPort int `yaml:"tcp_port"`
+	// ExternalIP discovers the public address over STUN at start so clients
+	// outside the LAN can connect. It needs internet access at start.
+	ExternalIP bool `yaml:"external_ip"`
+}
+
 // setting is one key that can be set from config.yaml, the environment and
 // flags. The env var and flag names are derived from the key.
 type setting struct {
@@ -83,6 +101,12 @@ var settings = []setting{
 	{key: "web.dir", usage: "serve the web client from this directory instead of the embedded build"},
 	{key: "mail.dev_log", usage: "true to log emails instead of sending them while SMTP is off (development)"},
 	{key: "setup.token", usage: "use this setup token instead of a random one"},
+	{key: "livekit.disabled", usage: "true to run without voice"},
+	{key: "livekit.binary", usage: "path to livekit-server (default: next to the hub, then PATH)"},
+	{key: "livekit.port", usage: "LiveKit signaling and API port on localhost"},
+	{key: "livekit.udp_port", usage: "LiveKit UDP port for media"},
+	{key: "livekit.tcp_port", usage: "LiveKit TCP port for media when UDP is blocked"},
+	{key: "livekit.external_ip", usage: "false to skip discovering the public IP over STUN (offline or LAN-only hosts)"},
 }
 
 func (s setting) envName() string {
@@ -179,8 +203,9 @@ func Load(src Source) (Config, error) {
 
 func defaults() Config {
 	return Config{
-		HTTP: HTTP{Addr: DefaultHTTPAddr},
-		Log:  Log{Level: "info", Format: LogFormatText},
+		HTTP:    HTTP{Addr: DefaultHTTPAddr},
+		Log:     Log{Level: "info", Format: LogFormatText},
+		LiveKit: LiveKit{Port: 7880, UDPPort: 7882, TCPPort: 7881, ExternalIP: true},
 	}
 }
 
@@ -253,6 +278,20 @@ func (c Config) Validate() error {
 	}
 	if c.Log.Format != LogFormatText && c.Log.Format != LogFormatJSON {
 		errs = append(errs, fmt.Errorf("log.format %q: must be %q or %q", c.Log.Format, LogFormatText, LogFormatJSON))
+	}
+	ports := map[int]string{}
+	for _, p := range []struct {
+		key  string
+		port int
+	}{{"livekit.port", c.LiveKit.Port}, {"livekit.udp_port", c.LiveKit.UDPPort}, {"livekit.tcp_port", c.LiveKit.TCPPort}} {
+		switch {
+		case p.port < 1 || p.port > 65535:
+			errs = append(errs, fmt.Errorf("%s %d: must be between 1 and 65535", p.key, p.port))
+		case ports[p.port] != "":
+			errs = append(errs, fmt.Errorf("%s %d: already used by %s", p.key, p.port, ports[p.port]))
+		default:
+			ports[p.port] = p.key
+		}
 	}
 	if err := errors.Join(errs...); err != nil {
 		return fmt.Errorf("invalid config: %w", err)

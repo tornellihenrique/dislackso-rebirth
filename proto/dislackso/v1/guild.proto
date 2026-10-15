@@ -51,6 +51,10 @@ message Member {
   int64 joined_at = 4;
   // Unix ms; clients keep the newest copy they have seen.
   int64 updated_at = 5;
+  // Set by an owner or admin; holds in every voice channel of the guild
+  // until lifted.
+  bool server_mute = 6;
+  bool server_deaf = 7;
 }
 
 // GuildState is everything a member needs to show a guild.
@@ -61,6 +65,8 @@ message GuildState {
   // Public profiles of every member.
   repeated User users = 4;
   repeated Presence presences = 5;
+  // Everyone in the guild's voice channels.
+  repeated VoiceState voice_states = 6;
 }
 
 message CreateGuildRequest {

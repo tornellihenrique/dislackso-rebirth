@@ -26,9 +26,12 @@ const setupToken = "test-setup-token"
 
 type running struct {
 	base string
+	app  *App
 }
 
-func start(t *testing.T) *running {
+// start runs a hub on a free port; opts adjust its config (voice is off
+// unless an option turns it on).
+func start(t *testing.T, opts ...func(*config.Config)) *running {
 	t.Helper()
 	webDir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(webDir, "index.html"), []byte("<!doctype html>"), 0o600); err != nil {
@@ -40,6 +43,10 @@ func start(t *testing.T) *running {
 		Log:     config.Log{Level: "info", Format: config.LogFormatText},
 		Web:     config.Web{Dir: webDir},
 		Setup:   config.Setup{Token: setupToken},
+		LiveKit: config.LiveKit{Disabled: true, Port: 7880},
+	}
+	for _, o := range opts {
+		o(&cfg)
 	}
 	ctx, cancel := context.WithCancel(t.Context())
 	a, err := New(ctx, cfg, slog.New(slog.DiscardHandler))
@@ -68,7 +75,7 @@ func start(t *testing.T) *running {
 			t.Errorf("Close: %v", err)
 		}
 	})
-	return &running{base: "http://" + addr.String()}
+	return &running{base: "http://" + addr.String(), app: a}
 }
 
 // browser is an HTTP client with its own cookie jar, like one browser profile.
@@ -83,6 +90,7 @@ type browser struct {
 	channels   dislacksov1connect.ChannelServiceClient
 	invites    dislacksov1connect.InviteServiceClient
 	moderation dislacksov1connect.ModerationServiceClient
+	voice      dislacksov1connect.VoiceServiceClient
 }
 
 func (r *running) browser(t *testing.T) *browser {
@@ -109,6 +117,7 @@ func (r *running) browser(t *testing.T) *browser {
 		channels:   dislacksov1connect.NewChannelServiceClient(c),
 		invites:    dislacksov1connect.NewInviteServiceClient(c),
 		moderation: dislacksov1connect.NewModerationServiceClient(c),
+		voice:      dislacksov1connect.NewVoiceServiceClient(c),
 	}
 }
 

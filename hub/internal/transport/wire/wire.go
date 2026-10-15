@@ -98,11 +98,13 @@ func Guild(g domain.Guild) *dislacksov1.Guild {
 
 func Member(m domain.Member) *dislacksov1.Member {
 	return &dislacksov1.Member{
-		GuildId:   m.GuildID.String(),
-		UserId:    m.UserID.String(),
-		Role:      roles[m.Role],
-		JoinedAt:  m.JoinedAt.UnixMilli(),
-		UpdatedAt: m.UpdatedAt.UnixMilli(),
+		GuildId:    m.GuildID.String(),
+		UserId:     m.UserID.String(),
+		Role:       roles[m.Role],
+		JoinedAt:   m.JoinedAt.UnixMilli(),
+		UpdatedAt:  m.UpdatedAt.UnixMilli(),
+		ServerMute: m.ServerMute,
+		ServerDeaf: m.ServerDeaf,
 	}
 }
 
@@ -152,12 +154,42 @@ func Channels(cs []domain.Channel) []*dislacksov1.Channel {
 
 func GuildState(s domain.GuildState) *dislacksov1.GuildState {
 	return &dislacksov1.GuildState{
-		Guild:     Guild(s.Guild),
-		Channels:  Channels(s.Channels),
-		Members:   Members(s.Members),
-		Users:     Users(s.Users),
-		Presences: Presences(s.Presences),
+		Guild:       Guild(s.Guild),
+		Channels:    Channels(s.Channels),
+		Members:     Members(s.Members),
+		Users:       Users(s.Users),
+		Presences:   Presences(s.Presences),
+		VoiceStates: VoiceStates(s.VoiceStates),
 	}
+}
+
+// VoiceState maps a voice state; a zero ChannelID becomes the empty
+// channel_id that tells clients the user left.
+func VoiceState(v domain.VoiceState) *dislacksov1.VoiceState {
+	out := &dislacksov1.VoiceState{
+		UserId:         v.UserID.String(),
+		GuildId:        v.GuildID.String(),
+		VoiceSessionId: v.SessionID,
+		SelfMute:       v.SelfMute,
+		SelfDeaf:       v.SelfDeaf,
+		ServerMute:     v.ServerMute,
+		ServerDeaf:     v.ServerDeaf,
+		Streaming:      v.Streaming,
+		Connected:      v.Connected,
+		JoinedAt:       v.JoinedAt.UnixMilli(),
+	}
+	if v.ChannelID != 0 {
+		out.ChannelId = v.ChannelID.String()
+	}
+	return out
+}
+
+func VoiceStates(vs []domain.VoiceState) []*dislacksov1.VoiceState {
+	out := make([]*dislacksov1.VoiceState, len(vs))
+	for i, v := range vs {
+		out[i] = VoiceState(v)
+	}
+	return out
 }
 
 func Invite(v domain.InviteView) *dislacksov1.Invite {
@@ -202,6 +234,9 @@ var auditActions = map[domain.AuditAction]dislacksov1.AuditAction{
 	domain.AuditMemberUnban:       dislacksov1.AuditAction_AUDIT_ACTION_MEMBER_UNBAN,
 	domain.AuditMemberRoleUpdate:  dislacksov1.AuditAction_AUDIT_ACTION_MEMBER_ROLE_UPDATE,
 	domain.AuditOwnershipTransfer: dislacksov1.AuditAction_AUDIT_ACTION_OWNERSHIP_TRANSFER,
+	domain.AuditMemberVoiceUpdate: dislacksov1.AuditAction_AUDIT_ACTION_MEMBER_VOICE_UPDATE,
+	domain.AuditMemberVoiceMove:   dislacksov1.AuditAction_AUDIT_ACTION_MEMBER_VOICE_MOVE,
+	domain.AuditMemberVoiceDrop:   dislacksov1.AuditAction_AUDIT_ACTION_MEMBER_VOICE_DISCONNECT,
 }
 
 var auditTargets = map[domain.AuditTarget]dislacksov1.AuditTargetType{

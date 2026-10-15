@@ -100,6 +100,56 @@ func (CloseCode) EnumDescriptor() ([]byte, []int) {
 	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{0}
 }
 
+type VoiceForcedAction int32
+
+const (
+	VoiceForcedAction_VOICE_FORCED_ACTION_UNSPECIFIED  VoiceForcedAction = 0
+	VoiceForcedAction_VOICE_FORCED_ACTION_DISCONNECTED VoiceForcedAction = 1
+	// Connect to channel_id, with a new Join.
+	VoiceForcedAction_VOICE_FORCED_ACTION_MOVED VoiceForcedAction = 2
+)
+
+// Enum value maps for VoiceForcedAction.
+var (
+	VoiceForcedAction_name = map[int32]string{
+		0: "VOICE_FORCED_ACTION_UNSPECIFIED",
+		1: "VOICE_FORCED_ACTION_DISCONNECTED",
+		2: "VOICE_FORCED_ACTION_MOVED",
+	}
+	VoiceForcedAction_value = map[string]int32{
+		"VOICE_FORCED_ACTION_UNSPECIFIED":  0,
+		"VOICE_FORCED_ACTION_DISCONNECTED": 1,
+		"VOICE_FORCED_ACTION_MOVED":        2,
+	}
+)
+
+func (x VoiceForcedAction) Enum() *VoiceForcedAction {
+	p := new(VoiceForcedAction)
+	*p = x
+	return p
+}
+
+func (x VoiceForcedAction) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (VoiceForcedAction) Descriptor() protoreflect.EnumDescriptor {
+	return file_dislackso_gateway_v1_gateway_proto_enumTypes[1].Descriptor()
+}
+
+func (VoiceForcedAction) Type() protoreflect.EnumType {
+	return &file_dislackso_gateway_v1_gateway_proto_enumTypes[1]
+}
+
+func (x VoiceForcedAction) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use VoiceForcedAction.Descriptor instead.
+func (VoiceForcedAction) EnumDescriptor() ([]byte, []int) {
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{1}
+}
+
 type GuildDeleteReason int32
 
 const (
@@ -139,11 +189,11 @@ func (x GuildDeleteReason) String() string {
 }
 
 func (GuildDeleteReason) Descriptor() protoreflect.EnumDescriptor {
-	return file_dislackso_gateway_v1_gateway_proto_enumTypes[1].Descriptor()
+	return file_dislackso_gateway_v1_gateway_proto_enumTypes[2].Descriptor()
 }
 
 func (GuildDeleteReason) Type() protoreflect.EnumType {
-	return &file_dislackso_gateway_v1_gateway_proto_enumTypes[1]
+	return &file_dislackso_gateway_v1_gateway_proto_enumTypes[2]
 }
 
 func (x GuildDeleteReason) Number() protoreflect.EnumNumber {
@@ -152,7 +202,7 @@ func (x GuildDeleteReason) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use GuildDeleteReason.Descriptor instead.
 func (GuildDeleteReason) EnumDescriptor() ([]byte, []int) {
-	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{1}
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{2}
 }
 
 // ClientFrame is sent from the client to the hub.
@@ -164,6 +214,7 @@ type ClientFrame struct {
 	//	*ClientFrame_Resume
 	//	*ClientFrame_Heartbeat
 	//	*ClientFrame_UpdatePresence
+	//	*ClientFrame_UpdateVoiceSelfState
 	Kind          isClientFrame_Kind `protobuf_oneof:"kind"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -242,6 +293,15 @@ func (x *ClientFrame) GetUpdatePresence() *UpdatePresence {
 	return nil
 }
 
+func (x *ClientFrame) GetUpdateVoiceSelfState() *UpdateVoiceSelfState {
+	if x != nil {
+		if x, ok := x.Kind.(*ClientFrame_UpdateVoiceSelfState); ok {
+			return x.UpdateVoiceSelfState
+		}
+	}
+	return nil
+}
+
 type isClientFrame_Kind interface {
 	isClientFrame_Kind()
 }
@@ -262,6 +322,10 @@ type ClientFrame_UpdatePresence struct {
 	UpdatePresence *UpdatePresence `protobuf:"bytes,4,opt,name=update_presence,json=updatePresence,proto3,oneof"`
 }
 
+type ClientFrame_UpdateVoiceSelfState struct {
+	UpdateVoiceSelfState *UpdateVoiceSelfState `protobuf:"bytes,5,opt,name=update_voice_self_state,json=updateVoiceSelfState,proto3,oneof"`
+}
+
 func (*ClientFrame_Identify) isClientFrame_Kind() {}
 
 func (*ClientFrame_Resume) isClientFrame_Kind() {}
@@ -269,6 +333,8 @@ func (*ClientFrame_Resume) isClientFrame_Kind() {}
 func (*ClientFrame_Heartbeat) isClientFrame_Kind() {}
 
 func (*ClientFrame_UpdatePresence) isClientFrame_Kind() {}
+
+func (*ClientFrame_UpdateVoiceSelfState) isClientFrame_Kind() {}
 
 // ServerFrame is sent from the hub to the client.
 type ServerFrame struct {
@@ -747,6 +813,68 @@ func (x *UpdatePresence) GetIdle() bool {
 	return false
 }
 
+// UpdateVoiceSelfState reports the client's own mute and deafen while in voice.
+type UpdateVoiceSelfState struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The voice session the client is connected with; other sessions are ignored.
+	VoiceSessionId string `protobuf:"bytes,1,opt,name=voice_session_id,json=voiceSessionId,proto3" json:"voice_session_id,omitempty"`
+	SelfMute       bool   `protobuf:"varint,2,opt,name=self_mute,json=selfMute,proto3" json:"self_mute,omitempty"`
+	SelfDeaf       bool   `protobuf:"varint,3,opt,name=self_deaf,json=selfDeaf,proto3" json:"self_deaf,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *UpdateVoiceSelfState) Reset() {
+	*x = UpdateVoiceSelfState{}
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateVoiceSelfState) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateVoiceSelfState) ProtoMessage() {}
+
+func (x *UpdateVoiceSelfState) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateVoiceSelfState.ProtoReflect.Descriptor instead.
+func (*UpdateVoiceSelfState) Descriptor() ([]byte, []int) {
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *UpdateVoiceSelfState) GetVoiceSessionId() string {
+	if x != nil {
+		return x.VoiceSessionId
+	}
+	return ""
+}
+
+func (x *UpdateVoiceSelfState) GetSelfMute() bool {
+	if x != nil {
+		return x.SelfMute
+	}
+	return false
+}
+
+func (x *UpdateVoiceSelfState) GetSelfDeaf() bool {
+	if x != nil {
+		return x.SelfDeaf
+	}
+	return false
+}
+
 type InstanceInfo struct {
 	state                 protoimpl.MessageState `protogen:"open.v1"`
 	Name                  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -762,7 +890,7 @@ type InstanceInfo struct {
 
 func (x *InstanceInfo) Reset() {
 	*x = InstanceInfo{}
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[9]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -774,7 +902,7 @@ func (x *InstanceInfo) String() string {
 func (*InstanceInfo) ProtoMessage() {}
 
 func (x *InstanceInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[9]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -787,7 +915,7 @@ func (x *InstanceInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InstanceInfo.ProtoReflect.Descriptor instead.
 func (*InstanceInfo) Descriptor() ([]byte, []int) {
-	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{9}
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *InstanceInfo) GetName() string {
@@ -851,7 +979,7 @@ type Ready struct {
 
 func (x *Ready) Reset() {
 	*x = Ready{}
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[10]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -863,7 +991,7 @@ func (x *Ready) String() string {
 func (*Ready) ProtoMessage() {}
 
 func (x *Ready) ProtoReflect() protoreflect.Message {
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[10]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -876,7 +1004,7 @@ func (x *Ready) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Ready.ProtoReflect.Descriptor instead.
 func (*Ready) Descriptor() ([]byte, []int) {
-	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{10}
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *Ready) GetSessionId() string {
@@ -915,7 +1043,7 @@ type Resumed struct {
 
 func (x *Resumed) Reset() {
 	*x = Resumed{}
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[11]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -927,7 +1055,7 @@ func (x *Resumed) String() string {
 func (*Resumed) ProtoMessage() {}
 
 func (x *Resumed) ProtoReflect() protoreflect.Message {
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[11]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -940,7 +1068,7 @@ func (x *Resumed) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Resumed.ProtoReflect.Descriptor instead.
 func (*Resumed) Descriptor() ([]byte, []int) {
-	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{11}
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{12}
 }
 
 type InvalidSession struct {
@@ -953,7 +1081,7 @@ type InvalidSession struct {
 
 func (x *InvalidSession) Reset() {
 	*x = InvalidSession{}
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[12]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -965,7 +1093,7 @@ func (x *InvalidSession) String() string {
 func (*InvalidSession) ProtoMessage() {}
 
 func (x *InvalidSession) ProtoReflect() protoreflect.Message {
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[12]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -978,7 +1106,7 @@ func (x *InvalidSession) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InvalidSession.ProtoReflect.Descriptor instead.
 func (*InvalidSession) Descriptor() ([]byte, []int) {
-	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{12}
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *InvalidSession) GetResumable() bool {
@@ -998,7 +1126,7 @@ type Dispatch struct {
 
 func (x *Dispatch) Reset() {
 	*x = Dispatch{}
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[13]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1010,7 +1138,7 @@ func (x *Dispatch) String() string {
 func (*Dispatch) ProtoMessage() {}
 
 func (x *Dispatch) ProtoReflect() protoreflect.Message {
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[13]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1023,7 +1151,7 @@ func (x *Dispatch) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Dispatch.ProtoReflect.Descriptor instead.
 func (*Dispatch) Descriptor() ([]byte, []int) {
-	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{13}
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *Dispatch) GetSeq() uint64 {
@@ -1062,6 +1190,8 @@ type Event struct {
 	//	*Event_BanRemove
 	//	*Event_AuditEntry
 	//	*Event_MeUpdate
+	//	*Event_VoiceStateUpdate
+	//	*Event_VoiceForced
 	Kind          isEvent_Kind `protobuf_oneof:"kind"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1069,7 +1199,7 @@ type Event struct {
 
 func (x *Event) Reset() {
 	*x = Event{}
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[14]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1081,7 +1211,7 @@ func (x *Event) String() string {
 func (*Event) ProtoMessage() {}
 
 func (x *Event) ProtoReflect() protoreflect.Message {
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[14]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1094,7 +1224,7 @@ func (x *Event) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Event.ProtoReflect.Descriptor instead.
 func (*Event) Descriptor() ([]byte, []int) {
-	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{14}
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *Event) GetKind() isEvent_Kind {
@@ -1266,6 +1396,24 @@ func (x *Event) GetMeUpdate() *v1.Me {
 	return nil
 }
 
+func (x *Event) GetVoiceStateUpdate() *v1.VoiceState {
+	if x != nil {
+		if x, ok := x.Kind.(*Event_VoiceStateUpdate); ok {
+			return x.VoiceStateUpdate
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetVoiceForced() *VoiceForced {
+	if x != nil {
+		if x, ok := x.Kind.(*Event_VoiceForced); ok {
+			return x.VoiceForced
+		}
+	}
+	return nil
+}
+
 type isEvent_Kind interface {
 	isEvent_Kind()
 }
@@ -1348,6 +1496,16 @@ type Event_MeUpdate struct {
 	MeUpdate *v1.Me `protobuf:"bytes,18,opt,name=me_update,json=meUpdate,proto3,oneof"`
 }
 
+type Event_VoiceStateUpdate struct {
+	// Someone joined, changed or left (empty channel_id) voice in a guild.
+	VoiceStateUpdate *v1.VoiceState `protobuf:"bytes,19,opt,name=voice_state_update,json=voiceStateUpdate,proto3,oneof"`
+}
+
+type Event_VoiceForced struct {
+	// The receiver's voice connection was ended or moved by someone else.
+	VoiceForced *VoiceForced `protobuf:"bytes,20,opt,name=voice_forced,json=voiceForced,proto3,oneof"`
+}
+
 func (*Event_GuildCreate) isEvent_Kind() {}
 
 func (*Event_GuildUpdate) isEvent_Kind() {}
@@ -1384,6 +1542,88 @@ func (*Event_AuditEntry) isEvent_Kind() {}
 
 func (*Event_MeUpdate) isEvent_Kind() {}
 
+func (*Event_VoiceStateUpdate) isEvent_Kind() {}
+
+func (*Event_VoiceForced) isEvent_Kind() {}
+
+type VoiceForced struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Action  VoiceForcedAction      `protobuf:"varint,1,opt,name=action,proto3,enum=dislackso.gateway.v1.VoiceForcedAction" json:"action,omitempty"`
+	GuildId string                 `protobuf:"bytes,2,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
+	// The target channel when moved.
+	ChannelId string `protobuf:"bytes,3,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	ByUserId  string `protobuf:"bytes,4,opt,name=by_user_id,json=byUserId,proto3" json:"by_user_id,omitempty"`
+	// The session that was ended or moved.
+	VoiceSessionId string `protobuf:"bytes,5,opt,name=voice_session_id,json=voiceSessionId,proto3" json:"voice_session_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *VoiceForced) Reset() {
+	*x = VoiceForced{}
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *VoiceForced) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VoiceForced) ProtoMessage() {}
+
+func (x *VoiceForced) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VoiceForced.ProtoReflect.Descriptor instead.
+func (*VoiceForced) Descriptor() ([]byte, []int) {
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *VoiceForced) GetAction() VoiceForcedAction {
+	if x != nil {
+		return x.Action
+	}
+	return VoiceForcedAction_VOICE_FORCED_ACTION_UNSPECIFIED
+}
+
+func (x *VoiceForced) GetGuildId() string {
+	if x != nil {
+		return x.GuildId
+	}
+	return ""
+}
+
+func (x *VoiceForced) GetChannelId() string {
+	if x != nil {
+		return x.ChannelId
+	}
+	return ""
+}
+
+func (x *VoiceForced) GetByUserId() string {
+	if x != nil {
+		return x.ByUserId
+	}
+	return ""
+}
+
+func (x *VoiceForced) GetVoiceSessionId() string {
+	if x != nil {
+		return x.VoiceSessionId
+	}
+	return ""
+}
+
 type GuildDelete struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	GuildId       string                 `protobuf:"bytes,1,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
@@ -1394,7 +1634,7 @@ type GuildDelete struct {
 
 func (x *GuildDelete) Reset() {
 	*x = GuildDelete{}
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[15]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1406,7 +1646,7 @@ func (x *GuildDelete) String() string {
 func (*GuildDelete) ProtoMessage() {}
 
 func (x *GuildDelete) ProtoReflect() protoreflect.Message {
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[15]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1419,7 +1659,7 @@ func (x *GuildDelete) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GuildDelete.ProtoReflect.Descriptor instead.
 func (*GuildDelete) Descriptor() ([]byte, []int) {
-	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{15}
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *GuildDelete) GetGuildId() string {
@@ -1447,7 +1687,7 @@ type MemberAdd struct {
 
 func (x *MemberAdd) Reset() {
 	*x = MemberAdd{}
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[16]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1459,7 +1699,7 @@ func (x *MemberAdd) String() string {
 func (*MemberAdd) ProtoMessage() {}
 
 func (x *MemberAdd) ProtoReflect() protoreflect.Message {
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[16]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1472,7 +1712,7 @@ func (x *MemberAdd) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MemberAdd.ProtoReflect.Descriptor instead.
 func (*MemberAdd) Descriptor() ([]byte, []int) {
-	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{16}
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *MemberAdd) GetMember() *v1.Member {
@@ -1506,7 +1746,7 @@ type MemberRemove struct {
 
 func (x *MemberRemove) Reset() {
 	*x = MemberRemove{}
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[17]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1518,7 +1758,7 @@ func (x *MemberRemove) String() string {
 func (*MemberRemove) ProtoMessage() {}
 
 func (x *MemberRemove) ProtoReflect() protoreflect.Message {
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[17]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1531,7 +1771,7 @@ func (x *MemberRemove) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MemberRemove.ProtoReflect.Descriptor instead.
 func (*MemberRemove) Descriptor() ([]byte, []int) {
-	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{17}
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *MemberRemove) GetGuildId() string {
@@ -1558,7 +1798,7 @@ type ChannelDelete struct {
 
 func (x *ChannelDelete) Reset() {
 	*x = ChannelDelete{}
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[18]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1570,7 +1810,7 @@ func (x *ChannelDelete) String() string {
 func (*ChannelDelete) ProtoMessage() {}
 
 func (x *ChannelDelete) ProtoReflect() protoreflect.Message {
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[18]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1583,7 +1823,7 @@ func (x *ChannelDelete) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelDelete.ProtoReflect.Descriptor instead.
 func (*ChannelDelete) Descriptor() ([]byte, []int) {
-	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{18}
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ChannelDelete) GetGuildId() string {
@@ -1611,7 +1851,7 @@ type ChannelsReordered struct {
 
 func (x *ChannelsReordered) Reset() {
 	*x = ChannelsReordered{}
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[19]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1623,7 +1863,7 @@ func (x *ChannelsReordered) String() string {
 func (*ChannelsReordered) ProtoMessage() {}
 
 func (x *ChannelsReordered) ProtoReflect() protoreflect.Message {
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[19]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1636,7 +1876,7 @@ func (x *ChannelsReordered) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelsReordered.ProtoReflect.Descriptor instead.
 func (*ChannelsReordered) Descriptor() ([]byte, []int) {
-	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{19}
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ChannelsReordered) GetGuildId() string {
@@ -1663,7 +1903,7 @@ type InviteDelete struct {
 
 func (x *InviteDelete) Reset() {
 	*x = InviteDelete{}
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[20]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1675,7 +1915,7 @@ func (x *InviteDelete) String() string {
 func (*InviteDelete) ProtoMessage() {}
 
 func (x *InviteDelete) ProtoReflect() protoreflect.Message {
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[20]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1688,7 +1928,7 @@ func (x *InviteDelete) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InviteDelete.ProtoReflect.Descriptor instead.
 func (*InviteDelete) Descriptor() ([]byte, []int) {
-	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{20}
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *InviteDelete) GetGuildId() string {
@@ -1715,7 +1955,7 @@ type BanRemove struct {
 
 func (x *BanRemove) Reset() {
 	*x = BanRemove{}
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[21]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1727,7 +1967,7 @@ func (x *BanRemove) String() string {
 func (*BanRemove) ProtoMessage() {}
 
 func (x *BanRemove) ProtoReflect() protoreflect.Message {
-	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[21]
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1740,7 +1980,7 @@ func (x *BanRemove) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BanRemove.ProtoReflect.Descriptor instead.
 func (*BanRemove) Descriptor() ([]byte, []int) {
-	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{21}
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *BanRemove) GetGuildId() string {
@@ -1761,12 +2001,13 @@ var File_dislackso_gateway_v1_gateway_proto protoreflect.FileDescriptor
 
 const file_dislackso_gateway_v1_gateway_proto_rawDesc = "" +
 	"\n" +
-	"\"dislackso/gateway/v1/gateway.proto\x12\x14dislackso.gateway.v1\x1a\x1adislackso/v1/channel.proto\x1a\x19dislackso/v1/common.proto\x1a\x18dislackso/v1/guild.proto\x1a\x19dislackso/v1/invite.proto\x1a\x1ddislackso/v1/moderation.proto\"\x9d\x02\n" +
+	"\"dislackso/gateway/v1/gateway.proto\x12\x14dislackso.gateway.v1\x1a\x1adislackso/v1/channel.proto\x1a\x19dislackso/v1/common.proto\x1a\x18dislackso/v1/guild.proto\x1a\x19dislackso/v1/invite.proto\x1a\x1ddislackso/v1/moderation.proto\"\x82\x03\n" +
 	"\vClientFrame\x12<\n" +
 	"\bidentify\x18\x01 \x01(\v2\x1e.dislackso.gateway.v1.IdentifyH\x00R\bidentify\x126\n" +
 	"\x06resume\x18\x02 \x01(\v2\x1c.dislackso.gateway.v1.ResumeH\x00R\x06resume\x12?\n" +
 	"\theartbeat\x18\x03 \x01(\v2\x1f.dislackso.gateway.v1.HeartbeatH\x00R\theartbeat\x12O\n" +
-	"\x0fupdate_presence\x18\x04 \x01(\v2$.dislackso.gateway.v1.UpdatePresenceH\x00R\x0eupdatePresenceB\x06\n" +
+	"\x0fupdate_presence\x18\x04 \x01(\v2$.dislackso.gateway.v1.UpdatePresenceH\x00R\x0eupdatePresence\x12c\n" +
+	"\x17update_voice_self_state\x18\x05 \x01(\v2*.dislackso.gateway.v1.UpdateVoiceSelfStateH\x00R\x14updateVoiceSelfStateB\x06\n" +
 	"\x04kind\"\x94\x03\n" +
 	"\vServerFrame\x123\n" +
 	"\x05hello\x18\x01 \x01(\v2\x1b.dislackso.gateway.v1.HelloH\x00R\x05hello\x123\n" +
@@ -1793,7 +2034,11 @@ const file_dislackso_gateway_v1_gateway_proto_rawDesc = "" +
 	"\blast_seq\x18\x01 \x01(\x04R\alastSeq\"\x0e\n" +
 	"\fHeartbeatAck\"$\n" +
 	"\x0eUpdatePresence\x12\x12\n" +
-	"\x04idle\x18\x01 \x01(\bR\x04idle\"\xc8\x02\n" +
+	"\x04idle\x18\x01 \x01(\bR\x04idle\"z\n" +
+	"\x14UpdateVoiceSelfState\x12(\n" +
+	"\x10voice_session_id\x18\x01 \x01(\tR\x0evoiceSessionId\x12\x1b\n" +
+	"\tself_mute\x18\x02 \x01(\bR\bselfMute\x12\x1b\n" +
+	"\tself_deaf\x18\x03 \x01(\bR\bselfDeaf\"\xc8\x02\n" +
 	"\fInstanceInfo\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12,\n" +
 	"\x12members_can_invite\x18\x02 \x01(\bR\x10membersCanInvite\x128\n" +
@@ -1813,7 +2058,8 @@ const file_dislackso_gateway_v1_gateway_proto_rawDesc = "" +
 	"\tresumable\x18\x01 \x01(\bR\tresumable\"O\n" +
 	"\bDispatch\x12\x10\n" +
 	"\x03seq\x18\x01 \x01(\x04R\x03seq\x121\n" +
-	"\x05event\x18\x02 \x01(\v2\x1b.dislackso.gateway.v1.EventR\x05event\"\xa2\t\n" +
+	"\x05event\x18\x02 \x01(\v2\x1b.dislackso.gateway.v1.EventR\x05event\"\xb4\n" +
+	"\n" +
 	"\x05Event\x12=\n" +
 	"\fguild_create\x18\x01 \x01(\v2\x18.dislackso.v1.GuildStateH\x00R\vguildCreate\x128\n" +
 	"\fguild_update\x18\x02 \x01(\v2\x13.dislackso.v1.GuildH\x00R\vguildUpdate\x12F\n" +
@@ -1837,8 +2083,18 @@ const file_dislackso_gateway_v1_gateway_proto_rawDesc = "" +
 	"ban_remove\x18\x10 \x01(\v2\x1f.dislackso.gateway.v1.BanRemoveH\x00R\tbanRemove\x12;\n" +
 	"\vaudit_entry\x18\x11 \x01(\v2\x18.dislackso.v1.AuditEntryH\x00R\n" +
 	"auditEntry\x12/\n" +
-	"\tme_update\x18\x12 \x01(\v2\x10.dislackso.v1.MeH\x00R\bmeUpdateB\x06\n" +
-	"\x04kind\"i\n" +
+	"\tme_update\x18\x12 \x01(\v2\x10.dislackso.v1.MeH\x00R\bmeUpdate\x12H\n" +
+	"\x12voice_state_update\x18\x13 \x01(\v2\x18.dislackso.v1.VoiceStateH\x00R\x10voiceStateUpdate\x12F\n" +
+	"\fvoice_forced\x18\x14 \x01(\v2!.dislackso.gateway.v1.VoiceForcedH\x00R\vvoiceForcedB\x06\n" +
+	"\x04kind\"\xd0\x01\n" +
+	"\vVoiceForced\x12?\n" +
+	"\x06action\x18\x01 \x01(\x0e2'.dislackso.gateway.v1.VoiceForcedActionR\x06action\x12\x19\n" +
+	"\bguild_id\x18\x02 \x01(\tR\aguildId\x12\x1d\n" +
+	"\n" +
+	"channel_id\x18\x03 \x01(\tR\tchannelId\x12\x1c\n" +
+	"\n" +
+	"by_user_id\x18\x04 \x01(\tR\bbyUserId\x12(\n" +
+	"\x10voice_session_id\x18\x05 \x01(\tR\x0evoiceSessionId\"i\n" +
 	"\vGuildDelete\x12\x19\n" +
 	"\bguild_id\x18\x01 \x01(\tR\aguildId\x12?\n" +
 	"\x06reason\x18\x02 \x01(\x0e2'.dislackso.gateway.v1.GuildDeleteReasonR\x06reason\"\x95\x01\n" +
@@ -1873,7 +2129,11 @@ const file_dislackso_gateway_v1_gateway_proto_rawDesc = "" +
 	"\x16CLOSE_CODE_INVALID_SEQ\x10\xa7\x1f\x12\x1c\n" +
 	"\x17CLOSE_CODE_RATE_LIMITED\x10\xa8\x1f\x12\x1f\n" +
 	"\x1aCLOSE_CODE_SESSION_EXPIRED\x10\xa9\x1f\x12\x1e\n" +
-	"\x19CLOSE_CODE_HUB_RESTARTING\x10\xaa\x1f*\xb7\x01\n" +
+	"\x19CLOSE_CODE_HUB_RESTARTING\x10\xaa\x1f*}\n" +
+	"\x11VoiceForcedAction\x12#\n" +
+	"\x1fVOICE_FORCED_ACTION_UNSPECIFIED\x10\x00\x12$\n" +
+	" VOICE_FORCED_ACTION_DISCONNECTED\x10\x01\x12\x1d\n" +
+	"\x19VOICE_FORCED_ACTION_MOVED\x10\x02*\xb7\x01\n" +
 	"\x11GuildDeleteReason\x12#\n" +
 	"\x1fGUILD_DELETE_REASON_UNSPECIFIED\x10\x00\x12\x1f\n" +
 	"\x1bGUILD_DELETE_REASON_DELETED\x10\x01\x12\x1e\n" +
@@ -1894,88 +2154,96 @@ func file_dislackso_gateway_v1_gateway_proto_rawDescGZIP() []byte {
 	return file_dislackso_gateway_v1_gateway_proto_rawDescData
 }
 
-var file_dislackso_gateway_v1_gateway_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_dislackso_gateway_v1_gateway_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_dislackso_gateway_v1_gateway_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_dislackso_gateway_v1_gateway_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_dislackso_gateway_v1_gateway_proto_goTypes = []any{
-	(CloseCode)(0),            // 0: dislackso.gateway.v1.CloseCode
-	(GuildDeleteReason)(0),    // 1: dislackso.gateway.v1.GuildDeleteReason
-	(*ClientFrame)(nil),       // 2: dislackso.gateway.v1.ClientFrame
-	(*ServerFrame)(nil),       // 3: dislackso.gateway.v1.ServerFrame
-	(*Hello)(nil),             // 4: dislackso.gateway.v1.Hello
-	(*ClientInfo)(nil),        // 5: dislackso.gateway.v1.ClientInfo
-	(*Identify)(nil),          // 6: dislackso.gateway.v1.Identify
-	(*Resume)(nil),            // 7: dislackso.gateway.v1.Resume
-	(*Heartbeat)(nil),         // 8: dislackso.gateway.v1.Heartbeat
-	(*HeartbeatAck)(nil),      // 9: dislackso.gateway.v1.HeartbeatAck
-	(*UpdatePresence)(nil),    // 10: dislackso.gateway.v1.UpdatePresence
-	(*InstanceInfo)(nil),      // 11: dislackso.gateway.v1.InstanceInfo
-	(*Ready)(nil),             // 12: dislackso.gateway.v1.Ready
-	(*Resumed)(nil),           // 13: dislackso.gateway.v1.Resumed
-	(*InvalidSession)(nil),    // 14: dislackso.gateway.v1.InvalidSession
-	(*Dispatch)(nil),          // 15: dislackso.gateway.v1.Dispatch
-	(*Event)(nil),             // 16: dislackso.gateway.v1.Event
-	(*GuildDelete)(nil),       // 17: dislackso.gateway.v1.GuildDelete
-	(*MemberAdd)(nil),         // 18: dislackso.gateway.v1.MemberAdd
-	(*MemberRemove)(nil),      // 19: dislackso.gateway.v1.MemberRemove
-	(*ChannelDelete)(nil),     // 20: dislackso.gateway.v1.ChannelDelete
-	(*ChannelsReordered)(nil), // 21: dislackso.gateway.v1.ChannelsReordered
-	(*InviteDelete)(nil),      // 22: dislackso.gateway.v1.InviteDelete
-	(*BanRemove)(nil),         // 23: dislackso.gateway.v1.BanRemove
-	(*v1.Me)(nil),             // 24: dislackso.v1.Me
-	(*v1.GuildState)(nil),     // 25: dislackso.v1.GuildState
-	(*v1.Guild)(nil),          // 26: dislackso.v1.Guild
-	(*v1.Member)(nil),         // 27: dislackso.v1.Member
-	(*v1.Channel)(nil),        // 28: dislackso.v1.Channel
-	(*v1.User)(nil),           // 29: dislackso.v1.User
-	(*v1.Presence)(nil),       // 30: dislackso.v1.Presence
-	(*v1.Invite)(nil),         // 31: dislackso.v1.Invite
-	(*v1.Ban)(nil),            // 32: dislackso.v1.Ban
-	(*v1.AuditEntry)(nil),     // 33: dislackso.v1.AuditEntry
+	(CloseCode)(0),               // 0: dislackso.gateway.v1.CloseCode
+	(VoiceForcedAction)(0),       // 1: dislackso.gateway.v1.VoiceForcedAction
+	(GuildDeleteReason)(0),       // 2: dislackso.gateway.v1.GuildDeleteReason
+	(*ClientFrame)(nil),          // 3: dislackso.gateway.v1.ClientFrame
+	(*ServerFrame)(nil),          // 4: dislackso.gateway.v1.ServerFrame
+	(*Hello)(nil),                // 5: dislackso.gateway.v1.Hello
+	(*ClientInfo)(nil),           // 6: dislackso.gateway.v1.ClientInfo
+	(*Identify)(nil),             // 7: dislackso.gateway.v1.Identify
+	(*Resume)(nil),               // 8: dislackso.gateway.v1.Resume
+	(*Heartbeat)(nil),            // 9: dislackso.gateway.v1.Heartbeat
+	(*HeartbeatAck)(nil),         // 10: dislackso.gateway.v1.HeartbeatAck
+	(*UpdatePresence)(nil),       // 11: dislackso.gateway.v1.UpdatePresence
+	(*UpdateVoiceSelfState)(nil), // 12: dislackso.gateway.v1.UpdateVoiceSelfState
+	(*InstanceInfo)(nil),         // 13: dislackso.gateway.v1.InstanceInfo
+	(*Ready)(nil),                // 14: dislackso.gateway.v1.Ready
+	(*Resumed)(nil),              // 15: dislackso.gateway.v1.Resumed
+	(*InvalidSession)(nil),       // 16: dislackso.gateway.v1.InvalidSession
+	(*Dispatch)(nil),             // 17: dislackso.gateway.v1.Dispatch
+	(*Event)(nil),                // 18: dislackso.gateway.v1.Event
+	(*VoiceForced)(nil),          // 19: dislackso.gateway.v1.VoiceForced
+	(*GuildDelete)(nil),          // 20: dislackso.gateway.v1.GuildDelete
+	(*MemberAdd)(nil),            // 21: dislackso.gateway.v1.MemberAdd
+	(*MemberRemove)(nil),         // 22: dislackso.gateway.v1.MemberRemove
+	(*ChannelDelete)(nil),        // 23: dislackso.gateway.v1.ChannelDelete
+	(*ChannelsReordered)(nil),    // 24: dislackso.gateway.v1.ChannelsReordered
+	(*InviteDelete)(nil),         // 25: dislackso.gateway.v1.InviteDelete
+	(*BanRemove)(nil),            // 26: dislackso.gateway.v1.BanRemove
+	(*v1.Me)(nil),                // 27: dislackso.v1.Me
+	(*v1.GuildState)(nil),        // 28: dislackso.v1.GuildState
+	(*v1.Guild)(nil),             // 29: dislackso.v1.Guild
+	(*v1.Member)(nil),            // 30: dislackso.v1.Member
+	(*v1.Channel)(nil),           // 31: dislackso.v1.Channel
+	(*v1.User)(nil),              // 32: dislackso.v1.User
+	(*v1.Presence)(nil),          // 33: dislackso.v1.Presence
+	(*v1.Invite)(nil),            // 34: dislackso.v1.Invite
+	(*v1.Ban)(nil),               // 35: dislackso.v1.Ban
+	(*v1.AuditEntry)(nil),        // 36: dislackso.v1.AuditEntry
+	(*v1.VoiceState)(nil),        // 37: dislackso.v1.VoiceState
 }
 var file_dislackso_gateway_v1_gateway_proto_depIdxs = []int32{
-	6,  // 0: dislackso.gateway.v1.ClientFrame.identify:type_name -> dislackso.gateway.v1.Identify
-	7,  // 1: dislackso.gateway.v1.ClientFrame.resume:type_name -> dislackso.gateway.v1.Resume
-	8,  // 2: dislackso.gateway.v1.ClientFrame.heartbeat:type_name -> dislackso.gateway.v1.Heartbeat
-	10, // 3: dislackso.gateway.v1.ClientFrame.update_presence:type_name -> dislackso.gateway.v1.UpdatePresence
-	4,  // 4: dislackso.gateway.v1.ServerFrame.hello:type_name -> dislackso.gateway.v1.Hello
-	12, // 5: dislackso.gateway.v1.ServerFrame.ready:type_name -> dislackso.gateway.v1.Ready
-	13, // 6: dislackso.gateway.v1.ServerFrame.resumed:type_name -> dislackso.gateway.v1.Resumed
-	14, // 7: dislackso.gateway.v1.ServerFrame.invalid_session:type_name -> dislackso.gateway.v1.InvalidSession
-	9,  // 8: dislackso.gateway.v1.ServerFrame.heartbeat_ack:type_name -> dislackso.gateway.v1.HeartbeatAck
-	15, // 9: dislackso.gateway.v1.ServerFrame.dispatch:type_name -> dislackso.gateway.v1.Dispatch
-	5,  // 10: dislackso.gateway.v1.Identify.client:type_name -> dislackso.gateway.v1.ClientInfo
-	24, // 11: dislackso.gateway.v1.Ready.me:type_name -> dislackso.v1.Me
-	11, // 12: dislackso.gateway.v1.Ready.instance:type_name -> dislackso.gateway.v1.InstanceInfo
-	25, // 13: dislackso.gateway.v1.Ready.guilds:type_name -> dislackso.v1.GuildState
-	16, // 14: dislackso.gateway.v1.Dispatch.event:type_name -> dislackso.gateway.v1.Event
-	25, // 15: dislackso.gateway.v1.Event.guild_create:type_name -> dislackso.v1.GuildState
-	26, // 16: dislackso.gateway.v1.Event.guild_update:type_name -> dislackso.v1.Guild
-	17, // 17: dislackso.gateway.v1.Event.guild_delete:type_name -> dislackso.gateway.v1.GuildDelete
-	18, // 18: dislackso.gateway.v1.Event.member_add:type_name -> dislackso.gateway.v1.MemberAdd
-	27, // 19: dislackso.gateway.v1.Event.member_update:type_name -> dislackso.v1.Member
-	19, // 20: dislackso.gateway.v1.Event.member_remove:type_name -> dislackso.gateway.v1.MemberRemove
-	28, // 21: dislackso.gateway.v1.Event.channel_create:type_name -> dislackso.v1.Channel
-	28, // 22: dislackso.gateway.v1.Event.channel_update:type_name -> dislackso.v1.Channel
-	20, // 23: dislackso.gateway.v1.Event.channel_delete:type_name -> dislackso.gateway.v1.ChannelDelete
-	21, // 24: dislackso.gateway.v1.Event.channels_reordered:type_name -> dislackso.gateway.v1.ChannelsReordered
-	29, // 25: dislackso.gateway.v1.Event.user_update:type_name -> dislackso.v1.User
-	30, // 26: dislackso.gateway.v1.Event.presence_update:type_name -> dislackso.v1.Presence
-	31, // 27: dislackso.gateway.v1.Event.invite_create:type_name -> dislackso.v1.Invite
-	22, // 28: dislackso.gateway.v1.Event.invite_delete:type_name -> dislackso.gateway.v1.InviteDelete
-	32, // 29: dislackso.gateway.v1.Event.ban_add:type_name -> dislackso.v1.Ban
-	23, // 30: dislackso.gateway.v1.Event.ban_remove:type_name -> dislackso.gateway.v1.BanRemove
-	33, // 31: dislackso.gateway.v1.Event.audit_entry:type_name -> dislackso.v1.AuditEntry
-	24, // 32: dislackso.gateway.v1.Event.me_update:type_name -> dislackso.v1.Me
-	1,  // 33: dislackso.gateway.v1.GuildDelete.reason:type_name -> dislackso.gateway.v1.GuildDeleteReason
-	27, // 34: dislackso.gateway.v1.MemberAdd.member:type_name -> dislackso.v1.Member
-	29, // 35: dislackso.gateway.v1.MemberAdd.user:type_name -> dislackso.v1.User
-	30, // 36: dislackso.gateway.v1.MemberAdd.presence:type_name -> dislackso.v1.Presence
-	28, // 37: dislackso.gateway.v1.ChannelsReordered.channels:type_name -> dislackso.v1.Channel
-	38, // [38:38] is the sub-list for method output_type
-	38, // [38:38] is the sub-list for method input_type
-	38, // [38:38] is the sub-list for extension type_name
-	38, // [38:38] is the sub-list for extension extendee
-	0,  // [0:38] is the sub-list for field type_name
+	7,  // 0: dislackso.gateway.v1.ClientFrame.identify:type_name -> dislackso.gateway.v1.Identify
+	8,  // 1: dislackso.gateway.v1.ClientFrame.resume:type_name -> dislackso.gateway.v1.Resume
+	9,  // 2: dislackso.gateway.v1.ClientFrame.heartbeat:type_name -> dislackso.gateway.v1.Heartbeat
+	11, // 3: dislackso.gateway.v1.ClientFrame.update_presence:type_name -> dislackso.gateway.v1.UpdatePresence
+	12, // 4: dislackso.gateway.v1.ClientFrame.update_voice_self_state:type_name -> dislackso.gateway.v1.UpdateVoiceSelfState
+	5,  // 5: dislackso.gateway.v1.ServerFrame.hello:type_name -> dislackso.gateway.v1.Hello
+	14, // 6: dislackso.gateway.v1.ServerFrame.ready:type_name -> dislackso.gateway.v1.Ready
+	15, // 7: dislackso.gateway.v1.ServerFrame.resumed:type_name -> dislackso.gateway.v1.Resumed
+	16, // 8: dislackso.gateway.v1.ServerFrame.invalid_session:type_name -> dislackso.gateway.v1.InvalidSession
+	10, // 9: dislackso.gateway.v1.ServerFrame.heartbeat_ack:type_name -> dislackso.gateway.v1.HeartbeatAck
+	17, // 10: dislackso.gateway.v1.ServerFrame.dispatch:type_name -> dislackso.gateway.v1.Dispatch
+	6,  // 11: dislackso.gateway.v1.Identify.client:type_name -> dislackso.gateway.v1.ClientInfo
+	27, // 12: dislackso.gateway.v1.Ready.me:type_name -> dislackso.v1.Me
+	13, // 13: dislackso.gateway.v1.Ready.instance:type_name -> dislackso.gateway.v1.InstanceInfo
+	28, // 14: dislackso.gateway.v1.Ready.guilds:type_name -> dislackso.v1.GuildState
+	18, // 15: dislackso.gateway.v1.Dispatch.event:type_name -> dislackso.gateway.v1.Event
+	28, // 16: dislackso.gateway.v1.Event.guild_create:type_name -> dislackso.v1.GuildState
+	29, // 17: dislackso.gateway.v1.Event.guild_update:type_name -> dislackso.v1.Guild
+	20, // 18: dislackso.gateway.v1.Event.guild_delete:type_name -> dislackso.gateway.v1.GuildDelete
+	21, // 19: dislackso.gateway.v1.Event.member_add:type_name -> dislackso.gateway.v1.MemberAdd
+	30, // 20: dislackso.gateway.v1.Event.member_update:type_name -> dislackso.v1.Member
+	22, // 21: dislackso.gateway.v1.Event.member_remove:type_name -> dislackso.gateway.v1.MemberRemove
+	31, // 22: dislackso.gateway.v1.Event.channel_create:type_name -> dislackso.v1.Channel
+	31, // 23: dislackso.gateway.v1.Event.channel_update:type_name -> dislackso.v1.Channel
+	23, // 24: dislackso.gateway.v1.Event.channel_delete:type_name -> dislackso.gateway.v1.ChannelDelete
+	24, // 25: dislackso.gateway.v1.Event.channels_reordered:type_name -> dislackso.gateway.v1.ChannelsReordered
+	32, // 26: dislackso.gateway.v1.Event.user_update:type_name -> dislackso.v1.User
+	33, // 27: dislackso.gateway.v1.Event.presence_update:type_name -> dislackso.v1.Presence
+	34, // 28: dislackso.gateway.v1.Event.invite_create:type_name -> dislackso.v1.Invite
+	25, // 29: dislackso.gateway.v1.Event.invite_delete:type_name -> dislackso.gateway.v1.InviteDelete
+	35, // 30: dislackso.gateway.v1.Event.ban_add:type_name -> dislackso.v1.Ban
+	26, // 31: dislackso.gateway.v1.Event.ban_remove:type_name -> dislackso.gateway.v1.BanRemove
+	36, // 32: dislackso.gateway.v1.Event.audit_entry:type_name -> dislackso.v1.AuditEntry
+	27, // 33: dislackso.gateway.v1.Event.me_update:type_name -> dislackso.v1.Me
+	37, // 34: dislackso.gateway.v1.Event.voice_state_update:type_name -> dislackso.v1.VoiceState
+	19, // 35: dislackso.gateway.v1.Event.voice_forced:type_name -> dislackso.gateway.v1.VoiceForced
+	1,  // 36: dislackso.gateway.v1.VoiceForced.action:type_name -> dislackso.gateway.v1.VoiceForcedAction
+	2,  // 37: dislackso.gateway.v1.GuildDelete.reason:type_name -> dislackso.gateway.v1.GuildDeleteReason
+	30, // 38: dislackso.gateway.v1.MemberAdd.member:type_name -> dislackso.v1.Member
+	32, // 39: dislackso.gateway.v1.MemberAdd.user:type_name -> dislackso.v1.User
+	33, // 40: dislackso.gateway.v1.MemberAdd.presence:type_name -> dislackso.v1.Presence
+	31, // 41: dislackso.gateway.v1.ChannelsReordered.channels:type_name -> dislackso.v1.Channel
+	42, // [42:42] is the sub-list for method output_type
+	42, // [42:42] is the sub-list for method input_type
+	42, // [42:42] is the sub-list for extension type_name
+	42, // [42:42] is the sub-list for extension extendee
+	0,  // [0:42] is the sub-list for field type_name
 }
 
 func init() { file_dislackso_gateway_v1_gateway_proto_init() }
@@ -1988,6 +2256,7 @@ func file_dislackso_gateway_v1_gateway_proto_init() {
 		(*ClientFrame_Resume)(nil),
 		(*ClientFrame_Heartbeat)(nil),
 		(*ClientFrame_UpdatePresence)(nil),
+		(*ClientFrame_UpdateVoiceSelfState)(nil),
 	}
 	file_dislackso_gateway_v1_gateway_proto_msgTypes[1].OneofWrappers = []any{
 		(*ServerFrame_Hello)(nil),
@@ -1997,7 +2266,7 @@ func file_dislackso_gateway_v1_gateway_proto_init() {
 		(*ServerFrame_HeartbeatAck)(nil),
 		(*ServerFrame_Dispatch)(nil),
 	}
-	file_dislackso_gateway_v1_gateway_proto_msgTypes[14].OneofWrappers = []any{
+	file_dislackso_gateway_v1_gateway_proto_msgTypes[15].OneofWrappers = []any{
 		(*Event_GuildCreate)(nil),
 		(*Event_GuildUpdate)(nil),
 		(*Event_GuildDelete)(nil),
@@ -2016,14 +2285,16 @@ func file_dislackso_gateway_v1_gateway_proto_init() {
 		(*Event_BanRemove)(nil),
 		(*Event_AuditEntry)(nil),
 		(*Event_MeUpdate)(nil),
+		(*Event_VoiceStateUpdate)(nil),
+		(*Event_VoiceForced)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_dislackso_gateway_v1_gateway_proto_rawDesc), len(file_dislackso_gateway_v1_gateway_proto_rawDesc)),
-			NumEnums:      2,
-			NumMessages:   22,
+			NumEnums:      3,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

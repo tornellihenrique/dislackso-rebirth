@@ -24,6 +24,7 @@ var codes = []struct {
 	{domain.ErrInvalid, connect.CodeInvalidArgument},
 	{domain.ErrUnauthenticated, connect.CodeUnauthenticated},
 	{domain.ErrFailedPrecondition, connect.CodeFailedPrecondition},
+	{domain.ErrUnavailable, connect.CodeUnavailable},
 }
 
 // errorMapper turns service errors into Connect errors. Domain errors keep

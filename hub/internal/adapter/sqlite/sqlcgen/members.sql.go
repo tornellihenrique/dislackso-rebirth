@@ -44,7 +44,7 @@ func (q *Queries) CountGuildMembers(ctx context.Context, guildID int64) (int64, 
 }
 
 const getMember = `-- name: GetMember :one
-SELECT guild_id, user_id, role, joined_at, updated_at FROM guild_members WHERE guild_id = ? AND user_id = ?
+SELECT guild_id, user_id, role, joined_at, updated_at, server_mute, server_deaf FROM guild_members WHERE guild_id = ? AND user_id = ?
 `
 
 type GetMemberParams struct {
@@ -61,12 +61,14 @@ func (q *Queries) GetMember(ctx context.Context, arg GetMemberParams) (GuildMemb
 		&i.Role,
 		&i.JoinedAt,
 		&i.UpdatedAt,
+		&i.ServerMute,
+		&i.ServerDeaf,
 	)
 	return i, err
 }
 
 const listGuildMembers = `-- name: ListGuildMembers :many
-SELECT guild_id, user_id, role, joined_at, updated_at FROM guild_members WHERE guild_id = ? ORDER BY joined_at, user_id
+SELECT guild_id, user_id, role, joined_at, updated_at, server_mute, server_deaf FROM guild_members WHERE guild_id = ? ORDER BY joined_at, user_id
 `
 
 func (q *Queries) ListGuildMembers(ctx context.Context, guildID int64) ([]GuildMember, error) {
@@ -84,6 +86,8 @@ func (q *Queries) ListGuildMembers(ctx context.Context, guildID int64) ([]GuildM
 			&i.Role,
 			&i.JoinedAt,
 			&i.UpdatedAt,
+			&i.ServerMute,
+			&i.ServerDeaf,
 		); err != nil {
 			return nil, err
 		}
@@ -99,7 +103,7 @@ func (q *Queries) ListGuildMembers(ctx context.Context, guildID int64) ([]GuildM
 }
 
 const listUserMemberships = `-- name: ListUserMemberships :many
-SELECT guild_id, user_id, role, joined_at, updated_at FROM guild_members WHERE user_id = ? ORDER BY joined_at, guild_id
+SELECT guild_id, user_id, role, joined_at, updated_at, server_mute, server_deaf FROM guild_members WHERE user_id = ? ORDER BY joined_at, guild_id
 `
 
 func (q *Queries) ListUserMemberships(ctx context.Context, userID int64) ([]GuildMember, error) {
@@ -117,6 +121,8 @@ func (q *Queries) ListUserMemberships(ctx context.Context, userID int64) ([]Guil
 			&i.Role,
 			&i.JoinedAt,
 			&i.UpdatedAt,
+			&i.ServerMute,
+			&i.ServerDeaf,
 		); err != nil {
 			return nil, err
 		}
@@ -162,6 +168,32 @@ type UpdateMemberRoleParams struct {
 func (q *Queries) UpdateMemberRole(ctx context.Context, arg UpdateMemberRoleParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, updateMemberRole,
 		arg.Role,
+		arg.UpdatedAt,
+		arg.GuildID,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const updateMemberVoiceModeration = `-- name: UpdateMemberVoiceModeration :execrows
+UPDATE guild_members SET server_mute = ?, server_deaf = ?, updated_at = ? WHERE guild_id = ? AND user_id = ?
+`
+
+type UpdateMemberVoiceModerationParams struct {
+	ServerMute int64
+	ServerDeaf int64
+	UpdatedAt  int64
+	GuildID    int64
+	UserID     int64
+}
+
+func (q *Queries) UpdateMemberVoiceModeration(ctx context.Context, arg UpdateMemberVoiceModerationParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateMemberVoiceModeration,
+		arg.ServerMute,
+		arg.ServerDeaf,
 		arg.UpdatedAt,
 		arg.GuildID,
 		arg.UserID,
