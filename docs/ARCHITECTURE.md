@@ -248,7 +248,7 @@ Precedence: defaults < `config.yaml` < env (`DSX_*`) < flags. Only bootstrap set
 - Rate limits (token bucket, per IP + per account): login, register, verify resend, reset request, invite accept, message send, uploads, gateway frames.
 - Validation: rules live in `domain` validators and reach clients as typed `FieldViolations` error details. `protovalidate` annotations are deferred (see STATUS, Phase 1 decisions).
 - Uploads: magic-byte sniffing, size caps, images re-encoded (metadata stripped), downloads with `X-Content-Type-Options: nosniff`, `Content-Security-Policy: sandbox`, `Content-Disposition: attachment` for non-media types.
-- Headers: strict CSP for the SPA, `Referrer-Policy: same-origin`, HSTS when HTTPS.
+- Headers: strict CSP for the SPA, `Referrer-Policy: same-origin`, HSTS when HTTPS. `style-src` admits a per-response nonce, handed to the page in `<meta name="csp-nonce">`, because UI libraries inject `<style>` elements (scroll locking in modal dialogs); scripts stay `'self'` only.
 - Link unfurling (chat phase): SSRF guard (deny private/loopback/link-local, re-check after DNS resolution, size/time limits).
 - Client IP only from the active `ExposureProvider.ClientIP` (never trust forwarded headers from other ingresses).
 - Secrets never logged; logs rotate (lumberjack).
@@ -341,6 +341,9 @@ server → Dispatch{seq, event}  (seq monotonic per session)
 - Client reconnect: exponential backoff 0.5 s → 15 s with jitter; try Resume first. `navigator.onLine`/visibility events trigger immediate retry.
 - Close codes: 4000 unknown, 4001 bad opcode, 4002 decode error, 4003 not authenticated, 4004 session revoked, 4005 already identified, 4007 invalid seq, 4008 rate limited, 4009 session expired, 4010 hub restarting (reconnect later, no resume).
 - Frames are binary protobuf (`ClientFrame`/`ServerFrame`). Dev builds expose a frame inspector panel.
+- Services publish events only after their transaction commits, and Identify subscribes to the user's topics before reading the snapshot; events that arrive in between are sent right after Ready. Clients upsert by `updated_at`, so a duplicate is harmless.
+- Each heartbeat re-checks the session cookie: a signed-out, revoked, expired or disabled session ends the connection with 4004 within one heartbeat interval.
+- A connection that drops without a close frame keeps its session (and the user's presence) for the resume window; a normal close (tab closed, sign-out) ends both at once.
 
 ### 8.2 Ready snapshot
 `me`, `settings` (synced user prefs), all guilds the user belongs to with channels, members (+ public user profiles), presences, **voice states for every guild**, read states, relationships (opt), open DMs (opt), instance info (name, limits, features). Sized for ≤ 50 users; no lazy member loading needed.
@@ -349,9 +352,9 @@ server → Dispatch{seq, event}  (seq monotonic per session)
 `guild:<id>` (all members), `user:<id>` (all sessions of a user), `channel:<id>` (typing; text viewers), `admins:<guildId>`, `instance-admins`. Gateway subscribes sessions on Identify and updates subscriptions on membership changes.
 
 ### 8.4 Event catalog
-`GUILD_CREATE` (joined/created) · `GUILD_UPDATE` · `GUILD_DELETE{reason: deleted|kicked|banned|left}` · `MEMBER_ADD/UPDATE/REMOVE` · `CHANNEL_CREATE/UPDATE/DELETE` · `CHANNELS_REORDERED` · `USER_UPDATE` (public profile of anyone sharing a guild/relationship) · `PRESENCE_UPDATE` · `VOICE_STATE_UPDATE` · `VOICE_FORCED{action: disconnected|moved|kicked, by}` · `INVITE_CREATE/DELETE` (admins) · `BAN_ADD/REMOVE` (admins) · `AUDIT_ENTRY` (admins) · `SESSION_REVOKED` · `INSTANCE_NOTICE` · *opt:* `MESSAGE_CREATE/UPDATE/DELETE`, `REACTION_ADD/REMOVE`, `TYPING_START`, `READ_STATE_UPDATE`, `THREAD_*`, `RELATIONSHIP_*`, `DM_CREATE`.
+`GUILD_CREATE` (joined/created) · `GUILD_UPDATE` · `GUILD_DELETE{reason: deleted|kicked|banned|left}` · `MEMBER_ADD/UPDATE/REMOVE` · `CHANNEL_CREATE/UPDATE/DELETE` · `CHANNELS_REORDERED` · `USER_UPDATE` (public profile of anyone sharing a guild/relationship) · `PRESENCE_UPDATE` · `VOICE_STATE_UPDATE` · `VOICE_FORCED{action: disconnected|moved|kicked, by}` · `INVITE_CREATE/DELETE` (admins) · `BAN_ADD/REMOVE` (admins) · `AUDIT_ENTRY` (admins) · `ME_UPDATE` (the receiver's own account, for their other sessions) · `INSTANCE_NOTICE` · *opt:* `MESSAGE_CREATE/UPDATE/DELETE`, `REACTION_ADD/REMOVE`, `TYPING_START`, `READ_STATE_UPDATE`, `THREAD_*`, `RELATIONSHIP_*`, `DM_CREATE`.
 
-Client → server frames: `UpdatePresence{status, custom_status}`, `UpdateVoiceSelfState{self_mute, self_deaf}`, `TypingStart{channel_id}` (≤ 1 per 8 s), `ClientTelemetry{ice_pair_type, bytes_sent, bytes_received, rtt}`.
+Client → server frames: `UpdatePresence{idle}` (inactivity; the status preference and custom status are set through `AccountService.SetStatusPreference`, so they persist and reach every device), `UpdateVoiceSelfState{self_mute, self_deaf}`, `TypingStart{channel_id}` (≤ 1 per 8 s), `ClientTelemetry{ice_pair_type, bytes_sent, bytes_received, rtt}`.
 
 ### 8.5 Presence
 Online while ≥ 1 gateway session; `idle` reported by client after 10 min without input (desktop uses `powerMonitor` idle time); `dnd` and `invisible` are user preferences (invisible = shown offline to others). Presence is broadcast to every guild the user is in.
