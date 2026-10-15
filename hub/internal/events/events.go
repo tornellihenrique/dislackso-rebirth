@@ -98,6 +98,28 @@ type AuditAppended struct{ Entry domain.AuditEntry }
 // MeUpdated tells a user's sessions that their own account changed.
 type MeUpdated struct{ User domain.User }
 
+// VoiceStateUpdated carries a joined, changed or ended voice state; an ended
+// one has a zero ChannelID.
+type VoiceStateUpdated struct{ State domain.VoiceState }
+
+type VoiceForcedAction string
+
+const (
+	VoiceDisconnected VoiceForcedAction = "disconnected"
+	VoiceMoved        VoiceForcedAction = "moved"
+)
+
+// VoiceForced tells a user that someone else ended or moved their voice
+// connection.
+type VoiceForced struct {
+	UserID    domain.ID
+	GuildID   domain.ID
+	ChannelID domain.ID
+	ByUserID  domain.ID
+	SessionID string
+	Action    VoiceForcedAction
+}
+
 func (GuildCreated) isPayload()      {}
 func (GuildUpdated) isPayload()      {}
 func (GuildDeleted) isPayload()      {}
@@ -116,6 +138,8 @@ func (BanAdded) isPayload()          {}
 func (BanRemoved) isPayload()        {}
 func (AuditAppended) isPayload()     {}
 func (MeUpdated) isPayload()         {}
+func (VoiceStateUpdated) isPayload() {}
+func (VoiceForced) isPayload()       {}
 
 // Bus delivers events to subscribers synchronously and in publish order;
 // subscribers must not block.

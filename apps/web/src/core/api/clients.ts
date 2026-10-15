@@ -7,6 +7,7 @@ import { InstanceService } from '@dislackso/contracts/gen/dislackso/v1/instance_
 import { InviteService } from '@dislackso/contracts/gen/dislackso/v1/invite_pb';
 import { ModerationService } from '@dislackso/contracts/gen/dislackso/v1/moderation_pb';
 import { SetupService } from '@dislackso/contracts/gen/dislackso/v1/setup_pb';
+import { VoiceService } from '@dislackso/contracts/gen/dislackso/v1/voice_pb';
 
 export interface HubClients {
   readonly auth: Client<typeof AuthService>;
@@ -17,6 +18,7 @@ export interface HubClients {
   readonly channels: Client<typeof ChannelService>;
   readonly invites: Client<typeof InviteService>;
   readonly moderation: Client<typeof ModerationService>;
+  readonly voice: Client<typeof VoiceService>;
 }
 
 export function createHubClients(transport: Transport): HubClients {
@@ -29,6 +31,7 @@ export function createHubClients(transport: Transport): HubClients {
     channels: createClient(ChannelService, transport),
     invites: createClient(InviteService, transport),
     moderation: createClient(ModerationService, transport),
+    voice: createClient(VoiceService, transport),
   };
 }
 

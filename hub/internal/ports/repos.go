@@ -68,6 +68,7 @@ type MemberRepo interface {
 	AddMember(ctx context.Context, m domain.Member) error
 	MemberByID(ctx context.Context, guildID, userID domain.ID) (domain.Member, error)
 	UpdateMemberRole(ctx context.Context, guildID, userID domain.ID, role domain.GuildRole, at time.Time) error
+	UpdateMemberVoiceModeration(ctx context.Context, guildID, userID domain.ID, serverMute, serverDeaf bool, at time.Time) error
 	RemoveMember(ctx context.Context, guildID, userID domain.ID) error
 	GuildMembers(ctx context.Context, guildID domain.ID) ([]domain.Member, error)
 	UserMemberships(ctx context.Context, userID domain.ID) ([]domain.Member, error)

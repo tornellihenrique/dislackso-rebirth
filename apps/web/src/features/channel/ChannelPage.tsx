@@ -1,9 +1,10 @@
 import { ChannelType } from '@dislackso/contracts/gen/dislackso/v1/channel_pb';
 import { Navigate, useParams } from '@tanstack/react-router';
-import { Hash, MessageSquareDashed, MonitorUp, Users, Volume2 } from 'lucide-react';
+import { Hash, MessageSquareDashed, Users, Volume2 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { VoiceStage } from '@/features/voice/VoiceStage';
 import { useEntities } from '@/stores/entities';
 import { useRealtime } from '@/stores/realtime';
 import { dispatchUi, useUi } from '@/stores/ui';
@@ -28,7 +29,6 @@ export function ChannelPage() {
   }
   const voice = channel.type === ChannelType.VOICE;
   const Icon = voice ? Volume2 : Hash;
-  const PlaceholderIcon = voice ? MonitorUp : MessageSquareDashed;
   const membersLabel = memberListOpen ? t('shell.hideMembers') : t('shell.showMembers');
 
   return (
@@ -57,17 +57,17 @@ export function ChannelPage() {
           </Tooltip>
         </div>
       </header>
-      <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-        <span className="flex size-16 items-center justify-center rounded-full bg-sidebar text-fg-muted">
-          <PlaceholderIcon aria-hidden className="size-8" />
-        </span>
-        <h2 className="text-xl font-semibold">
-          {voice ? t('channel.voicePlaceholderTitle') : t('channel.textPlaceholderTitle')}
-        </h2>
-        <p className="max-w-md text-fg-muted">
-          {voice ? t('channel.voicePlaceholderBody') : t('channel.textPlaceholderBody')}
-        </p>
-      </div>
+      {voice ? (
+        <VoiceStage guildId={guildId} channelId={channelId} channelName={channel.name} />
+      ) : (
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+          <span className="flex size-16 items-center justify-center rounded-full bg-sidebar text-fg-muted">
+            <MessageSquareDashed aria-hidden className="size-8" />
+          </span>
+          <h2 className="text-xl font-semibold">{t('channel.textPlaceholderTitle')}</h2>
+          <p className="max-w-md text-fg-muted">{t('channel.textPlaceholderBody')}</p>
+        </div>
+      )}
     </>
   );
 }

@@ -111,6 +111,17 @@ func (db *DB) UpdateMemberRole(ctx context.Context, guildID, userID domain.ID, r
 	return affected(n, err, "update role of member %d", userID)
 }
 
+func (db *DB) UpdateMemberVoiceModeration(ctx context.Context, guildID, userID domain.ID, serverMute, serverDeaf bool, at time.Time) error {
+	n, err := db.writer(ctx).UpdateMemberVoiceModeration(ctx, sqlcgen.UpdateMemberVoiceModerationParams{
+		ServerMute: boolInt(serverMute),
+		ServerDeaf: boolInt(serverDeaf),
+		UpdatedAt:  toMS(at),
+		GuildID:    int64(guildID),
+		UserID:     int64(userID),
+	})
+	return affected(n, err, "update voice moderation of member %d", userID)
+}
+
 func (db *DB) RemoveMember(ctx context.Context, guildID, userID domain.ID) error {
 	n, err := db.writer(ctx).RemoveMember(ctx, sqlcgen.RemoveMemberParams{GuildID: int64(guildID), UserID: int64(userID)})
 	return affected(n, err, "remove member %d", userID)
@@ -150,11 +161,13 @@ func toMembers(rows []sqlcgen.GuildMember) []domain.Member {
 
 func toMember(r sqlcgen.GuildMember) domain.Member {
 	return domain.Member{
-		GuildID:   domain.ID(r.GuildID),
-		UserID:    domain.ID(r.UserID),
-		Role:      domain.GuildRole(r.Role),
-		JoinedAt:  fromMS(r.JoinedAt),
-		UpdatedAt: fromMS(r.UpdatedAt),
+		GuildID:    domain.ID(r.GuildID),
+		UserID:     domain.ID(r.UserID),
+		Role:       domain.GuildRole(r.Role),
+		ServerMute: r.ServerMute != 0,
+		ServerDeaf: r.ServerDeaf != 0,
+		JoinedAt:   fromMS(r.JoinedAt),
+		UpdatedAt:  fromMS(r.UpdatedAt),
 	}
 }
 

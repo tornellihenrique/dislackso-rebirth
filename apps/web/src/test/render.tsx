@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { I18nextProvider } from 'react-i18next';
 
 import { ServicesContext, type Services } from '@/app/services';
+import type { VoiceActions } from '@/app/voice';
 import { createHubClients } from '@/core/api/clients';
 import { createI18n, type Language } from '@/core/i18n/i18n';
 
@@ -13,6 +14,20 @@ interface RenderOptions {
   routes?: (router: ConnectRouter) => void;
   services?: Partial<Services>;
   language?: Language;
+}
+
+/** Voice actions that do nothing; tests that care pass their own. */
+export function stubVoice(): VoiceActions {
+  return {
+    join: () => Promise.resolve(),
+    leave: () => Promise.resolve(),
+    toggleMute: () => undefined,
+    toggleDeafen: () => undefined,
+    setUserVolume: () => undefined,
+    toggleLocalMute: () => undefined,
+    setPrefs: () => undefined,
+    startAudio: () => Promise.resolve(),
+  };
 }
 
 /** Renders `ui` with the same providers as the app, minus the router. */
@@ -26,6 +41,7 @@ export async function renderWithProviders(
     health: { check: () => Promise.reject(new Error('health is not stubbed')) },
     hub: createHubClients(createRouterTransport(routes)),
     uploads: { upload: () => Promise.reject(new Error('uploads are not stubbed')) },
+    voice: stubVoice(),
     ...services,
   };
   return render(

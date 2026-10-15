@@ -11,6 +11,7 @@ import { usePresence } from '@/stores/presence';
 import { useSession } from '@/stores/session';
 import { Avatar } from '@/ui/Avatar';
 import { ContextItem, ContextMenuArea, ContextSeparator } from '@/ui/Menu';
+import { VoiceMemberItems } from '@/features/voice/VoiceMemberItems';
 
 import { useMemberActionRunner, useMemberActions, type MemberAction } from './MemberActions';
 import { displayName, memberGroups, type MemberEntry } from './member-groups';
@@ -140,6 +141,7 @@ function MemberMenu({ member, actions, onAction, children }: MenuProps) {
   const name = useEntities((s) => displayName(s.users[member.userId]));
   const menu = (
     <>
+      <VoiceMemberItems guildId={member.guildId} userId={member.userId} />
       {actions.map((a) => (
         <ContextItem
           key={a}

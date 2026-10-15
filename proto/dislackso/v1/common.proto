@@ -93,3 +93,25 @@ message FieldViolation {
 message RateLimited {
   int64 retry_after_ms = 1;
 }
+
+// VoiceState is one member connected to (or connecting to) a voice channel.
+// A user has at most one voice state on the whole instance.
+message VoiceState {
+  string user_id = 1;
+  string guild_id = 2;
+  // Empty in an update means the user left voice in that guild.
+  string channel_id = 3;
+  // New on every join. A client that sees its own user with a session it
+  // did not start knows voice moved to another device.
+  string voice_session_id = 4;
+  bool self_mute = 5;
+  bool self_deaf = 6;
+  bool server_mute = 7;
+  bool server_deaf = 8;
+  // Sharing their screen, as the media server reports it.
+  bool streaming = 9;
+  // False until the media server confirms the connection.
+  bool connected = 10;
+  // Unix ms.
+  int64 joined_at = 11;
+}

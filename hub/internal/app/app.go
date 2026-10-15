@@ -12,10 +12,12 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/blob"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/clock"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/ice"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/imaging"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/mail"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/password"
@@ -41,9 +43,11 @@ import (
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/settings"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/setup"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/snapshot"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/voice"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/clientip"
 	filehttp "github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/files"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/gateway"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/media"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/rpc"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/web"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/webdist"
@@ -64,6 +68,8 @@ type App struct {
 	settings *settings.Service
 	setup    *setup.Service
 	gateway  *gateway.Server
+	voice    *voice.Service
+	media    *mediaServer
 	server   *http.Server
 	listener net.Listener
 	devMail  bool
@@ -87,7 +93,7 @@ func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*App, err
 	if err != nil {
 		return nil, err
 	}
-	a, err := wire(cfg, logger, db, files)
+	a, err := wire(ctx, cfg, logger, db, files)
 	if err != nil {
 		_ = db.Close()
 		return nil, err
@@ -95,7 +101,7 @@ func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*App, err
 	return a, nil
 }
 
-func wire(cfg config.Config, logger *slog.Logger, db *sqlite.DB, files fs.FS) (*App, error) {
+func wire(ctx context.Context, cfg config.Config, logger *slog.Logger, db *sqlite.DB, files fs.FS) (*App, error) {
 	secretStore, err := secrets.OpenFile(filepath.Join(cfg.DataDir, "secrets.yaml"))
 	if err != nil {
 		return nil, err
@@ -122,10 +128,20 @@ func wire(cfg config.Config, logger *slog.Logger, db *sqlite.DB, files fs.FS) (*
 	var authSvc *auth.Service
 	verification := verifier(func(ctx context.Context) bool { return authSvc.VerificationRequired(ctx) })
 
+	mediaSrv, err := newMediaServer(ctx, cfg, secretStore, logger)
+	if err != nil {
+		return nil, err
+	}
+	voiceSvc := voice.New(voice.Deps{
+		Guilds: db, Members: db, Channels: db, Users: db, Audit: db, Tx: db, IDs: ids, Tokens: tokens,
+		Clock: clk, Limiter: limiter, Events: publisher, Bus: bus, Media: mediaSrv.provider, ICE: ice.None{},
+		Settings: settingsSvc, Presence: tracker, Verification: verification, Logger: logger,
+	})
+
 	invites := invite.New(invite.Deps{
 		Tokens: db, Users: db, Guilds: db, Members: db, Channels: db, Invites: db, Bans: db, Audit: db, Tx: db,
 		TokenGen: tokens, Codes: tokens, IDs: ids, Clock: clk, Limiter: limiter, Events: publisher,
-		Settings: settingsSvc, Presence: tracker, Verification: verification,
+		Settings: settingsSvc, Presence: tracker, Voice: voiceSvc, Verification: verification,
 	})
 	authSvc = auth.New(auth.Deps{
 		Users: db, Sessions: db, Tokens: db, Tx: db,
@@ -154,7 +170,7 @@ func wire(cfg config.Config, logger *slog.Logger, db *sqlite.DB, files fs.FS) (*
 	})
 	snapshotSvc := snapshot.New(snapshot.Deps{
 		Users: db, Guilds: db, Members: db, Channels: db, Settings: settingsSvc,
-		Presence: tracker, Verification: authSvc,
+		Presence: tracker, Voice: voiceSvc, Verification: authSvc,
 	})
 	instanceSvc := instance.New(instance.Deps{
 		Users: db, Sessions: db, Tx: db, Clock: clk,
@@ -170,7 +186,7 @@ func wire(cfg config.Config, logger *slog.Logger, db *sqlite.DB, files fs.FS) (*
 		Users: db, Tx: db, Hasher: hasher, IDs: ids, Clock: clk, Limiter: limiter,
 		Settings: settingsSvc, Sessions: authSvc, Mail: mail.SMTP{}, Token: setupToken,
 	})
-	healthSvc := health.NewService(clk, buildinfo.Version(), db)
+	healthSvc := health.NewService(clk, buildinfo.Version(), db, mediaSrv)
 
 	mux := http.NewServeMux()
 	rpc.Mount(mux, rpc.Deps{
@@ -185,15 +201,17 @@ func wire(cfg config.Config, logger *slog.Logger, db *sqlite.DB, files fs.FS) (*
 		Channels:      channelSvc,
 		GuildInvites:  invites,
 		Moderation:    moderationSvc,
+		Voice:         voiceSvc,
 		ClientIP:      clientip.RemoteAddr,
 		Logger:        logger,
 	})
 	gw := gateway.New(gateway.Options{
-		Events: bus, Auth: authSvc, Snapshots: snapshotSvc, Presence: tracker,
+		Events: bus, Auth: authSvc, Snapshots: snapshotSvc, Presence: tracker, Voice: voiceSvc,
 		Tokens: tokens, Clock: clk, Logger: logger,
 	})
 	mux.Handle("GET "+gateway.Path, gw)
 	filehttp.Register(mux, filehttp.Options{Files: fileSvc, Auth: authSvc, Logger: logger})
+	media.Register(mux, media.Options{Target: mediaSrv.apiURL(), Webhooks: mediaSrv.provider, Events: voiceSvc, Logger: logger})
 	web.Register(mux, web.Options{Files: files, Health: healthSvc, Setup: setupSvc, ClientIP: clientip.RemoteAddr})
 
 	server := &http.Server{
@@ -204,7 +222,7 @@ func wire(cfg config.Config, logger *slog.Logger, db *sqlite.DB, files fs.FS) (*
 	}
 	return &App{
 		cfg: cfg, logger: logger, db: db, settings: settingsSvc, setup: setupSvc,
-		gateway: gw, server: server, devMail: cfg.Mail.DevLog,
+		gateway: gw, voice: voiceSvc, media: mediaSrv, server: server, devMail: cfg.Mail.DevLog,
 	}, nil
 }
 
@@ -239,6 +257,18 @@ func (a *App) Serve(ctx context.Context) error {
 	if a.listener == nil {
 		return errors.New("serve called before listen")
 	}
+	// Background work runs until Serve returns, after the HTTP server drained.
+	bg, stopBackground := context.WithCancel(context.WithoutCancel(ctx))
+	var background sync.WaitGroup
+	defer func() {
+		stopBackground()
+		background.Wait()
+	}()
+	background.Go(func() { a.voice.Run(bg) })
+	if err := a.media.start(bg, &background, a.listener.Addr(), a.mediaReady); err != nil {
+		return err
+	}
+
 	serveErr := make(chan error, 1)
 	go func() { serveErr <- a.server.Serve(a.listener) }()
 
@@ -260,6 +290,18 @@ func (a *App) Serve(ctx context.Context) error {
 		return fmt.Errorf("serve http: %w", err)
 	}
 	return nil
+}
+
+// mediaReady rebuilds voice state from the media server whenever it comes
+// up. A restarted media server has lost its rooms, so connections wait for
+// their clients to reconnect or expire.
+func (a *App) mediaReady(ctx context.Context, restarts int) {
+	if restarts > 0 {
+		a.voice.MediaRestarted(ctx)
+	}
+	if err := a.voice.Reconcile(ctx); err != nil {
+		a.logger.WarnContext(ctx, "reconcile voice states", slog.Any("error", err))
+	}
 }
 
 // Run listens and serves until ctx is cancelled.

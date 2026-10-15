@@ -71,6 +71,11 @@ var (
 	heartbeatAckFrame   = marshal(&gatewayv1.ServerFrame{Kind: &gatewayv1.ServerFrame_HeartbeatAck{HeartbeatAck: &gatewayv1.HeartbeatAck{}}})
 )
 
+var voiceForcedActions = map[events.VoiceForcedAction]gatewayv1.VoiceForcedAction{
+	events.VoiceDisconnected: gatewayv1.VoiceForcedAction_VOICE_FORCED_ACTION_DISCONNECTED,
+	events.VoiceMoved:        gatewayv1.VoiceForcedAction_VOICE_FORCED_ACTION_MOVED,
+}
+
 var guildDeleteReasons = map[events.GuildDeleteReason]gatewayv1.GuildDeleteReason{
 	events.ReasonGuildDeleted: gatewayv1.GuildDeleteReason_GUILD_DELETE_REASON_DELETED,
 	events.ReasonKicked:       gatewayv1.GuildDeleteReason_GUILD_DELETE_REASON_KICKED,
@@ -133,6 +138,19 @@ func toEvent(p events.Payload) *gatewayv1.Event {
 		ev.Kind = &gatewayv1.Event_AuditEntry{AuditEntry: wire.AuditEntry(p.Entry)}
 	case events.MeUpdated:
 		ev.Kind = &gatewayv1.Event_MeUpdate{MeUpdate: wire.Me(p.User)}
+	case events.VoiceStateUpdated:
+		ev.Kind = &gatewayv1.Event_VoiceStateUpdate{VoiceStateUpdate: wire.VoiceState(p.State)}
+	case events.VoiceForced:
+		f := &gatewayv1.VoiceForced{
+			Action:         voiceForcedActions[p.Action],
+			GuildId:        p.GuildID.String(),
+			ByUserId:       p.ByUserID.String(),
+			VoiceSessionId: p.SessionID,
+		}
+		if p.Action == events.VoiceMoved {
+			f.ChannelId = p.ChannelID.String()
+		}
+		ev.Kind = &gatewayv1.Event_VoiceForced{VoiceForced: f}
 	default:
 		return nil
 	}

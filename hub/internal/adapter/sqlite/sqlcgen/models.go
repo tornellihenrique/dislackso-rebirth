@@ -77,11 +77,13 @@ type GuildBan struct {
 }
 
 type GuildMember struct {
-	GuildID   int64
-	UserID    int64
-	Role      string
-	JoinedAt  int64
-	UpdatedAt int64
+	GuildID    int64
+	UserID     int64
+	Role       string
+	JoinedAt   int64
+	UpdatedAt  int64
+	ServerMute int64
+	ServerDeaf int64
 }
 
 type InstanceSetting struct {

@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+package dislackso.v1;
+
+import "dislackso/v1/common.proto";
+import "dislackso/v1/guild.proto";
+
+// VoiceService connects members to voice channels. The hub owns voice state;
+// the media server only carries audio and video.
+service VoiceService {
+  // Join connects the caller to a voice channel, leaving any voice channel
+  // they were in, on any device. The client then connects to the media
+  // server with the returned token.
+  rpc Join(JoinRequest) returns (JoinResponse);
+  // Leave ends the caller's voice connection.
+  rpc Leave(LeaveRequest) returns (LeaveResponse);
+  // MoveMember sends a member who is in voice to another voice channel of
+  // the guild. Owners and admins only.
+  rpc MoveMember(MoveMemberRequest) returns (MoveMemberResponse);
+  // SetServerMute stops a member from speaking in the guild's voice
+  // channels until it is lifted, across reconnects. Owners and admins only.
+  rpc SetServerMute(SetServerMuteRequest) returns (SetServerMuteResponse);
+  // SetServerDeafen stops a member from hearing anyone in the guild's voice
+  // channels until it is lifted. Owners and admins only.
+  rpc SetServerDeafen(SetServerDeafenRequest) returns (SetServerDeafenResponse);
+  // DisconnectMember drops a member from voice. Owners and admins only.
+  rpc DisconnectMember(DisconnectMemberRequest) returns (DisconnectMemberResponse);
+}
+
+message IceServer {
+  repeated string urls = 1;
+  string username = 2;
+  string credential = 3;
+}
+
+message VoiceLimits {
+  int32 mic_bitrate_max_kbps = 1;
+}
+
+message JoinRequest {
+  string channel_id = 1;
+  // The client's own mute and deafen, applied from the start.
+  bool self_mute = 2;
+  bool self_deaf = 3;
+}
+
+message JoinResponse {
+  // The media server's URL. May be relative to the instance ("/lk"); the
+  // client resolves it against the page URL.
+  string url = 1;
+  string token = 2;
+  // Extra ICE servers (TURN) for networks where direct media fails.
+  repeated IceServer ice_servers = 3;
+  VoiceState state = 4;
+  VoiceLimits limits = 5;
+}
+
+message LeaveRequest {
+  // Leaves only if this is still the caller's session, so a closing tab
+  // cannot end a call that moved to another device. Empty leaves any.
+  string voice_session_id = 1;
+}
+
+message LeaveResponse {}
+
+message MoveMemberRequest {
+  string guild_id = 1;
+  string user_id = 2;
+  // A voice channel of the same guild.
+  string channel_id = 3;
+}
+
+message MoveMemberResponse {}
+
+message SetServerMuteRequest {
+  string guild_id = 1;
+  string user_id = 2;
+  bool mute = 3;
+}
+
+message SetServerMuteResponse {
+  Member member = 1;
+}
+
+message SetServerDeafenRequest {
+  string guild_id = 1;
+  string user_id = 2;
+  bool deaf = 3;
+}
+
+message SetServerDeafenResponse {
+  Member member = 1;
+}
+
+message DisconnectMemberRequest {
+  string guild_id = 1;
+  string user_id = 2;
+}
+
+message DisconnectMemberResponse {}

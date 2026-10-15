@@ -37,6 +37,11 @@ const (
 	AuditAction_AUDIT_ACTION_MEMBER_UNBAN       AuditAction = 10
 	AuditAction_AUDIT_ACTION_MEMBER_ROLE_UPDATE AuditAction = 11
 	AuditAction_AUDIT_ACTION_OWNERSHIP_TRANSFER AuditAction = 12
+	// data: "server_mute" or "server_deaf", "true" or "false".
+	AuditAction_AUDIT_ACTION_MEMBER_VOICE_UPDATE AuditAction = 13
+	// data: "channel_id", "name" (the channel moved to).
+	AuditAction_AUDIT_ACTION_MEMBER_VOICE_MOVE       AuditAction = 14
+	AuditAction_AUDIT_ACTION_MEMBER_VOICE_DISCONNECT AuditAction = 15
 )
 
 // Enum value maps for AuditAction.
@@ -55,21 +60,27 @@ var (
 		10: "AUDIT_ACTION_MEMBER_UNBAN",
 		11: "AUDIT_ACTION_MEMBER_ROLE_UPDATE",
 		12: "AUDIT_ACTION_OWNERSHIP_TRANSFER",
+		13: "AUDIT_ACTION_MEMBER_VOICE_UPDATE",
+		14: "AUDIT_ACTION_MEMBER_VOICE_MOVE",
+		15: "AUDIT_ACTION_MEMBER_VOICE_DISCONNECT",
 	}
 	AuditAction_value = map[string]int32{
-		"AUDIT_ACTION_UNSPECIFIED":        0,
-		"AUDIT_ACTION_GUILD_UPDATE":       1,
-		"AUDIT_ACTION_CHANNEL_CREATE":     2,
-		"AUDIT_ACTION_CHANNEL_UPDATE":     3,
-		"AUDIT_ACTION_CHANNEL_DELETE":     4,
-		"AUDIT_ACTION_CHANNELS_REORDER":   5,
-		"AUDIT_ACTION_INVITE_CREATE":      6,
-		"AUDIT_ACTION_INVITE_REVOKE":      7,
-		"AUDIT_ACTION_MEMBER_KICK":        8,
-		"AUDIT_ACTION_MEMBER_BAN":         9,
-		"AUDIT_ACTION_MEMBER_UNBAN":       10,
-		"AUDIT_ACTION_MEMBER_ROLE_UPDATE": 11,
-		"AUDIT_ACTION_OWNERSHIP_TRANSFER": 12,
+		"AUDIT_ACTION_UNSPECIFIED":             0,
+		"AUDIT_ACTION_GUILD_UPDATE":            1,
+		"AUDIT_ACTION_CHANNEL_CREATE":          2,
+		"AUDIT_ACTION_CHANNEL_UPDATE":          3,
+		"AUDIT_ACTION_CHANNEL_DELETE":          4,
+		"AUDIT_ACTION_CHANNELS_REORDER":        5,
+		"AUDIT_ACTION_INVITE_CREATE":           6,
+		"AUDIT_ACTION_INVITE_REVOKE":           7,
+		"AUDIT_ACTION_MEMBER_KICK":             8,
+		"AUDIT_ACTION_MEMBER_BAN":              9,
+		"AUDIT_ACTION_MEMBER_UNBAN":            10,
+		"AUDIT_ACTION_MEMBER_ROLE_UPDATE":      11,
+		"AUDIT_ACTION_OWNERSHIP_TRANSFER":      12,
+		"AUDIT_ACTION_MEMBER_VOICE_UPDATE":     13,
+		"AUDIT_ACTION_MEMBER_VOICE_MOVE":       14,
+		"AUDIT_ACTION_MEMBER_VOICE_DISCONNECT": 15,
 	}
 )
 
@@ -870,7 +881,7 @@ const file_dislackso_v1_moderation_proto_rawDesc = "" +
 	"\x05limit\x18\x03 \x01(\x05R\x05limit\"t\n" +
 	"\x14ListAuditLogResponse\x122\n" +
 	"\aentries\x18\x01 \x03(\v2\x18.dislackso.v1.AuditEntryR\aentries\x12(\n" +
-	"\x05users\x18\x02 \x03(\v2\x12.dislackso.v1.UserR\x05users*\xb4\x03\n" +
+	"\x05users\x18\x02 \x03(\v2\x12.dislackso.v1.UserR\x05users*\xa8\x04\n" +
 	"\vAuditAction\x12\x1c\n" +
 	"\x18AUDIT_ACTION_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19AUDIT_ACTION_GUILD_UPDATE\x10\x01\x12\x1f\n" +
@@ -885,7 +896,10 @@ const file_dislackso_v1_moderation_proto_rawDesc = "" +
 	"\x19AUDIT_ACTION_MEMBER_UNBAN\x10\n" +
 	"\x12#\n" +
 	"\x1fAUDIT_ACTION_MEMBER_ROLE_UPDATE\x10\v\x12#\n" +
-	"\x1fAUDIT_ACTION_OWNERSHIP_TRANSFER\x10\f*\xaa\x01\n" +
+	"\x1fAUDIT_ACTION_OWNERSHIP_TRANSFER\x10\f\x12$\n" +
+	" AUDIT_ACTION_MEMBER_VOICE_UPDATE\x10\r\x12\"\n" +
+	"\x1eAUDIT_ACTION_MEMBER_VOICE_MOVE\x10\x0e\x12(\n" +
+	"$AUDIT_ACTION_MEMBER_VOICE_DISCONNECT\x10\x0f*\xaa\x01\n" +
 	"\x0fAuditTargetType\x12!\n" +
 	"\x1dAUDIT_TARGET_TYPE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17AUDIT_TARGET_TYPE_GUILD\x10\x01\x12\x1d\n" +

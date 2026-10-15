@@ -189,6 +189,22 @@ describe('GatewayClient', () => {
     });
   });
 
+  it('reports the voice self state when live and after reconnecting', () => {
+    const { client, last } = setup();
+    client.start();
+    client.setVoiceSelf('vs1', true, false);
+    last().hello();
+    last().ready('s1');
+    expect(last().kinds()).toEqual(['identify', 'updateVoiceSelfState']);
+    client.setVoiceSelf('vs1', true, true);
+    expect(last().sent.at(-1)?.kind).toMatchObject({
+      case: 'updateVoiceSelfState',
+      value: { voiceSessionId: 'vs1', selfMute: true, selfDeaf: true },
+    });
+    client.setVoiceSelf('', false, false);
+    expect(last().sent).toHaveLength(3);
+  });
+
   it('ignores a socket replaced after stop', () => {
     const { client, last, frames, sockets } = setup();
     client.start();

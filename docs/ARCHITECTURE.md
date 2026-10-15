@@ -157,6 +157,8 @@ keys: { <generated>: <generated> }
 webhook: { api_key: <generated>, urls: [http://127.0.0.1:7300/internal/livekit/webhook] }
 logging: { level: info }
 ```
+The API key pair is generated once and kept in `secrets.yaml`; the sidecar receives it through `LIVEKIT_KEYS`, so `livekit.yaml` holds no secret. LiveKit rejects unknown keys and refuses to start when `use_external_ip` cannot reach STUN, so hosts without internet access set `livekit.external_ip: false` in the hub config.
+
 Connection paths, in order of preference:
 1. **LAN host candidate** (same office network).
 2. **IPv6** global address (common on Brazilian fiber; stateful firewalls are opened by full-ICE checks from both sides).
@@ -222,15 +224,16 @@ app (composition root) wires everything from config — the only place that know
 ### 5.2 `MediaProvider` port (LiveKit adapter)
 ```go
 type MediaProvider interface {
-    JoinToken(p JoinParams) (url string, token string, err error)          // room, identity, name, metadata, grants, ttl
-    RemoveParticipant(ctx context.Context, room string, identity string) error
-    SetPublishPermissions(ctx context.Context, room, identity string, sources []TrackSource) error
-    SetSubscribePermission(ctx context.Context, room, identity string, allowed bool) error
-    MuteTrack(ctx context.Context, room, identity, trackSID string, muted bool) error
-    ListParticipants(ctx context.Context, room string) ([]Participant, error)
-    ParseWebhook(r *http.Request) (MediaEvent, error)                      // verifies signature
+    URL() string                                                             // where clients connect, e.g. "/lk"
+    Available() bool                                                         // the media server is up
+    JoinToken(j MediaJoin) (string, error)                                   // room, identity, metadata, permissions, ttl
+    RemoveParticipant(ctx context.Context, room, identity string) error
+    SetPermissions(ctx context.Context, room, identity string, p VoicePermissions) error // publish sources + subscribe
+    ListRooms(ctx context.Context) ([]string, error)
+    ListParticipants(ctx context.Context, room string) ([]MediaParticipant, error)
 }
 ```
+`SetPermissions` replaces the whole permission set; LiveKit unpublishes tracks whose source is no longer allowed, so server mute needs no separate track mute. The adapter also verifies and parses webhooks (`ParseWebhook`), which the HTTP handler reaches through an interface of its own.
 `url` can point to the embedded sidecar (`wss://<instance>/lk`) or an **external LiveKit** (VPS or LiveKit Cloud) — configurable, same code path.
 
 ### 5.3 Configuration & data directory
@@ -248,7 +251,7 @@ Precedence: defaults < `config.yaml` < env (`DSX_*`) < flags. Only bootstrap set
 - Rate limits (token bucket, per IP + per account): login, register, verify resend, reset request, invite accept, message send, uploads, gateway frames.
 - Validation: rules live in `domain` validators and reach clients as typed `FieldViolations` error details. `protovalidate` annotations are deferred (see STATUS, Phase 1 decisions).
 - Uploads: magic-byte sniffing, size caps, images re-encoded (metadata stripped), downloads with `X-Content-Type-Options: nosniff`, `Content-Security-Policy: sandbox`, `Content-Disposition: attachment` for non-media types.
-- Headers: strict CSP for the SPA, `Referrer-Policy: same-origin`, HSTS when HTTPS. `style-src` admits a per-response nonce, handed to the page in `<meta name="csp-nonce">`, because UI libraries inject `<style>` elements (scroll locking in modal dialogs); scripts stay `'self'` only.
+- Headers: strict CSP for the SPA, `Referrer-Policy: same-origin`, HSTS when HTTPS. `style-src` admits a per-response nonce, handed to the page in `<meta name="csp-nonce">`, because UI libraries inject `<style>` elements (scroll locking in modal dialogs); scripts stay `'self'`, plus `'wasm-unsafe-eval'` so the noise suppressor can compile its WebAssembly (it allows no JavaScript eval).
 - Link unfurling (chat phase): SSRF guard (deny private/loopback/link-local, re-check after DNS resolution, size/time limits).
 - Client IP only from the active `ExposureProvider.ClientIP` (never trust forwarded headers from other ingresses).
 - Secrets never logged; logs rotate (lumberjack).
@@ -366,19 +369,20 @@ Online while ≥ 1 gateway session; `idle` reported by client after 10 min witho
 ### 9.1 Voice state (in-memory, hub-owned)
 ```
 VoiceState{ user_id, guild_id, channel_id, voice_session_id, self_mute, self_deaf, server_mute, server_deaf,
-            streaming /*from LiveKit track events*/, camera /*opt*/, joined_at }
+            streaming /*from LiveKit track events*/, camera /*opt*/, connected /*false until LiveKit confirms*/, joined_at }
 ```
 Broadcast via `VOICE_STATE_UPDATE` to all guild members (sidebar shows occupants of every voice channel in every guild, live).
 
 ### 9.2 Join / switch / leave flow
 1. Client calls `VoiceService.Join(channelId)`.
 2. Hub checks: member, not banned, channel is voice, `user_limit`, instance limits.
-3. Hub atomically: removes user's previous voice state (any guild), assigns new state (pending), mints LiveKit token (identity = userId, room = `vc_<channelId>`, grants: publish sources `[microphone, screen_share, screen_share_audio]` (+`camera` if enabled), subscribe, publish data; metadata = `{voiceSessionId}`; TTL 10 min — LiveKit refreshes tokens for connected clients), issues ICE servers from `IceServerProvider` (TTL 12 h).
+3. Hub atomically: removes user's previous voice state (any guild), assigns new state (pending), mints LiveKit token (identity = userId, room = `vc_<channelId>`, grants: publish sources `[microphone, screen_share, screen_share_audio]` (+`camera` if enabled), subscribe, publish data; metadata = the voice session id; TTL 10 min — LiveKit refreshes tokens for connected clients), issues ICE servers from `IceServerProvider` (TTL 12 h). If the previous state was in another room, the hub removes that participant: LiveKit replaces duplicate identities only within one room.
 4. Client disconnects any previous room, then `room.connect(url, token, { rtcConfig: { iceServers } })`.
 5. LiveKit webhook `participant_joined` → state confirmed. No confirmation within 30 s → state cleared.
-6. `participant_left` / `participant_connection_aborted` → state cleared (ignore if `voiceSessionId` differs: user already moved).
+6. `participant_left` / `participant_connection_aborted` → state cleared (ignore if `voiceSessionId` differs: user already moved). Track webhooks carry only the participant SID, which the hub remembers when it confirms the connection. A participant whose session is not the user's current one is removed; one the hub has no state for is adopted if the user is a member (after a hub restart) and removed otherwise. Server mute and deafen are re-applied on every confirmation.
 7. Same user joining from another device → LiveKit drops the old participant (duplicate identity); old client shows "Voice connected on another device".
-8. Hub restart → rebuilds voice states from `ListParticipants` of all `vc_*` rooms.
+8. Hub restart → rebuilds voice states from `ListParticipants` of all `vc_*` rooms. The sidecar stops with the hub, so in practice clients reconnect to the restarted LiveKit and are adopted from their webhooks.
+9. Move (admin): the hub sets the target channel on the same session, removes the participant from the old room and sends `VOICE_FORCED{moved}`; the member's client joins the target (LiveKit's `MoveParticipant` is Cloud-only). Disconnect (admin) ends the state and removes the participant.
 
 Switching channels is the same call; target ≤ 1 s. Use `Room.prepareConnection` on hover of a voice channel to pre-warm.
 

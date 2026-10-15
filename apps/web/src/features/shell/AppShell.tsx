@@ -6,6 +6,7 @@ import { HubStatusBadge } from '@/features/health/HubStatusBadge';
 import { ChannelSidebar } from '@/features/guild/ChannelSidebar';
 import { GuildRail } from '@/features/guild/GuildRail';
 import { MemberList } from '@/features/members/MemberList';
+import { VoicePanel } from '@/features/voice/VoicePanel';
 import { useEntities } from '@/stores/entities';
 import { useUi } from '@/stores/ui';
 
@@ -36,6 +37,7 @@ export function AppShell() {
               )}
             </aside>
           </div>
+          <VoicePanel />
           <UserPanel />
         </div>
         <main className="flex min-w-0 flex-1 flex-col bg-main">

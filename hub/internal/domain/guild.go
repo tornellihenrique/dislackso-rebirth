@@ -26,11 +26,15 @@ const (
 func (r GuildRole) Valid() bool { return r == RoleOwner || r == RoleAdmin || r == RoleMember }
 
 type Member struct {
-	GuildID   ID
-	UserID    ID
-	Role      GuildRole
-	JoinedAt  time.Time
-	UpdatedAt time.Time
+	GuildID ID
+	UserID  ID
+	Role    GuildRole
+	// ServerMute and ServerDeaf are set by moderators and apply whenever the
+	// member is in one of the guild's voice channels.
+	ServerMute bool
+	ServerDeaf bool
+	JoinedAt   time.Time
+	UpdatedAt  time.Time
 }
 
 type Ban struct {
@@ -75,11 +79,12 @@ func ValidateReason(field, reason string) *FieldViolation {
 
 // GuildState is everything a member needs to show a guild.
 type GuildState struct {
-	Guild     Guild
-	Channels  []Channel
-	Members   []Member
-	Users     []User
-	Presences []Presence
+	Guild       Guild
+	Channels    []Channel
+	Members     []Member
+	Users       []User
+	Presences   []Presence
+	VoiceStates []VoiceState
 }
 
 // BanView is a ban with the people involved; BannedBy is nil when that

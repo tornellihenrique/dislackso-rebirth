@@ -4,6 +4,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { createI18n, detectLanguage } from '@/core/i18n/i18n';
+import { createSoundPlayer } from '@/core/media/sounds';
 import { loadSession } from '@/features/auth/session-actions';
 import { appearanceStore, applyAppearance } from '@/stores/appearance';
 import { dispatchSession, sessionStore } from '@/stores/session';
@@ -12,6 +13,7 @@ import { App } from './App';
 import { startRealtime } from './realtime';
 import { createAppRouter } from './router';
 import { createServices } from './services';
+import { VoiceController } from './voice';
 
 export async function startApp(container: HTMLElement): Promise<void> {
   // The hub's CSP admits <style> elements only with this page's nonce;
@@ -24,9 +26,19 @@ export async function startApp(container: HTMLElement): Promise<void> {
   applyAppearance(appearanceStore.getState(), document.documentElement);
 
   const i18n = await createI18n(language);
-  const services = createServices(() => {
-    dispatchSession({ type: 'signedOut' });
-  });
+  const audioHost = document.createElement('div');
+  audioHost.hidden = true;
+  document.body.append(audioHost);
+  let voice: VoiceController | undefined;
+  const services = createServices(
+    () => {
+      dispatchSession({ type: 'signedOut' });
+    },
+    (hub) => {
+      voice = new VoiceController({ hub, sounds: createSoundPlayer(), t: i18n.t, host: audioHost });
+      return voice;
+    },
+  );
   try {
     await loadSession(services.hub);
   } catch {
@@ -35,7 +47,10 @@ export async function startApp(container: HTMLElement): Promise<void> {
 
   const queryClient = new QueryClient();
   const router = createAppRouter();
-  startRealtime(queryClient);
+  if (voice) {
+    voice.start();
+    startRealtime(queryClient, voice);
+  }
   sessionStore.subscribe((next, prev) => {
     if (prev.status === 'signedIn' && next.status !== 'signedIn') {
       // Nothing cached for the previous account may leak into the next one.

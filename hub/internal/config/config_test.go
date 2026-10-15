@@ -24,6 +24,7 @@ func TestLoad(t *testing.T) {
 			DataDir: dataDir,
 			HTTP:    HTTP{Addr: "0.0.0.0:8000"},
 			Log:     Log{Level: "debug", Format: LogFormatText},
+			LiveKit: defaultLiveKit,
 		}
 		if mut != nil {
 			mut(&c)
@@ -59,6 +60,14 @@ func TestLoad(t *testing.T) {
 			want: base(func(c *Config) { c.Mail.DevLog = true; c.Setup.Token = "fixed" }),
 		},
 		{
+			name: "livekit ports and switches",
+			args: []string{"--livekit-udp-port", "17882", "--livekit-external-ip=false"},
+			env:  map[string]string{"DSX_LIVEKIT_BINARY": "/opt/livekit-server"},
+			want: base(func(c *Config) {
+				c.LiveKit.UDPPort, c.LiveKit.ExternalIP, c.LiveKit.Binary = 17882, false, "/opt/livekit-server"
+			}),
+		},
+		{
 			name: "empty env var is ignored",
 			env:  map[string]string{"DSX_HTTP_ADDR": ""},
 			want: base(nil),
@@ -70,12 +79,16 @@ func TestLoad(t *testing.T) {
 				DataDir: filepath.ToSlash(otherDir),
 				HTTP:    HTTP{Addr: DefaultHTTPAddr},
 				Log:     Log{Level: "info", Format: LogFormatJSON},
+				LiveKit: defaultLiveKit,
 			},
 		},
 		{
 			name: "missing default config file falls back to defaults",
 			args: []string{"--data-dir", otherDir},
-			want: Config{DataDir: otherDir, HTTP: HTTP{Addr: DefaultHTTPAddr}, Log: Log{Level: "info", Format: LogFormatText}},
+			want: Config{
+				DataDir: otherDir, HTTP: HTTP{Addr: DefaultHTTPAddr}, Log: Log{Level: "info", Format: LogFormatText},
+				LiveKit: defaultLiveKit,
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -90,6 +103,8 @@ func TestLoad(t *testing.T) {
 		})
 	}
 }
+
+var defaultLiveKit = LiveKit{Port: 7880, UDPPort: 7882, TCPPort: 7881, ExternalIP: true}
 
 func TestLoadErrors(t *testing.T) {
 	dataDir := t.TempDir()
@@ -106,6 +121,8 @@ func TestLoadErrors(t *testing.T) {
 		{name: "invalid log level", env: map[string]string{"DSX_LOG_LEVEL": "loud"}},
 		{name: "invalid log format", args: []string{"--log-format", "xml"}},
 		{name: "invalid listen address", args: []string{"--http-addr", "7300"}},
+		{name: "livekit port out of range", args: []string{"--livekit-port", "70000"}},
+		{name: "livekit ports collide", args: []string{"--livekit-tcp-port", "7882"}},
 		{name: "unknown flag", args: []string{"--nope"}},
 		{name: "positional argument", args: []string{"extra"}},
 	}

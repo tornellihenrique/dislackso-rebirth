@@ -1,3 +1,4 @@
+import { Check, ChevronRight } from 'lucide-react';
 import { ContextMenu as CM, DropdownMenu as DM } from 'radix-ui';
 import type { ReactNode } from 'react';
 
@@ -100,4 +101,65 @@ export function ContextItem({
 
 export function ContextSeparator() {
   return <CM.Separator className={separatorClass} />;
+}
+
+interface CheckItemProps {
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  disabled?: boolean;
+  children: ReactNode;
+}
+
+/** A context menu item with a check box, such as "Server mute". */
+export function ContextCheckItem({
+  checked,
+  onCheckedChange,
+  disabled = false,
+  children,
+}: CheckItemProps) {
+  return (
+    <CM.CheckboxItem
+      checked={checked}
+      disabled={disabled}
+      onCheckedChange={onCheckedChange}
+      className={`${itemClass} ${toneClass.normal}`}
+    >
+      {children}
+      <span
+        aria-hidden
+        className={`flex size-4 items-center justify-center rounded-sm border ${checked ? 'border-accent bg-accent text-accent-fg' : 'border-fg-muted'}`}
+      >
+        <CM.ItemIndicator>
+          <Check className="size-3" />
+        </CM.ItemIndicator>
+      </span>
+    </CM.CheckboxItem>
+  );
+}
+
+interface SubProps {
+  label: ReactNode;
+  children: ReactNode;
+}
+
+/** A context menu item that opens a nested menu. */
+export function ContextSub({ label, children }: SubProps) {
+  return (
+    <CM.Sub>
+      <CM.SubTrigger className={`${itemClass} ${toneClass.normal} data-[state=open]:bg-hover`}>
+        {label}
+        <ChevronRight aria-hidden className="size-4" />
+      </CM.SubTrigger>
+      <CM.Portal>
+        <CM.SubContent sideOffset={4} className={contentClass}>
+          {children}
+        </CM.SubContent>
+      </CM.Portal>
+    </CM.Sub>
+  );
+}
+
+/** Content that is not an item, such as a slider, inside a context menu. */
+export function ContextPanel({ children }: { children: ReactNode }) {
+  return <div className="px-2 py-1.5">{children}</div>;
 }

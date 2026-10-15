@@ -42,6 +42,7 @@ type Deps struct {
 	Events       ports.EventPublisher
 	Settings     SettingsReader
 	Presence     access.Presences
+	Voice        access.VoiceStates
 	Verification access.Verification
 }
 
@@ -59,7 +60,7 @@ func New(d Deps) *Service {
 		tokens: emailtoken.Store{Repo: d.Tokens, Tokens: d.TokenGen, IDs: d.IDs, Clock: d.Clock},
 		access: access.Guilds{
 			Guilds: d.Guilds, Members: d.Members, Channels: d.Channels, Users: d.Users,
-			Presence: d.Presence, Verification: d.Verification,
+			Presence: d.Presence, Verification: d.Verification, Voice: d.Voice,
 		},
 		auditor: access.Auditor{Repo: d.Audit, IDs: d.IDs, Clock: d.Clock, Events: d.Events},
 	}

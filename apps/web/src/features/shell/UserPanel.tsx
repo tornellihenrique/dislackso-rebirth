@@ -9,6 +9,7 @@ import { toApiError } from '@/core/api/errors';
 import { errorText } from '@/core/i18n/error-text';
 import { meUpdated } from '@/features/auth/session-actions';
 import { STATUS_OPTIONS, statusKey, statusTone } from '@/features/settings/status';
+import { VoiceToggles } from '@/features/voice/VoiceToggles';
 import { pushNotice } from '@/stores/notices';
 import { useSession } from '@/stores/session';
 import { Avatar } from '@/ui/Avatar';
@@ -36,7 +37,7 @@ export function UserPanel() {
   const name = user?.displayName ?? '';
 
   return (
-    <div className="flex items-center gap-2 bg-rail/60 px-2 py-2" data-testid="user-panel">
+    <div className="flex items-center gap-1 bg-rail/60 px-2 py-2" data-testid="user-panel">
       <Menu
         trigger={
           <button
@@ -71,6 +72,7 @@ export function UserPanel() {
           </MenuItem>
         ))}
       </Menu>
+      <VoiceToggles />
       <Tooltip label={t('shell.userSettings')}>
         <Link
           to="/settings/account"

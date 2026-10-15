@@ -52,6 +52,7 @@ export class GatewayClient {
   /** Identified or resumed on the current socket. */
   private live = false;
   private idle = false;
+  private voiceSelf: { voiceSessionId: string; selfMute: boolean; selfDeaf: boolean } | undefined;
   private awaitingAck = false;
   private heartbeat: ReturnType<typeof setInterval> | undefined;
   private reconnect: ReturnType<typeof setTimeout> | undefined;
@@ -91,6 +92,18 @@ export class GatewayClient {
     this.idle = idle;
     // Before Identify the hub would refuse the frame; connected() sends it then.
     if (this.live) this.send({ kind: { case: 'updatePresence', value: { idle } } });
+  }
+
+  /**
+   * Reports this device's own mute and deafen for its voice session; an
+   * empty session stops reporting. Sent again after every reconnect, so a
+   * restarted hub learns it too.
+   */
+  setVoiceSelf(voiceSessionId: string, selfMute: boolean, selfDeaf: boolean): void {
+    this.voiceSelf = voiceSessionId === '' ? undefined : { voiceSessionId, selfMute, selfDeaf };
+    if (this.live && this.voiceSelf) {
+      this.send({ kind: { case: 'updateVoiceSelfState', value: this.voiceSelf } });
+    }
   }
 
   private open(): void {
@@ -173,6 +186,8 @@ export class GatewayClient {
     this.attempt = 0;
     this.o.onStatus('ready');
     if (this.idle) this.send({ kind: { case: 'updatePresence', value: { idle: true } } });
+    if (this.voiceSelf)
+      this.send({ kind: { case: 'updateVoiceSelfState', value: this.voiceSelf } });
   }
 
   private startHeartbeat(intervalMs: number): void {

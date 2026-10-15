@@ -7,6 +7,9 @@ SELECT * FROM guild_members WHERE guild_id = ? AND user_id = ?;
 -- name: UpdateMemberRole :execrows
 UPDATE guild_members SET role = ?, updated_at = ? WHERE guild_id = ? AND user_id = ?;
 
+-- name: UpdateMemberVoiceModeration :execrows
+UPDATE guild_members SET server_mute = ?, server_deaf = ?, updated_at = ? WHERE guild_id = ? AND user_id = ?;
+
 -- name: RemoveMember :execrows
 DELETE FROM guild_members WHERE guild_id = ? AND user_id = ?;
 

@@ -21,6 +21,7 @@ type Deps struct {
 	Channels     ports.ChannelRepo
 	Settings     SettingsReader
 	Presence     access.Presences
+	Voice        access.VoiceStates
 	Verification access.Verification
 }
 
@@ -32,7 +33,7 @@ type Service struct {
 func New(d Deps) *Service {
 	return &Service{d: d, access: access.Guilds{
 		Guilds: d.Guilds, Members: d.Members, Channels: d.Channels, Users: d.Users,
-		Presence: d.Presence, Verification: d.Verification,
+		Presence: d.Presence, Verification: d.Verification, Voice: d.Voice,
 	}}
 }
 

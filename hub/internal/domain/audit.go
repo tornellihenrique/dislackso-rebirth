@@ -17,6 +17,9 @@ const (
 	AuditMemberUnban       AuditAction = "member_unban"
 	AuditMemberRoleUpdate  AuditAction = "member_role_update"
 	AuditOwnershipTransfer AuditAction = "ownership_transfer"
+	AuditMemberVoiceUpdate AuditAction = "member_voice_update"
+	AuditMemberVoiceMove   AuditAction = "member_voice_move"
+	AuditMemberVoiceDrop   AuditAction = "member_voice_disconnect"
 )
 
 type AuditTarget string

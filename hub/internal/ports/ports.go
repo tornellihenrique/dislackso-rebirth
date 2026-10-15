@@ -109,3 +109,72 @@ type ImageProcessor interface {
 	// input fails with domain.ErrInvalid.
 	Square(r io.Reader, size int, crop image.Rectangle) (Image, error)
 }
+
+// MediaJoin describes a participant token for a voice room.
+type MediaJoin struct {
+	Room     string
+	Identity string
+	// Metadata travels with the participant and comes back in media events.
+	Metadata    string
+	Permissions domain.VoicePermissions
+	TTL         time.Duration
+}
+
+// MediaParticipant is someone in a media server room.
+type MediaParticipant struct {
+	// SID identifies one connection; track events carry only it and Identity.
+	SID      string
+	Identity string
+	Metadata string
+	// Active is false while the participant is still connecting.
+	Active  bool
+	Sources []domain.MediaSource
+}
+
+type MediaEventKind string
+
+const (
+	MediaParticipantJoined MediaEventKind = "participant_joined"
+	MediaParticipantLeft   MediaEventKind = "participant_left"
+	MediaTrackPublished    MediaEventKind = "track_published"
+	MediaTrackUnpublished  MediaEventKind = "track_unpublished"
+)
+
+// MediaEvent is a media server notification the hub reconciles voice state with.
+type MediaEvent struct {
+	Kind        MediaEventKind
+	Room        string
+	Participant MediaParticipant
+	// Source is the track's source for track events.
+	Source domain.MediaSource
+}
+
+// MediaProvider is the media server (an SFU) that carries voice and video.
+// The hub mints its tokens and enforces moderation through it.
+type MediaProvider interface {
+	// URL is where clients connect; it may be relative to the instance.
+	URL() string
+	// Available reports whether the media server is up.
+	Available() bool
+	JoinToken(j MediaJoin) (string, error)
+	RemoveParticipant(ctx context.Context, room, identity string) error
+	// SetPermissions changes what a connected participant may publish and
+	// whether it may subscribe. The media server enforces it, unpublishing
+	// tracks of sources no longer allowed.
+	SetPermissions(ctx context.Context, room, identity string, p domain.VoicePermissions) error
+	ListRooms(ctx context.Context) ([]string, error)
+	ListParticipants(ctx context.Context, room string) ([]MediaParticipant, error)
+}
+
+// IceServer is a STUN or TURN server for clients behind restrictive networks.
+type IceServer struct {
+	URLs       []string
+	Username   string
+	Credential string
+}
+
+// IceServerProvider issues ICE servers, with credentials valid for ttl.
+type IceServerProvider interface {
+	Name() string
+	Issue(ctx context.Context, userID domain.ID, ttl time.Duration) ([]IceServer, error)
+}
