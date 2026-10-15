@@ -13,6 +13,9 @@ function setup() {
   const t = {
     entities: vi.fn(),
     presence: vi.fn(),
+    voiceStates: vi.fn(),
+    voiceUpdated: vi.fn(),
+    voiceForced: vi.fn(),
     me: vi.fn(),
     ready: vi.fn(),
     listChanged: vi.fn(),
@@ -73,5 +76,34 @@ describe('createGatewayDispatcher', () => {
       type: 'upserted',
       presences: [expect.objectContaining({ userId: '7' })],
     });
+  });
+
+  it('feeds voice states before telling the voice controller', () => {
+    const { t, event } = setup();
+    const order: string[] = [];
+    t.voiceStates.mockImplementation(() => order.push('store'));
+    t.voiceUpdated.mockImplementation(() => order.push('controller'));
+    event({
+      kind: {
+        case: 'dispatch',
+        value: {
+          seq: 1n,
+          event: {
+            kind: {
+              case: 'voiceStateUpdate',
+              value: { userId: '7', guildId: '1', channelId: '9' },
+            },
+          },
+        },
+      },
+    });
+    event({
+      kind: {
+        case: 'dispatch',
+        value: { seq: 2n, event: { kind: { case: 'voiceForced', value: { guildId: '1' } } } },
+      },
+    });
+    expect(order).toEqual(['store', 'controller']);
+    expect(t.voiceForced).toHaveBeenCalledWith(expect.objectContaining({ guildId: '1' }));
   });
 });

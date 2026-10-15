@@ -16,6 +16,12 @@ type ActionKey =
   | 'member_role_admin'
   | 'member_role_member'
   | 'ownership_transfer'
+  | 'member_server_mute'
+  | 'member_server_unmute'
+  | 'member_server_deafen'
+  | 'member_server_undeafen'
+  | 'member_voice_move'
+  | 'member_voice_disconnect'
   | 'unknown';
 
 function actionKey(e: AuditEntry): ActionKey {
@@ -44,6 +50,15 @@ function actionKey(e: AuditEntry): ActionKey {
       return e.data.role === 'admin' ? 'member_role_admin' : 'member_role_member';
     case AuditAction.OWNERSHIP_TRANSFER:
       return 'ownership_transfer';
+    case AuditAction.MEMBER_VOICE_UPDATE:
+      if (e.data.server_mute !== undefined) {
+        return e.data.server_mute === 'true' ? 'member_server_mute' : 'member_server_unmute';
+      }
+      return e.data.server_deaf === 'true' ? 'member_server_deafen' : 'member_server_undeafen';
+    case AuditAction.MEMBER_VOICE_MOVE:
+      return 'member_voice_move';
+    case AuditAction.MEMBER_VOICE_DISCONNECT:
+      return 'member_voice_disconnect';
     case AuditAction.UNSPECIFIED:
     default:
       return 'unknown';

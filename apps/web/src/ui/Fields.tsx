@@ -98,3 +98,33 @@ export function CheckboxField({ label, ...input }: CheckboxFieldProps) {
     </div>
   );
 }
+
+interface RangeFieldProps extends Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  'id' | 'type' | 'value'
+> {
+  label: string;
+  value: number;
+  /** The value as shown next to the label, such as "120 %". */
+  display: string;
+  hint?: string | undefined;
+}
+
+export function RangeField({ label, value, display, hint, ...input }: RangeFieldProps) {
+  const id = useId();
+  return (
+    <FieldFrame id={id} label={label} hint={hint}>
+      <div className="flex items-center gap-3">
+        <input
+          id={id}
+          type="range"
+          value={value}
+          aria-describedby={describedBy(id, hint, undefined)}
+          className="flex-1 accent-accent"
+          {...input}
+        />
+        <span className="w-14 text-right text-sm text-fg-muted tabular-nums">{display}</span>
+      </div>
+    </FieldFrame>
+  );
+}

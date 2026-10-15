@@ -25,6 +25,7 @@ import { AppearancePage } from '@/features/settings/AppearancePage';
 import { ProfilePage } from '@/features/settings/ProfilePage';
 import { SessionsPage } from '@/features/settings/SessionsPage';
 import { SettingsLayout } from '@/features/settings/SettingsLayout';
+import { VoicePage } from '@/features/settings/VoicePage';
 import { SetupPage } from '@/features/setup/SetupPage';
 import { SetupRequiredPage } from '@/features/setup/SetupRequiredPage';
 import { AppShell } from '@/features/shell/AppShell';
@@ -238,6 +239,12 @@ const settingsAppearanceRoute = createRoute({
   component: AppearancePage,
 });
 
+const settingsVoiceRoute = createRoute({
+  getParentRoute: () => settingsRoute,
+  path: 'voice',
+  component: VoicePage,
+});
+
 const settingsSessionsRoute = createRoute({
   getParentRoute: () => settingsRoute,
   path: 'sessions',
@@ -270,6 +277,7 @@ const routeTree = rootRoute.addChildren([
       settingsRoute.addChildren([
         settingsAccountRoute,
         settingsProfileRoute,
+        settingsVoiceRoute,
         settingsAppearanceRoute,
         settingsSessionsRoute,
         settingsInstanceRoute,

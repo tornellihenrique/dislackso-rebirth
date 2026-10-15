@@ -1,0 +1,211 @@
+import { create } from '@bufbuild/protobuf';
+import {
+  VoiceForcedAction,
+  VoiceForcedSchema,
+} from '@dislackso/contracts/gen/dislackso/gateway/v1/gateway_pb';
+import {
+  MeSchema,
+  StatusPreference,
+  VoiceStateSchema,
+} from '@dislackso/contracts/gen/dislackso/v1/common_pb';
+import type { TFunction } from 'i18next';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { HubClients } from '@/core/api/clients';
+import type { VoiceSessionListener } from '@/core/media/voice-session';
+import { callStore, idleCall } from '@/stores/call';
+import { noticesStore } from '@/stores/notices';
+import { dispatchSession, initialSessionState, sessionStore } from '@/stores/session';
+import { defaultVoiceSettings, voiceSettingsStore } from '@/stores/voice-settings';
+
+import { VoiceController } from './voice';
+
+/** The media session, recording what the controller asks of it. */
+class FakeSession {
+  static last: FakeSession | undefined;
+  readonly calls: string[] = [];
+  constructor(readonly listener: VoiceSessionListener) {
+    FakeSession.last = this;
+  }
+  connect(
+    target: { url: string; token: string },
+    _prefs: unknown,
+    local: { muted: boolean; deafened: boolean; micAllowed: boolean },
+  ) {
+    this.calls.push(
+      `connect ${target.url} ${target.token} muted=${String(local.muted)} deaf=${String(local.deafened)}`,
+    );
+    return Promise.resolve();
+  }
+  disconnect() {
+    this.calls.push('disconnect');
+    return Promise.resolve();
+  }
+  setMuted(m: boolean) {
+    this.calls.push(`muted=${String(m)}`);
+  }
+  setDeafened(d: boolean) {
+    this.calls.push(`deaf=${String(d)}`);
+  }
+  setMicAllowed(a: boolean) {
+    this.calls.push(`micAllowed=${String(a)}`);
+  }
+  setPushToTalk() {
+    this.calls.push('setPushToTalk');
+  }
+  setOutputVolume() {
+    this.calls.push('setOutputVolume');
+  }
+  setUserVolume() {
+    this.calls.push('setUserVolume');
+  }
+  setUserMuted() {
+    this.calls.push('setUserMuted');
+  }
+  updatePrefs() {
+    return Promise.resolve();
+  }
+  startAudio() {
+    return Promise.resolve();
+  }
+}
+
+vi.mock('@/core/media/voice-session', () => ({ VoiceSession: FakeSession }));
+
+const state = (session: string, channelId: string, extra: Record<string, unknown> = {}) =>
+  create(VoiceStateSchema, {
+    userId: '1',
+    guildId: 'g',
+    channelId,
+    voiceSessionId: session,
+    ...extra,
+  });
+
+function setup() {
+  let n = 0;
+  const join = vi.fn((req: { channelId: string }) => {
+    n++;
+    return Promise.resolve({
+      url: '/lk',
+      token: `token-${String(n)}`,
+      iceServers: [],
+      state: state(`s${String(n)}`, req.channelId),
+      limits: { micBitrateMaxKbps: 64 },
+    });
+  });
+  const leave = vi.fn(() => Promise.resolve({}));
+  const hub = { voice: { join, leave } } as unknown as HubClients;
+  const played: string[] = [];
+  const gateway = { setVoiceSelf: vi.fn() };
+  const t = ((key: string) => key) as unknown as TFunction;
+  const host = document.createElement('div');
+  const voice = new VoiceController({ hub, sounds: { play: (k) => played.push(k) }, t, host });
+  voice.attachGateway(gateway);
+  const notices = () =>
+    noticesStore.getState().items.map((i) => (i.kind === 'message' ? i.text : i.kind));
+  return { voice, join, leave, gateway, played, notices, session: () => FakeSession.last };
+}
+
+beforeEach(() => {
+  dispatchSession({
+    type: 'signedIn',
+    me: create(MeSchema, { user: { id: '1' }, status: StatusPreference.ONLINE }),
+  });
+  voiceSettingsStore.setState(defaultVoiceSettings, true);
+});
+
+afterEach(() => {
+  callStore.setState(idleCall, true);
+  noticesStore.setState({ items: [], nextId: 1 }, true);
+  sessionStore.setState(initialSessionState, true);
+  FakeSession.last = undefined;
+});
+
+describe('VoiceController', () => {
+  it('joins through the hub and connects with the token', async () => {
+    const { voice, join, gateway, played, session } = setup();
+    await voice.join('g', 'c1');
+    expect(join).toHaveBeenCalledWith({ channelId: 'c1', selfMute: false, selfDeaf: false });
+    expect(session()?.calls).toContain('connect /lk token-1 muted=false deaf=false');
+    expect(callStore.getState()).toMatchObject({
+      status: 'connected',
+      channelId: 'c1',
+      sessionId: 's1',
+    });
+    expect(gateway.setVoiceSelf).toHaveBeenCalledWith('s1', false, false);
+    expect(played).toEqual(['join']);
+  });
+
+  it('deafens in a call and tells the hub', async () => {
+    const { voice, gateway, played, session } = setup();
+    await voice.join('g', 'c1');
+    voice.toggleDeafen();
+    expect(session()?.calls.slice(-2)).toEqual(['muted=true', 'deaf=true']);
+    expect(gateway.setVoiceSelf).toHaveBeenLastCalledWith('s1', true, true);
+    expect(played.at(-1)).toBe('deafen');
+  });
+
+  it('ends the call when another device takes over or the hub ends it', async () => {
+    const { voice, notices, session } = setup();
+    await voice.join('g', 'c1');
+    voice.voiceUpdated(state('s1', 'c1', { serverMute: true }));
+    expect(session()?.calls.at(-1)).toBe('micAllowed=false');
+
+    voice.voiceUpdated(state('elsewhere', 'c1'));
+    expect(callStore.getState().status).toBe('idle');
+    expect(notices()).toEqual(['voice.notices.anotherDevice']);
+
+    await voice.join('g', 'c1');
+    voice.voiceUpdated(state('s2', ''));
+    expect(callStore.getState().status).toBe('idle');
+    expect(session()?.calls.at(-1)).toBe('disconnect');
+  });
+
+  it('follows a move to the new channel', async () => {
+    const { voice, join, notices } = setup();
+    await voice.join('g', 'c1');
+    voice.voiceForced(
+      create(VoiceForcedSchema, {
+        action: VoiceForcedAction.MOVED,
+        guildId: 'g',
+        channelId: 'c2',
+        voiceSessionId: 's1',
+      }),
+    );
+    await vi.waitFor(() => {
+      expect(callStore.getState()).toMatchObject({ status: 'connected', channelId: 'c2' });
+    });
+    expect(join).toHaveBeenLastCalledWith({ channelId: 'c2', selfMute: false, selfDeaf: false });
+    expect(notices()).toEqual(['voice.notices.movedBy']);
+  });
+
+  it('ignores the old room ending while switching, and leaves the hub when media fails', async () => {
+    const { voice, join, leave, notices, session } = setup();
+    await voice.join('g', 'c1');
+    let release = (): void => undefined;
+    join.mockImplementationOnce((req: { channelId: string }) => {
+      // The hub removes the old connection before answering.
+      session()?.listener.onEnded('removed');
+      return new Promise((resolve) => {
+        release = () => {
+          resolve({
+            url: '/lk',
+            token: 'token-x',
+            iceServers: [],
+            state: state('s9', req.channelId),
+            limits: { micBitrateMaxKbps: 64 },
+          });
+        };
+      });
+    });
+    const switching = voice.join('g', 'c2');
+    release();
+    await switching;
+    expect(callStore.getState()).toMatchObject({ status: 'connected', channelId: 'c2' });
+
+    session()?.listener.onEnded('failed');
+    expect(callStore.getState().status).toBe('idle');
+    expect(notices()).toEqual(['voice.notices.connectionLost']);
+    expect(leave).toHaveBeenCalledWith({ voiceSessionId: 's9' });
+  });
+});

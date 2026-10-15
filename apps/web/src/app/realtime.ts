@@ -8,12 +8,15 @@ import { dispatchEntities, entitiesStore } from '@/stores/entities';
 import { pushNotice } from '@/stores/notices';
 import { dispatchPresence } from '@/stores/presence';
 import { dispatchRealtime } from '@/stores/realtime';
+import { dispatchVoiceStates } from '@/stores/voice-states';
 import {
   dispatchSession,
   needsVerification,
   sessionStore,
   type SessionState,
 } from '@/stores/session';
+
+import type { VoiceController } from './voice';
 
 /** No input for this long reports the user as idle (ARCHITECTURE §8.5). */
 const IDLE_AFTER_MS = 10 * 60 * 1000;
@@ -30,10 +33,17 @@ const lostReasons: Partial<Record<GuildDeleteReason, 'kicked' | 'banned' | 'dele
  * Runs the gateway while a verified user is signed in, and feeds its frames
  * to the stores. Returns a function that tears everything down.
  */
-export function startRealtime(queryClient: QueryClient): () => void {
+export function startRealtime(queryClient: QueryClient, voice: VoiceController): () => void {
   const dispatch = createGatewayDispatcher({
     entities: dispatchEntities,
     presence: dispatchPresence,
+    voiceStates: dispatchVoiceStates,
+    voiceUpdated: (state) => {
+      voice.voiceUpdated(state);
+    },
+    voiceForced: (forced) => {
+      voice.voiceForced(forced);
+    },
     me: (me) => {
       dispatchSession({ type: 'meUpdated', me });
     },
@@ -72,10 +82,14 @@ export function startRealtime(queryClient: QueryClient): () => void {
     if (shouldRun === active) return;
     active = shouldRun;
     if (shouldRun) {
+      voice.attachGateway(client);
       client.start();
       return;
     }
+    void voice.leave();
+    voice.attachGateway(undefined);
     client.stop();
+    dispatchVoiceStates({ type: 'reset', guilds: [] });
     dispatchEntities({ type: 'cleared' });
     dispatchPresence({ type: 'reset', presences: [] });
     dispatchRealtime({ type: 'cleared' });

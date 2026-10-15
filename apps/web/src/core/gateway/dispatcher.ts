@@ -3,11 +3,13 @@ import type {
   GuildDeleteReason,
   InstanceInfo,
   ServerFrame,
+  VoiceForced,
 } from '@dislackso/contracts/gen/dislackso/gateway/v1/gateway_pb';
-import type { Me } from '@dislackso/contracts/gen/dislackso/v1/common_pb';
+import type { Me, VoiceState } from '@dislackso/contracts/gen/dislackso/v1/common_pb';
 
 import type { EntitiesEvent } from '@/stores/entities';
 import type { PresenceEvent } from '@/stores/presence';
+import type { VoiceStatesEvent } from '@/stores/voice-states';
 
 /** Admin lists kept in query caches rather than stores. */
 export type ListKind = 'invites' | 'bans' | 'auditLog';
@@ -16,6 +18,10 @@ export type ListKind = 'invites' | 'bans' | 'auditLog';
 export interface DispatchTargets {
   entities(event: EntitiesEvent): void;
   presence(event: PresenceEvent): void;
+  voiceStates(event: VoiceStatesEvent): void;
+  /** A voice state changed; called after the store has it. */
+  voiceUpdated(state: VoiceState): void;
+  voiceForced(forced: VoiceForced): void;
   me(me: Me): void;
   ready(instance: InstanceInfo | undefined): void;
   /** A list for a guild changed; cached copies should be refreshed. */
@@ -35,6 +41,7 @@ export function createGatewayDispatcher(t: DispatchTargets): (frame: ServerFrame
       const ready = kind.value;
       t.entities({ type: 'reset', guilds: ready.guilds });
       t.presence({ type: 'reset', presences: ready.guilds.flatMap((g) => g.presences) });
+      t.voiceStates({ type: 'reset', guilds: ready.guilds });
       if (ready.me) t.me(ready.me);
       t.ready(ready.instance);
       return;
@@ -49,6 +56,7 @@ function applyEvent(t: DispatchTargets, event: Event): void {
     case 'guildCreate':
       t.entities({ type: 'guildJoined', state: kind.value });
       t.presence({ type: 'upserted', presences: kind.value.presences });
+      t.voiceStates({ type: 'guildLoaded', state: kind.value });
       break;
     case 'guildUpdate':
       t.entities({ type: 'guildUpdated', guild: kind.value });
@@ -57,6 +65,7 @@ function applyEvent(t: DispatchTargets, event: Event): void {
       // Before removal, so the notice can still name the guild.
       t.guildLost(kind.value.guildId, kind.value.reason);
       t.entities({ type: 'guildRemoved', guildId: kind.value.guildId });
+      t.voiceStates({ type: 'guildRemoved', guildId: kind.value.guildId });
       break;
     case 'memberAdd':
       if (kind.value.member) {
@@ -100,6 +109,13 @@ function applyEvent(t: DispatchTargets, event: Event): void {
       break;
     case 'auditEntry':
       t.listChanged('auditLog', kind.value.guildId);
+      break;
+    case 'voiceStateUpdate':
+      t.voiceStates({ type: 'updated', state: kind.value });
+      t.voiceUpdated(kind.value);
+      break;
+    case 'voiceForced':
+      t.voiceForced(kind.value);
       break;
     case 'meUpdate':
       t.me(kind.value);

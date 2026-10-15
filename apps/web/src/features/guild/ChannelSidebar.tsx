@@ -37,6 +37,7 @@ import { errorText } from '@/core/i18n/error-text';
 import { ChannelSettingsDialog } from '@/features/channel/ChannelSettingsDialog';
 import { useApiErrors } from '@/features/common/useApiErrors';
 import { InviteDialog } from '@/features/invites/InviteDialog';
+import { VoiceOccupants } from '@/features/voice/VoiceOccupants';
 import { pushNotice } from '@/stores/notices';
 import { dispatchUi, useUi } from '@/stores/ui';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
@@ -348,8 +349,10 @@ function ChannelRow({ channel, manage, onInvite, onEdit }: ChannelRowProps) {
     id: channel.id,
     disabled: !manage,
   });
+  const { voice } = useServices();
   const active = channelId === channel.id;
-  const Icon = channel.type === ChannelType.VOICE ? Volume2 : Hash;
+  const isVoice = channel.type === ChannelType.VOICE;
+  const Icon = isVoice ? Volume2 : Hash;
   const actions: ReactNode = (
     <span
       className={`flex items-center gap-1 ${active ? '' : 'invisible group-focus-within:visible group-hover:visible'}`}
@@ -385,25 +388,32 @@ function ChannelRow({ channel, manage, onInvite, onEdit }: ChannelRowProps) {
     </>
   );
   return (
-    <ContextMenuArea menu={menu}>
-      <div
-        ref={setNodeRef}
-        style={{ transform: CSS.Translate.toString(transform), transition }}
-        {...(manage ? { ...attributes, ...listeners } : {})}
-        className={`group flex h-row items-center gap-1.5 rounded-sm px-2 ${active ? 'bg-hover text-fg' : 'text-fg-muted hover:bg-hover/60 hover:text-fg'} ${isDragging ? 'opacity-50' : ''}`}
-      >
-        <Link
-          to="/channels/$guildId/$channelId"
-          params={{ guildId: channel.guildId, channelId: channel.id }}
-          aria-current={active ? 'page' : undefined}
-          className="flex min-w-0 flex-1 items-center gap-1.5"
+    <>
+      <ContextMenuArea menu={menu}>
+        <div
+          ref={setNodeRef}
+          style={{ transform: CSS.Translate.toString(transform), transition }}
+          {...(manage ? { ...attributes, ...listeners } : {})}
+          className={`group flex h-row items-center gap-1.5 rounded-sm px-2 ${active ? 'bg-hover text-fg' : 'text-fg-muted hover:bg-hover/60 hover:text-fg'} ${isDragging ? 'opacity-50' : ''}`}
         >
-          <Icon aria-hidden className="size-5 shrink-0" />
-          <span className={`truncate ${active ? 'font-medium' : ''}`}>{channel.name}</span>
-        </Link>
-        {actions}
-      </div>
-    </ContextMenuArea>
+          <Link
+            to="/channels/$guildId/$channelId"
+            params={{ guildId: channel.guildId, channelId: channel.id }}
+            aria-current={active ? 'page' : undefined}
+            onClick={() => {
+              // Clicking a voice channel joins it; it does nothing if already there.
+              if (isVoice) void voice.join(channel.guildId, channel.id);
+            }}
+            className="flex min-w-0 flex-1 items-center gap-1.5"
+          >
+            <Icon aria-hidden className="size-5 shrink-0" />
+            <span className={`truncate ${active ? 'font-medium' : ''}`}>{channel.name}</span>
+          </Link>
+          {actions}
+        </div>
+      </ContextMenuArea>
+      {isVoice && <VoiceOccupants guildId={channel.guildId} channelId={channel.id} />}
+    </>
   );
 }
 

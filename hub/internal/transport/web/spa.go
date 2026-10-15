@@ -19,9 +19,11 @@ const indexFile = "index.html"
 // also covers same-origin ws:/wss: in current browsers. Styles allow a
 // per-response nonce: UI libraries inject <style> elements (scroll locking
 // in modal dialogs and menus) and tag them with the nonce the page hands them.
+// 'wasm-unsafe-eval' lets the noise suppressor compile its WebAssembly; it
+// does not allow eval of JavaScript.
 func contentSecurityPolicy(nonce string) string {
 	return "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; " +
-		"form-action 'self'; script-src 'self'; style-src 'self' 'nonce-" + nonce + "'; img-src 'self' data: blob:; " +
+		"form-action 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'nonce-" + nonce + "'; img-src 'self' data: blob:; " +
 		"media-src 'self' blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self' blob:"
 }
 

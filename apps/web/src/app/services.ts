@@ -7,11 +7,14 @@ import { createHealthApi, type HealthApi } from '@/core/api/health';
 import { createHubTransport } from '@/core/api/transport';
 import { createUploadApi, type UploadApi } from '@/core/api/uploads';
 
+import type { VoiceActions } from './voice';
+
 /** Everything features need from outside the browser tab, injected through ServicesContext. */
 export interface Services {
   readonly health: HealthApi;
   readonly hub: HubClients;
   readonly uploads: UploadApi;
+  readonly voice: VoiceActions;
 }
 
 /**
@@ -19,7 +22,10 @@ export interface Services {
  * revoked elsewhere). Auth endpoints are excluded: there Unauthenticated means
  * wrong credentials.
  */
-export function createServices(onSessionLost: () => void): Services {
+export function createServices(
+  onSessionLost: () => void,
+  voice: (hub: HubClients) => VoiceActions,
+): Services {
   const sessionGuard: Interceptor = (next) => async (req) => {
     try {
       return await next(req);
@@ -29,10 +35,12 @@ export function createServices(onSessionLost: () => void): Services {
     }
   };
   const transport = createHubTransport([sessionGuard]);
+  const hub = createHubClients(transport);
   return {
     health: createHealthApi(transport, () => performance.now()),
-    hub: createHubClients(transport),
+    hub,
     uploads: createUploadApi(),
+    voice: voice(hub),
   };
 }
 
