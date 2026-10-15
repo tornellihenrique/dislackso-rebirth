@@ -1,0 +1,21 @@
+{
+  "name": "@dislackso/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./gen/*": "./src/gen/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "catalog:"
+  },
+  "devDependencies": {
+    "@bufbuild/protoc-gen-es": "catalog:",
+    "@dislackso/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

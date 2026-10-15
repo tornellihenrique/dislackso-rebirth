@@ -1,0 +1,19 @@
+version: v2
+clean: true
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/tornellihenrique/dislackso-rebirth/hub/gen
+plugins:
+  # Go generators run through `go tool` so their versions always match the
+  # runtime libraries pinned in hub/go.mod.
+  - local: ["go", "-C", "../hub", "tool", "protoc-gen-go"]
+    out: ../hub/gen
+    opt: paths=source_relative
+  - local: ["go", "-C", "../hub", "tool", "protoc-gen-connect-go"]
+    out: ../hub/gen
+    opt: paths=source_relative
+  - local: ["node", "../packages/contracts/node_modules/@bufbuild/protoc-gen-es/bin/protoc-gen-es"]
+    out: ../packages/contracts/src/gen
+    opt: target=ts

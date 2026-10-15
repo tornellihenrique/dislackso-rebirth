@@ -1,0 +1,152 @@
+version: '3'
+
+# Commands run through Task's built-in POSIX shell on every OS, so `cd`, `&&`
+# and quoting behave the same on Windows, macOS and Linux.
+
+vars:
+  ROOT: '{{toSlash .ROOT_DIR}}'
+  TOOLS_BIN: '{{.ROOT}}/.tools/bin'
+  BUF: '{{.TOOLS_BIN}}/buf{{exeExt}}'
+  GOLANGCI_LINT: '{{.TOOLS_BIN}}/golangci-lint{{exeExt}}'
+  HUB_BIN: '{{.ROOT}}/bin/hub{{exeExt}}'
+  DEV_DIR: '{{.ROOT}}/.dev'
+  GO_MODULES: hub tools
+  GEN_DIRS: hub/gen packages/contracts/src/gen
+
+tasks:
+  default:
+    cmds:
+      - task --list
+    silent: true
+
+  setup:
+    desc: Install pinned tools and JS dependencies
+    cmds:
+      - task: tools
+      - pnpm install --frozen-lockfile
+
+  tools:
+    desc: 'Install pinned dev tools into .tools/bin (all, or the ones given: task tools -- buf)'
+    cmds:
+      - go -C tools run ./cmd/fetchtools -manifest "{{.ROOT}}/tools/manifest.json" -bin "{{.TOOLS_BIN}}" {{.CLI_ARGS}}
+
+  gen:
+    desc: Generate protobuf code (Go + TS)
+    dir: proto
+    cmds:
+      - '"{{.BUF}}" generate'
+
+  gen:check:
+    desc: Fail if generated code differs from what the generators produce now
+    cmds:
+      - >-
+        go -C tools run ./cmd/gencheck -root "{{.ROOT}}" -dir proto
+        {{range $d := splitList " " .GEN_DIRS}}-path {{$d}} {{end}}
+        -- "{{.BUF}}" generate --output "{out}"
+
+  dev:
+    desc: Run the hub and the Vite dev server (open http://localhost:5173)
+    deps: [dev:hub, dev:web]
+
+  dev:hub:
+    desc: Run the hub against a throwaway data dir in .dev/
+    cmds:
+      - go -C hub build -o "{{.DEV_DIR}}/hub{{exeExt}}" ./cmd/hub
+      - '"{{.DEV_DIR}}/hub{{exeExt}}" run --data-dir "{{.DEV_DIR}}/data" --log-level debug'
+
+  dev:web:
+    desc: Run the Vite dev server, proxying API routes to the hub
+    cmds:
+      - pnpm --filter @dislackso/web dev
+
+  lint:
+    desc: Lint Go, protobuf and TypeScript, and check formatting
+    cmds:
+      - task: lint:go
+      - task: lint:proto
+      - task: lint:web
+
+  lint:go:
+    cmds:
+      - for: { var: GO_MODULES, split: ' ' }
+        cmd: cd {{.ITEM}} && "{{.GOLANGCI_LINT}}" run ./...
+
+  lint:proto:
+    dir: proto
+    cmds:
+      - '"{{.BUF}}" lint'
+      - '"{{.BUF}}" format --diff --exit-code'
+
+  lint:web:
+    cmds:
+      - pnpm lint
+      - pnpm format:check
+
+  fmt:
+    desc: Format Go, protobuf and TypeScript sources
+    cmds:
+      - for: { var: GO_MODULES, split: ' ' }
+        cmd: cd {{.ITEM}} && "{{.GOLANGCI_LINT}}" fmt ./...
+      - cd proto && "{{.BUF}}" format -w
+      - pnpm format
+
+  typecheck:
+    desc: Typecheck every TypeScript package
+    cmds:
+      - pnpm typecheck
+
+  test:
+    desc: Run Go and TypeScript unit tests
+    cmds:
+      - task: test:go
+      - task: test:web
+
+  test:go:
+    cmds:
+      - for: { var: GO_MODULES, split: ' ' }
+        cmd: cd {{.ITEM}} && go test ./...
+
+  test:web:
+    cmds:
+      - pnpm test
+
+  test:int:
+    desc: Go integration tests (build tag "integration", real livekit-server)
+    dir: hub
+    cmds:
+      - go test -tags integration ./...
+
+  check:
+    desc: Lint, typecheck, unit tests and generated-code freshness
+    cmds:
+      - task: lint
+      - task: typecheck
+      - task: test
+      - task: gen:check
+
+  build:
+    desc: Build the web client and embed it into a single hub binary at bin/
+    cmds:
+      - task: build:web
+      - task: build:hub
+
+  build:web:
+    cmds:
+      - pnpm --filter @dislackso/web build
+
+  build:hub:
+    vars:
+      VERSION:
+        sh: git describe --tags --always --dirty --match "v*" 2>/dev/null || echo dev
+    cmds:
+      - >-
+        go -C hub build -trimpath
+        -ldflags "-s -w -X github.com/tornellihenrique/dislackso-rebirth/hub/internal/buildinfo.version={{.VERSION}}"
+        -o "{{.HUB_BIN}}" ./cmd/hub
+
+  e2e:
+    desc: Build the hub and run the Playwright suite against it
+    deps: [build]
+    cmds:
+      - pnpm --filter @dislackso/e2e exec playwright install chromium
+      - pnpm --filter @dislackso/e2e e2e

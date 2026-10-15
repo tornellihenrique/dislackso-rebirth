@@ -1,0 +1,37 @@
+name: Set up toolchains
+description: Go and Task, plus Node, pnpm and the workspace dependencies unless node is 'false'.
+
+inputs:
+  node:
+    description: Also set up Node and pnpm and install JS dependencies.
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      with:
+        go-version-file: hub/go.mod
+        cache-dependency-path: |
+          hub/go.sum
+          tools/go.sum
+
+    - uses: go-task/setup-task@a00fbb05ce67b35648be3c78cbc9fd85354c757e # v2.2.0
+      with:
+        version: 3.54.0
+        repo-token: ${{ github.token }}
+
+    - if: inputs.node == 'true'
+      uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      with:
+        cache: true
+
+    - if: inputs.node == 'true'
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version-file: .nvmrc
+        package-manager-cache: false
+
+    - if: inputs.node == 'true'
+      shell: bash
+      run: pnpm install --frozen-lockfile

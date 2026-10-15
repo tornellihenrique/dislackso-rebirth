@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package dislackso.v1;
+
+// HealthService reports whether the hub is up and which build is running.
+service HealthService {
+  rpc Check(CheckRequest) returns (CheckResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}
+
+enum ServingStatus {
+  SERVING_STATUS_UNSPECIFIED = 0;
+  SERVING_STATUS_SERVING = 1;
+  // At least one readiness probe (database, media server, exposure) is failing.
+  SERVING_STATUS_DEGRADED = 2;
+}
+
+message CheckRequest {}
+
+message CheckResponse {
+  ServingStatus status = 1;
+  string version = 2;
+  // Unix ms.
+  int64 started_at = 3;
+  // Unix ms.
+  int64 server_time = 4;
+}
