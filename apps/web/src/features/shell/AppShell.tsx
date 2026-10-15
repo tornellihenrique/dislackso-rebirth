@@ -3,10 +3,14 @@ import { useTranslation } from 'react-i18next';
 
 import { PRODUCT_NAME } from '@/core/product';
 import { HubStatusBadge } from '@/features/health/HubStatusBadge';
+import { useSession } from '@/stores/session';
 import { ProductMark } from '@/ui/ProductMark';
+
+import { UserPanel } from './UserPanel';
 
 export function AppShell() {
   const { t } = useTranslation();
+  const instanceName = useSession((s) => s.instance?.name);
   return (
     <div className="flex h-full overflow-hidden">
       <nav
@@ -26,7 +30,9 @@ export function AppShell() {
 
       <aside className="flex w-60 shrink-0 flex-col bg-sidebar">
         <header className="flex h-12 items-center border-b border-rail px-4 font-semibold">
-          {PRODUCT_NAME}
+          <span className="truncate">
+            {instanceName === undefined || instanceName === '' ? PRODUCT_NAME : instanceName}
+          </span>
         </header>
         <div className="flex-1 overflow-y-auto p-4">
           <h2 className="text-xs font-semibold tracking-wide text-fg-muted uppercase">
@@ -34,8 +40,11 @@ export function AppShell() {
           </h2>
           <p className="mt-2 text-sm text-fg-muted">{t('shell.serversEmpty')}</p>
         </div>
-        <footer className="flex h-13 items-center bg-rail/40 px-4">
-          <HubStatusBadge />
+        <footer className="flex flex-col">
+          <div className="flex h-8 items-center px-4">
+            <HubStatusBadge />
+          </div>
+          <UserPanel />
         </footer>
       </aside>
 
