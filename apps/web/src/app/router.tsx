@@ -1,6 +1,18 @@
 import { createRootRoute, createRoute, createRouter, redirect } from '@tanstack/react-router';
 
 import { InstancePage } from '@/features/admin/InstancePage';
+import { ChannelPage } from '@/features/channel/ChannelPage';
+import { GuildIndexPage } from '@/features/guild/GuildIndexPage';
+import { GuildLayout } from '@/features/guild/GuildLayout';
+import { AuditLogPage } from '@/features/guild-settings/AuditLogPage';
+import { BansPage } from '@/features/guild-settings/BansPage';
+import { ChannelsPage } from '@/features/guild-settings/ChannelsPage';
+import { DangerPage } from '@/features/guild-settings/DangerPage';
+import { GuildSettingsLayout } from '@/features/guild-settings/GuildSettingsLayout';
+import { InvitesPage } from '@/features/guild-settings/InvitesPage';
+import { MembersPage } from '@/features/guild-settings/MembersPage';
+import { OverviewPage } from '@/features/guild-settings/OverviewPage';
+import { InviteLandingPage } from '@/features/invites/InviteLandingPage';
 import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { RegisterPage } from '@/features/auth/RegisterPage';
@@ -9,6 +21,7 @@ import { VerifyEmailPage } from '@/features/auth/VerifyEmailPage';
 import { VerifyPendingPage } from '@/features/auth/VerifyPendingPage';
 import { HomePage } from '@/features/home/HomePage';
 import { AccountPage } from '@/features/settings/AccountPage';
+import { AppearancePage } from '@/features/settings/AppearancePage';
 import { ProfilePage } from '@/features/settings/ProfilePage';
 import { SessionsPage } from '@/features/settings/SessionsPage';
 import { SettingsLayout } from '@/features/settings/SettingsLayout';
@@ -105,6 +118,13 @@ const verifyEmailRoute = createRoute({
   component: VerifyEmailPage,
 });
 
+const inviteRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/invite/$code',
+  beforeLoad: requireSetupDone,
+  component: InviteLandingPage,
+});
+
 const authedRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: 'authed',
@@ -146,6 +166,49 @@ const homeRoute = createRoute({
   component: HomePage,
 });
 
+const guildRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: 'channels/$guildId',
+  component: GuildLayout,
+});
+
+const guildIndexRoute = createRoute({
+  getParentRoute: () => guildRoute,
+  path: '/',
+  component: GuildIndexPage,
+});
+
+const channelRoute = createRoute({
+  getParentRoute: () => guildRoute,
+  path: '$channelId',
+  component: ChannelPage,
+});
+
+const guildSettingsRoute = createRoute({
+  getParentRoute: () => verifiedRoute,
+  path: 'guilds/$guildId/settings',
+  beforeLoad: ({ location, params }) => {
+    if (location.pathname.endsWith('/settings') || location.pathname.endsWith('/settings/')) {
+      throw redirect({ to: '/guilds/$guildId/settings/overview', params });
+    }
+  },
+  component: GuildSettingsLayout,
+});
+
+const guildSettingsPages = (
+  [
+    ['overview', OverviewPage],
+    ['channels', ChannelsPage],
+    ['members', MembersPage],
+    ['invites', InvitesPage],
+    ['bans', BansPage],
+    ['audit-log', AuditLogPage],
+    ['danger', DangerPage],
+  ] as const
+).map(([path, component]) =>
+  createRoute({ getParentRoute: () => guildSettingsRoute, path, component }),
+);
+
 const settingsRoute = createRoute({
   getParentRoute: () => verifiedRoute,
   path: '/settings',
@@ -167,6 +230,12 @@ const settingsProfileRoute = createRoute({
   getParentRoute: () => settingsRoute,
   path: 'profile',
   component: ProfilePage,
+});
+
+const settingsAppearanceRoute = createRoute({
+  getParentRoute: () => settingsRoute,
+  path: 'appearance',
+  component: AppearancePage,
 });
 
 const settingsSessionsRoute = createRoute({
@@ -192,13 +261,16 @@ const routeTree = rootRoute.addChildren([
   forgotPasswordRoute,
   resetPasswordRoute,
   verifyEmailRoute,
+  inviteRoute,
   authedRoute.addChildren([
     verifyPendingRoute,
     verifiedRoute.addChildren([
-      shellRoute.addChildren([homeRoute]),
+      shellRoute.addChildren([homeRoute, guildRoute.addChildren([guildIndexRoute, channelRoute])]),
+      guildSettingsRoute.addChildren(guildSettingsPages),
       settingsRoute.addChildren([
         settingsAccountRoute,
         settingsProfileRoute,
+        settingsAppearanceRoute,
         settingsSessionsRoute,
         settingsInstanceRoute,
       ]),

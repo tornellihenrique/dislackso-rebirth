@@ -9,7 +9,12 @@ import { signOut } from '@/features/auth/session-actions';
 import { useSession } from '@/stores/session';
 
 interface NavItemProps {
-  to: '/settings/account' | '/settings/profile' | '/settings/sessions' | '/settings/instance';
+  to:
+    | '/settings/account'
+    | '/settings/profile'
+    | '/settings/appearance'
+    | '/settings/sessions'
+    | '/settings/instance';
   children: ReactNode;
 }
 
@@ -58,6 +63,7 @@ export function SettingsLayout() {
           </h2>
           <NavItem to="/settings/account">{t('settings.nav.account')}</NavItem>
           <NavItem to="/settings/profile">{t('settings.nav.profile')}</NavItem>
+          <NavItem to="/settings/appearance">{t('settings.nav.appearance')}</NavItem>
           <NavItem to="/settings/sessions">{t('settings.nav.sessions')}</NavItem>
           {admin && (
             <>
@@ -102,7 +108,7 @@ export function SettingsLayout() {
 interface SettingsSectionProps {
   title: string;
   description?: string;
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 export function SettingsSection({ title, description, children }: SettingsSectionProps) {

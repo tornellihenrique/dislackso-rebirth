@@ -25,6 +25,7 @@ export async function renderWithProviders(
   const all: Services = {
     health: { check: () => Promise.reject(new Error('health is not stubbed')) },
     hub: createHubClients(createRouterTransport(routes)),
+    uploads: { upload: () => Promise.reject(new Error('uploads are not stubbed')) },
     ...services,
   };
   return render(

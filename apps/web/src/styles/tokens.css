@@ -23,10 +23,23 @@
   --color-success: var(--green);
   --color-warning: var(--yellow);
   --color-danger: var(--red);
+  --color-avatar-0: var(--avatar-0);
+  --color-avatar-1: var(--avatar-1);
+  --color-avatar-2: var(--avatar-2);
+  --color-avatar-3: var(--avatar-3);
+  --color-avatar-4: var(--avatar-4);
+  --color-avatar-5: var(--avatar-5);
+  --color-avatar-6: var(--avatar-6);
+  --color-avatar-7: var(--avatar-7);
+
+  --spacing-row: var(--row-height);
+  --spacing-row-gap: var(--row-gap);
 
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 16px;
+  /* A circle that can animate into a rounded square (guild icons). */
+  --radius-circle: 50%;
 
   --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;

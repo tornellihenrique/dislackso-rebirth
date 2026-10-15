@@ -3,6 +3,9 @@ import { RouterProvider } from '@tanstack/react-router';
 import type { i18n } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
 
+import { Notices } from '@/features/shell/Notices';
+import { TooltipProvider } from '@/ui/Tooltip';
+
 import type { AppRouter } from './router';
 import { ServicesContext, type Services } from './services';
 
@@ -18,7 +21,10 @@ export function App({ i18n, queryClient, router, services }: AppProps) {
     <I18nextProvider i18n={i18n}>
       <QueryClientProvider client={queryClient}>
         <ServicesContext value={services}>
-          <RouterProvider router={router} />
+          <TooltipProvider delayDuration={300}>
+            <RouterProvider router={router} />
+            <Notices />
+          </TooltipProvider>
         </ServicesContext>
       </QueryClientProvider>
     </I18nextProvider>
