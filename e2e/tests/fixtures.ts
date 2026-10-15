@@ -15,15 +15,25 @@ export const MEMBER = {
 };
 
 /**
+ * livekit-client logs its own races and the closing of its data channels as
+ * errors, tagged with the room; voice failures that matter reach the page as
+ * events the tests assert on.
+ */
+function isLiveKitLog(text: string): boolean {
+  return / \{room: vc_\d+, roomID: RM_\w+/.test(text);
+}
+
+/**
  * Collects uncaught exceptions and console errors (CSP violations included).
  * Failed requests are left out: the suite triggers expected 4xx answers.
  */
 export function trackErrors(page: Page): string[] {
   const errors: string[] = [];
   page.on('console', (msg) => {
-    if (msg.type() === 'error' && !msg.text().startsWith('Failed to load resource')) {
-      errors.push(msg.text());
-    }
+    if (msg.type() !== 'error') return;
+    const text = msg.text();
+    if (text.startsWith('Failed to load resource') || isLiveKitLog(text)) return;
+    errors.push(text);
   });
   page.on('pageerror', (err) => errors.push(err.message));
   return errors;

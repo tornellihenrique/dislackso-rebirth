@@ -59,12 +59,13 @@ tasks:
     deps: [dev:hub, dev:web]
 
   dev:hub:
-    desc: Run the hub against a throwaway data dir in .dev/, logging emails instead of sending them
+    desc: Run the hub and its LiveKit sidecar against a throwaway data dir in .dev/, logging emails instead of sending them
     cmds:
       - go -C hub build -o "{{.DEV_DIR}}/hub{{exeExt}}" ./cmd/hub
       - >-
         "{{.DEV_DIR}}/hub{{exeExt}}" run --data-dir "{{.DEV_DIR}}/data" --log-level debug
         --mail-dev-log=true --setup-token {{.DEV_SETUP_TOKEN}}
+        --livekit-binary "{{.TOOLS_BIN}}/livekit-server{{exeExt}}" --livekit-external-ip=false
 
   dev:web:
     desc: Run the Vite dev server, proxying API routes to the hub
