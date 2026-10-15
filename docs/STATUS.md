@@ -2,8 +2,40 @@
 
 ## Current phase
 
-**Phase 2 — Guilds, channels, realtime shell, basic moderation: implemented, waiting for
-review.** Next: Phase 3 — Voice.
+**Phase 3 — Voice: implemented, waiting for review.** Next: Phase 4 — Screen share & stage.
+Phase 2 is in review too ([PR #3](https://github.com/tornellihenrique/dislackso-rebirth/pull/3));
+the Phase 3 branch builds on it.
+
+### Phase 3 acceptance
+
+- [x] Three users on LAN in two channels: audio isolated per channel; switching channels < 1 s;
+      sidebar in other guilds shows occupants live. Each voice channel is its own LiveKit room
+      (`vc_<channelId>`), so audio cannot cross channels. Switching measured 56–66 ms from the
+      Join call to LiveKit's confirmation in the integration test, and well under a second in the
+      browser (the Playwright test switches and checks the other browser). Voice states go to
+      every member of the guild whatever page they are on; the Playwright suite checks the other
+      browser within 1 s. A three-person call with real people is step 4 of the manual script.
+- [x] Deafen mutes all remote mics and own mic; undeafen restores the previous mute; states
+      persist across reload and apply on join; others see icons update live. Reducer tests cover
+      the exact semantics; the Playwright suite mutes, deafens (remote audio goes silent),
+      undeafens back to muted, reloads, rejoins muted and watches the icons in the other browser.
+- [x] Server mute cannot be bypassed by the client: integration test against a real
+      `livekit-server` with a Go participant. After the mute, LiveKit removes the published
+      microphone, refuses a new one and the client's permissions lack it; tokens minted later
+      carry no microphone grant, and every confirmed connection gets the permissions re-applied
+      (a token from before the mute cannot sneak one in).
+- [x] Killing a client process clears its voice state within `departure_timeout`; restarting the
+      hub restores voice states from LiveKit. Integration test: a participant process is killed
+      and its state clears after ~21 s (LiveKit gives up on the connection after ~20 s). A fresh
+      voice service rebuilds the call from `ListParticipants`, and clients that reconnect to a
+      restarted media server are adopted from their webhooks (unit tests).
+- [x] Joining from a second device moves voice there and the first shows the "another device"
+      notice. Integration test (the first participant is dropped with `DUPLICATE_IDENTITY`) and
+      Playwright (a second tab joins; the first shows the notice and leaves the call).
+- [x] Device unplug falls back to default without dropping the call. On `devicechange` the client
+      switches a vanished microphone to the default inside the same LiveKit room, and LiveKit does
+      the same for the output; the choice is unit-tested. Unplugging real hardware is step 3 of the
+      manual script.
 
 ### Phase 2 acceptance
 
@@ -65,6 +97,63 @@ review.** Next: Phase 3 — Voice.
       typecheck + tests, build + Playwright smoke).
 
 ## Done
+
+### Phase 3 — Voice
+
+- **Contract.** `VoiceService` (Join, Leave, MoveMember, SetServerMute, SetServerDeafen,
+  DisconnectMember), `VoiceState` (with a `connected` flag that stays false until LiveKit
+  confirms), voice states in `GuildState`, gateway events `VOICE_STATE_UPDATE` and
+  `VOICE_FORCED`, the `UpdateVoiceSelfState` frame, and audit actions for voice moderation.
+- **Voice service.** The hub owns voice state in memory: one connection per user on the whole
+  instance; a join mints a LiveKit token (identity = user id, room = `vc_<channelId>`, the voice
+  session id as participant metadata) and removes the user from any other room. LiveKit webhooks
+  confirm joins, end connections and set the streaming flag; unconfirmed joins expire after 30 s.
+  Participants the hub does not know are adopted when they are members (a restarted hub) and
+  removed otherwise; an older connection of the user that comes back is removed. User limits
+  (owners and admins exempt, moved members exempt), membership checks, a join rate limit, and
+  cleanup when a member, channel or guild goes away.
+- **Moderation.** Server mute and deafen are stored per member (migration `00003_voice.sql`) and
+  enforced through LiveKit permissions; move (the member's client rejoins the target channel) and
+  disconnect. All three are owner/admin actions under the same target rules as kick, and land in
+  the audit log.
+- **LiveKit sidecar.** `internal/sidecar` supervises processes: health probe, restart with
+  backoff (1–30 s), log capture to `logs/livekit.log`, a Windows job object (process group and
+  parent-death signal elsewhere) so LiveKit never outlives the hub. The hub writes
+  `livekit.yaml` on every start (signaling on localhost only, UDP 7882 mux, TCP 7881, external
+  IP via STUN, webhooks to the hub) and passes the API keys, generated once and kept in
+  `secrets.yaml`, through the environment. `/readyz` reports the media server.
+- **HTTP.** `/lk/rtc…` reverse-proxies LiveKit signaling (WebSocket included) so it shares the
+  instance address; the rest of LiveKit (admin API, debug pages) stays unreachable. The webhook
+  endpoint answers only on loopback and verifies the signature. Tokens never reach the logs.
+- **ICE.** `IceServerProvider` with `none` (wired) and `static` implementations.
+- **Web core.** `VoiceSession` wraps the LiveKit room: microphone publishing (Opus, DTX, RED,
+  the instance's bitrate cap), deafen by disabling remote microphone forwarding, reconnect states,
+  quality, active speakers and autoplay unblocking. `MicProcessor` runs the microphone through
+  RNNoise (optional, loaded on demand), input volume and a voice gate (automatic or manual
+  sensitivity, 400 ms hangover) or push-to-talk (focused window, released on blur).
+  `RemoteAudio` plays everyone through `<audio>` elements kept outside any view, with per-user
+  volume up to 200 % (Web Audio above 100 %), local mute and output device. Synthesized sounds for
+  join, leave, mute, deafen and disconnect. `livekit-client` loads with the first join.
+- **Web app.** `VoiceController` joins through the hub, keeps the hub told about mute and deafen
+  (again after every gateway reconnect), and reacts when the hub ends, moves or replaces the call.
+  Mute and deafen work in and out of calls and persist on the device; Ctrl+Shift+M and
+  Ctrl+Shift+D toggle them.
+- **UI.** Occupants under each voice channel in every guild (speaking ring, mute, deafen and
+  server icons, LIVE badge, dimmed while connecting), clicking a voice channel joins it, a voice
+  panel above the user panel (state, channel, quality, disconnect, enable-audio button), mic and
+  headphone toggles in the user panel (red when a moderator muted you), a voice channel page with
+  a join screen and a tile per participant, voice entries in member context menus (volume slider,
+  local mute, server mute and deafen, move to, disconnect), and Settings → Voice & audio (devices,
+  volumes, mic test with meter and playback, input mode and push-to-talk key, sensitivity, noise
+  suppression, echo cancellation, gain control, sounds). Everything in en and pt-BR.
+- **Tests.** Go: voice service on fakes (joins, limits, switching, confirmation, adoption, stale
+  sessions, self state, server mute and deafen, move, disconnect, sweep, media restart,
+  reconcile, cleanup), sidecar supervisor with a helper process, LiveKit adapter (token grants,
+  Twirp calls and their admin grants, webhook signatures, config), proxy and webhook handlers,
+  config, and `task test:int` against a real LiveKit with Go participants. Web: speaking hangover,
+  voice gate, push-to-talk, devices, voice stores and reducers, dispatcher, gateway self state and
+  the controller's decisions. Playwright: five voice tests with two browsers and a synthetic
+  microphone (17 tests in all).
 
 ### Phase 2 — Guilds, channels, realtime shell, basic moderation
 
@@ -310,6 +399,42 @@ review.** Next: Phase 3 — Voice.
   6.2.4, get-nonce 1.0.1 (already used by Radix; set with the page nonce), coder/websocket 1.8.15,
   golang.org/x/image 0.47.0.
 
+### Phase 3
+
+- No ledger decision was changed.
+- **`MediaProvider` as built** (§5.2 updated): permissions change in one call
+  (`SetPermissions`), and there is no separate track mute, because LiveKit unpublishes a track
+  whose source is no longer allowed. Webhook parsing lives in the adapter, behind an interface of
+  the HTTP handler.
+- **Server mute and deafen belong to the member,** not the connection: leaving and joining again
+  does not lift them. LiveKit enforces them; the hub re-applies them whenever a connection is
+  confirmed, since tokens refresh on their own and one minted before a mute could reconnect.
+- **The voice session id travels as participant metadata.** Participant webhooks match on it;
+  track webhooks carry only the participant SID, so the hub remembers the SID of each confirmed
+  connection.
+- **Move keeps the session id** and the member's client joins the target itself: LiveKit's
+  `MoveParticipant` exists only on LiveKit Cloud. Moved members may enter a full channel.
+- **One connection per user across rooms is the hub's job:** LiveKit drops duplicate identities
+  only inside one room, so a join removes the user from the room they were in. In the same room
+  LiveKit replaces the old connection itself (removing it from the hub could hit the new one).
+- **LiveKit keys** are generated once, kept in `secrets.yaml`, and reach the sidecar through
+  `LIVEKIT_KEYS`; `livekit.yaml` never holds the secret.
+- **`livekit.external_ip` defaults to true** (§4.3). `task dev`, the e2e suite and the
+  integration tests turn it off: LiveKit refuses to start when STUN is unreachable.
+- **CSP allows `'wasm-unsafe-eval'`** so RNNoise can compile its WebAssembly; JavaScript eval stays
+  blocked (§5.4 updated).
+- **Mute, deafen and voice preferences are per device** (`localStorage`), which matches devices,
+  volumes and processing; syncing mute and deafen across devices can come with settings sync.
+  Unmuting while deafened also undeafens.
+- **`livekit-client` loads on the first join** (a 526 kB chunk), keeping the first page load at the
+  Phase 2 size.
+- **Sounds are synthesized tones** (Web Audio), so there are no audio assets to license.
+- **The `static` TURN provider has no settings yet;** choosing and configuring TURN belongs to the
+  Phase 5 wizard, with the Cloudflare provider.
+- **Voice shortcuts are fixed** (Ctrl+Shift+M, Ctrl+Shift+D) until the Keybinds page.
+- **New dependencies:** github.com/livekit/protocol v1.52.1 (hub), github.com/livekit/server-sdk-go
+  v2.19.0 (integration tests only), livekit-client 2.22.4, @sapphi-red/web-noise-suppressor 0.4.1.
+
 ## Known issues
 
 - **Client IP is the TCP peer.** That is correct for direct connections. A tunnel or reverse proxy
@@ -325,15 +450,63 @@ review.** Next: Phase 3 — Voice.
 - The dev-build frame inspector (§8.1) is not built yet.
 - Rail badges (unread, mentions) wait for text chat.
 - No `LICENSE` file yet: the license is the owner's choice.
-- The web bundle is ~870 kB minified (266 kB gzip), so Vite prints its 500 kB chunk warning on
-  build. Route-level code splitting (settings, server settings) is the next easy win.
+- The web bundle is ~930 kB minified (283 kB gzip) plus a 526 kB LiveKit chunk loaded with the
+  first join, so Vite prints its 500 kB chunk warning on build. Route-level code splitting
+  (settings, server settings) is the next easy win.
 - Go's `Server.Shutdown` waits up to 5 s for connections a client opened but never used (for
   example a browser preconnect), so stopping the hub can take a few seconds.
-- `task dev` does not start LiveKit yet (Phase 3), and `task test:int` has no tests yet.
-- Lesson from the reference repo still to apply: keep the remote-audio elements mounted for as
-  long as the user is in the room, not tied to the stage view (Phase 3).
+- **Browsers allow the microphone only on HTTPS or localhost.** Until Phase 5 gives the instance
+  an HTTPS address, people on other machines cannot talk (they can still open the app over the
+  LAN with `http.addr` on a LAN address, but not use the mic).
+- A client that dies without leaving stays in voice for ~20 s, until LiveKit gives up on it.
+- The sidecar stops with the hub, so restarting the hub also empties LiveKit's rooms. Clients
+  reconnect on their own within LiveKit's retry window (~40 s) and the hub adopts them; after a
+  longer outage people rejoin by hand.
+- Disabling or deleting an account ends its sessions but not a voice connection already up
+  (LiveKit keeps refreshing its token); the next join is refused.
+- An offline host must run with `--livekit-external-ip=false`; otherwise LiveKit exits at start
+  and the supervisor keeps restarting it (the log says why). The Phase 5 doctor will detect this.
+- livekit-client logs some of its own races and data channel closings as console errors; the
+  e2e error tracker ignores lines tagged with a LiveKit room.
+- The voice channel page is a plain tile grid; the stage with focus, fullscreen and the grid
+  algorithm comes with screen sharing in Phase 4.
 
 ## Manual test script
+
+### Phase 3
+
+Prerequisites: `task setup` (installs `livekit-server` into `.tools/bin`). Browsers only allow
+the microphone on HTTPS or localhost, so until Phase 5 a "second person" is a second browser
+profile on the same PC, or a second PC whose Chrome treats your LAN address as secure (step 4).
+
+1. `task check` is green, `task e2e` passes 17 Playwright tests, and `task test:int` passes (it
+   runs a real LiveKit; the killed-client case takes ~20 s).
+2. `task dev`: the hub log shows `sidecar started` and `sidecar ready` for livekit, and
+   `.dev/data/livekit.yaml` exists without any secret in it.
+3. **Settings → Voice & audio.** Pick your microphone and press Let's check: the meter moves as you
+   talk and turns green past the yellow threshold mark; Play my voice back (with headphones) lets
+   you hear yourself. Switch noise suppression to Strong (RNNoise): typing gets quiet, your voice
+   does not. Choose Push to talk, record a key, and hold it: the meter turns green only while you
+   hold it. While in a call later, unplug a USB mic: the call goes on with the default mic.
+4. **A call.** In profile A click the voice channel: you hear the join sound, "Voice connected"
+   shows above your name, and you appear under the channel. In profile B (or another PC with
+   Chrome started with `--unsafely-treat-insecure-origin-as-secure=http://<host LAN IP>:5173` and
+   the hub's `http.addr` on the LAN) join the same channel: you hear each other, and the speaking
+   ring lights up. With a third person in a second voice channel, the two calls do not hear
+   each other, and everyone sees who is where in the sidebar.
+5. **Mute and deafen.** Toggle the mic and headphones in the user panel (or Ctrl+Shift+M and
+   Ctrl+Shift+D): the other profile sees the icons at once. Mute, then deafen, then undeafen: you
+   are still muted. Reload: the state stays, and joining again starts muted.
+6. **Volume.** Right-click the other person: set their volume to 150 % and back, and Mute for me.
+7. **Moderation** (as owner or admin, on a member): Server mute shows a red icon for everyone and
+   their mic button turns red; leaving and joining again keeps it. Move to another voice channel:
+   they land there with a notice. Disconnect from voice: they drop with a notice. Each shows in
+   Server settings → Audit log.
+8. **Another device.** With profile A in a call, join from a second tab of the same profile: the
+   first tab shows "Voice connected on another device" and leaves the call.
+9. **Hub restart.** Restart `task dev` while in a call: the panel shows Reconnecting, then
+   Connected again within a minute, and the sidebar is right on both sides.
+10. **Language.** In pt-BR every voice screen, menu and notice is in Portuguese.
 
 ### Phase 2
 
