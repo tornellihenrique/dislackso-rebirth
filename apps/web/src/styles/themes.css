@@ -41,9 +41,35 @@
 }
 
 :root {
+  /* Placeholder avatar backgrounds, picked per user ID. */
+  --avatar-0: #5b6cf0;
+  --avatar-1: #3ba55d;
+  --avatar-2: #c27c0e;
+  --avatar-3: #d83c3e;
+  --avatar-4: #8e44ad;
+  --avatar-5: #1f8b9e;
+  --avatar-6: #e67e22;
+  --avatar-7: #64748b;
   --accent: #5b6cf0;
   --accent-fg: #ffffff;
   --green: #23a55a;
   --yellow: #f0b232;
   --red: #f23f43;
+}
+
+/* Density scales list rows (channels, members); the default matches §15. */
+:root,
+[data-density='default'] {
+  --row-height: 2rem;
+  --row-gap: 0.125rem;
+}
+
+[data-density='compact'] {
+  --row-height: 1.625rem;
+  --row-gap: 0;
+}
+
+[data-density='spacious'] {
+  --row-height: 2.5rem;
+  --row-gap: 0.25rem;
 }

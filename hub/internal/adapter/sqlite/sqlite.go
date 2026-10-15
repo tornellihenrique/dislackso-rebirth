@@ -110,22 +110,46 @@ func migrate(ctx context.Context, db *sql.DB) error {
 
 type txKey struct{}
 
+type txState struct {
+	tx          *sql.Tx
+	afterCommit []func()
+}
+
+func txFrom(ctx context.Context) (*txState, bool) {
+	st, ok := ctx.Value(txKey{}).(*txState)
+	return st, ok
+}
+
 // InTx runs fn inside a write transaction. A nested call joins the outer one.
 func (db *DB) InTx(ctx context.Context, fn func(ctx context.Context) error) error {
-	if _, ok := ctx.Value(txKey{}).(*sql.Tx); ok {
+	if _, ok := txFrom(ctx); ok {
 		return fn(ctx)
 	}
 	tx, err := db.write.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
-	if err := fn(context.WithValue(ctx, txKey{}, tx)); err != nil {
+	st := &txState{tx: tx}
+	if err := fn(context.WithValue(ctx, txKey{}, st)); err != nil {
 		return errors.Join(err, rollback(tx))
 	}
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit transaction: %w", err)
 	}
+	for _, hook := range st.afterCommit {
+		hook()
+	}
 	return nil
+}
+
+// AfterCommit runs fn once the transaction in ctx commits, or right away
+// outside a transaction. A rolled-back transaction drops it.
+func (db *DB) AfterCommit(ctx context.Context, fn func()) {
+	if st, ok := txFrom(ctx); ok {
+		st.afterCommit = append(st.afterCommit, fn)
+		return
+	}
+	fn()
 }
 
 func rollback(tx *sql.Tx) error {
@@ -138,27 +162,27 @@ func rollback(tx *sql.Tx) error {
 // reader queries through the caller's transaction when there is one, so a
 // transaction sees its own writes.
 func (db *DB) reader(ctx context.Context) *sqlcgen.Queries {
-	if tx, ok := ctx.Value(txKey{}).(*sql.Tx); ok {
-		return db.writeQ.WithTx(tx)
+	if st, ok := txFrom(ctx); ok {
+		return db.writeQ.WithTx(st.tx)
 	}
 	return db.readQ
 }
 
 func (db *DB) writer(ctx context.Context) *sqlcgen.Queries {
-	if tx, ok := ctx.Value(txKey{}).(*sql.Tx); ok {
-		return db.writeQ.WithTx(tx)
+	if st, ok := txFrom(ctx); ok {
+		return db.writeQ.WithTx(st.tx)
 	}
 	return db.writeQ
 }
 
 // mapError turns driver errors into domain errors: no rows into ErrNotFound
-// and unique violations into ErrConflict naming the column.
+// and unique or primary key violations into ErrConflict naming the (first) column.
 func mapError(err error) error {
 	if errors.Is(err, sql.ErrNoRows) {
 		return domain.ErrNotFound
 	}
 	var se *sqlite3.Error
-	if errors.As(err, &se) && se.Code() == sqlite3lib.SQLITE_CONSTRAINT_UNIQUE {
+	if errors.As(err, &se) && (se.Code() == sqlite3lib.SQLITE_CONSTRAINT_UNIQUE || se.Code() == sqlite3lib.SQLITE_CONSTRAINT_PRIMARYKEY) {
 		// The message reads "UNIQUE constraint failed: table.column (2067)".
 		_, after, ok := strings.Cut(se.Error(), "constraint failed: ")
 		if !ok {
@@ -166,6 +190,7 @@ func mapError(err error) error {
 		}
 		_, column, _ := strings.Cut(after, ".")
 		column, _, _ = strings.Cut(column, " ")
+		column = strings.TrimSuffix(column, ",")
 		return domain.Conflict(column)
 	}
 	return err
@@ -188,6 +213,17 @@ func fromNullMS(v sql.NullInt64) *time.Time {
 	}
 	t := fromMS(v.Int64)
 	return &t
+}
+
+func toNullID(id domain.ID) sql.NullInt64 {
+	return sql.NullInt64{Int64: int64(id), Valid: id != 0}
+}
+
+func fromNullID(v sql.NullInt64) domain.ID {
+	if !v.Valid {
+		return 0
+	}
+	return domain.ID(v.Int64)
 }
 
 func boolInt(b bool) int64 {

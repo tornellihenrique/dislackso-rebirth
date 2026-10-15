@@ -77,6 +77,62 @@ func (StatusPreference) EnumDescriptor() ([]byte, []int) {
 	return file_dislackso_v1_common_proto_rawDescGZIP(), []int{0}
 }
 
+// PresenceStatus is what other users see.
+type PresenceStatus int32
+
+const (
+	PresenceStatus_PRESENCE_STATUS_UNSPECIFIED PresenceStatus = 0
+	PresenceStatus_PRESENCE_STATUS_OFFLINE     PresenceStatus = 1
+	PresenceStatus_PRESENCE_STATUS_ONLINE      PresenceStatus = 2
+	PresenceStatus_PRESENCE_STATUS_IDLE        PresenceStatus = 3
+	PresenceStatus_PRESENCE_STATUS_DND         PresenceStatus = 4
+)
+
+// Enum value maps for PresenceStatus.
+var (
+	PresenceStatus_name = map[int32]string{
+		0: "PRESENCE_STATUS_UNSPECIFIED",
+		1: "PRESENCE_STATUS_OFFLINE",
+		2: "PRESENCE_STATUS_ONLINE",
+		3: "PRESENCE_STATUS_IDLE",
+		4: "PRESENCE_STATUS_DND",
+	}
+	PresenceStatus_value = map[string]int32{
+		"PRESENCE_STATUS_UNSPECIFIED": 0,
+		"PRESENCE_STATUS_OFFLINE":     1,
+		"PRESENCE_STATUS_ONLINE":      2,
+		"PRESENCE_STATUS_IDLE":        3,
+		"PRESENCE_STATUS_DND":         4,
+	}
+)
+
+func (x PresenceStatus) Enum() *PresenceStatus {
+	p := new(PresenceStatus)
+	*p = x
+	return p
+}
+
+func (x PresenceStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (PresenceStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_dislackso_v1_common_proto_enumTypes[1].Descriptor()
+}
+
+func (PresenceStatus) Type() protoreflect.EnumType {
+	return &file_dislackso_v1_common_proto_enumTypes[1]
+}
+
+func (x PresenceStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use PresenceStatus.Descriptor instead.
+func (PresenceStatus) EnumDescriptor() ([]byte, []int) {
+	return file_dislackso_v1_common_proto_rawDescGZIP(), []int{1}
+}
+
 type RegistrationMode int32
 
 const (
@@ -114,11 +170,11 @@ func (x RegistrationMode) String() string {
 }
 
 func (RegistrationMode) Descriptor() protoreflect.EnumDescriptor {
-	return file_dislackso_v1_common_proto_enumTypes[1].Descriptor()
+	return file_dislackso_v1_common_proto_enumTypes[2].Descriptor()
 }
 
 func (RegistrationMode) Type() protoreflect.EnumType {
-	return &file_dislackso_v1_common_proto_enumTypes[1]
+	return &file_dislackso_v1_common_proto_enumTypes[2]
 }
 
 func (x RegistrationMode) Number() protoreflect.EnumNumber {
@@ -127,15 +183,19 @@ func (x RegistrationMode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use RegistrationMode.Descriptor instead.
 func (RegistrationMode) EnumDescriptor() ([]byte, []int) {
-	return file_dislackso_v1_common_proto_rawDescGZIP(), []int{1}
+	return file_dislackso_v1_common_proto_rawDescGZIP(), []int{2}
 }
 
 // User is the public profile shown to anyone who shares a guild with the user.
 type User struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Username      string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
-	DisplayName   string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Id          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Username    string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
+	DisplayName string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	// Empty when the user has no avatar.
+	AvatarUrl string `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	// Unix ms; clients keep the newest copy they have seen.
+	UpdatedAt     int64 `protobuf:"varint,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -189,6 +249,20 @@ func (x *User) GetDisplayName() string {
 		return x.DisplayName
 	}
 	return ""
+}
+
+func (x *User) GetAvatarUrl() string {
+	if x != nil {
+		return x.AvatarUrl
+	}
+	return ""
+}
+
+func (x *User) GetUpdatedAt() int64 {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return 0
 }
 
 // Me is the signed-in user's own account, including private fields.
@@ -285,6 +359,154 @@ func (x *Me) GetCreatedAt() int64 {
 	return 0
 }
 
+type Presence struct {
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	UserId string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Status PresenceStatus         `protobuf:"varint,2,opt,name=status,proto3,enum=dislackso.v1.PresenceStatus" json:"status,omitempty"`
+	// Empty while offline.
+	CustomStatus  string `protobuf:"bytes,3,opt,name=custom_status,json=customStatus,proto3" json:"custom_status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Presence) Reset() {
+	*x = Presence{}
+	mi := &file_dislackso_v1_common_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Presence) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Presence) ProtoMessage() {}
+
+func (x *Presence) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_v1_common_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Presence.ProtoReflect.Descriptor instead.
+func (*Presence) Descriptor() ([]byte, []int) {
+	return file_dislackso_v1_common_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *Presence) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *Presence) GetStatus() PresenceStatus {
+	if x != nil {
+		return x.Status
+	}
+	return PresenceStatus_PRESENCE_STATUS_UNSPECIFIED
+}
+
+func (x *Presence) GetCustomStatus() string {
+	if x != nil {
+		return x.CustomStatus
+	}
+	return ""
+}
+
+// FileRef describes an uploaded file. Uploads go through POST /api/uploads,
+// never through RPC.
+type FileRef struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Same-origin download URL.
+	Url           string `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"`
+	Mime          string `protobuf:"bytes,3,opt,name=mime,proto3" json:"mime,omitempty"`
+	Size          int64  `protobuf:"varint,4,opt,name=size,proto3" json:"size,omitempty"`
+	Width         int32  `protobuf:"varint,5,opt,name=width,proto3" json:"width,omitempty"`
+	Height        int32  `protobuf:"varint,6,opt,name=height,proto3" json:"height,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FileRef) Reset() {
+	*x = FileRef{}
+	mi := &file_dislackso_v1_common_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FileRef) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FileRef) ProtoMessage() {}
+
+func (x *FileRef) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_v1_common_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FileRef.ProtoReflect.Descriptor instead.
+func (*FileRef) Descriptor() ([]byte, []int) {
+	return file_dislackso_v1_common_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *FileRef) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *FileRef) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *FileRef) GetMime() string {
+	if x != nil {
+		return x.Mime
+	}
+	return ""
+}
+
+func (x *FileRef) GetSize() int64 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+func (x *FileRef) GetWidth() int32 {
+	if x != nil {
+		return x.Width
+	}
+	return 0
+}
+
+func (x *FileRef) GetHeight() int32 {
+	if x != nil {
+		return x.Height
+	}
+	return 0
+}
+
 // ErrorReason is attached to errors whose code alone does not tell the client
 // what happened, such as "invalid_credentials" or "registration_closed".
 type ErrorReason struct {
@@ -296,7 +518,7 @@ type ErrorReason struct {
 
 func (x *ErrorReason) Reset() {
 	*x = ErrorReason{}
-	mi := &file_dislackso_v1_common_proto_msgTypes[2]
+	mi := &file_dislackso_v1_common_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -308,7 +530,7 @@ func (x *ErrorReason) String() string {
 func (*ErrorReason) ProtoMessage() {}
 
 func (x *ErrorReason) ProtoReflect() protoreflect.Message {
-	mi := &file_dislackso_v1_common_proto_msgTypes[2]
+	mi := &file_dislackso_v1_common_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -321,7 +543,7 @@ func (x *ErrorReason) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ErrorReason.ProtoReflect.Descriptor instead.
 func (*ErrorReason) Descriptor() ([]byte, []int) {
-	return file_dislackso_v1_common_proto_rawDescGZIP(), []int{2}
+	return file_dislackso_v1_common_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ErrorReason) GetReason() string {
@@ -341,7 +563,7 @@ type FieldViolations struct {
 
 func (x *FieldViolations) Reset() {
 	*x = FieldViolations{}
-	mi := &file_dislackso_v1_common_proto_msgTypes[3]
+	mi := &file_dislackso_v1_common_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -353,7 +575,7 @@ func (x *FieldViolations) String() string {
 func (*FieldViolations) ProtoMessage() {}
 
 func (x *FieldViolations) ProtoReflect() protoreflect.Message {
-	mi := &file_dislackso_v1_common_proto_msgTypes[3]
+	mi := &file_dislackso_v1_common_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -366,7 +588,7 @@ func (x *FieldViolations) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FieldViolations.ProtoReflect.Descriptor instead.
 func (*FieldViolations) Descriptor() ([]byte, []int) {
-	return file_dislackso_v1_common_proto_rawDescGZIP(), []int{3}
+	return file_dislackso_v1_common_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *FieldViolations) GetViolations() []*FieldViolation {
@@ -389,7 +611,7 @@ type FieldViolation struct {
 
 func (x *FieldViolation) Reset() {
 	*x = FieldViolation{}
-	mi := &file_dislackso_v1_common_proto_msgTypes[4]
+	mi := &file_dislackso_v1_common_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -401,7 +623,7 @@ func (x *FieldViolation) String() string {
 func (*FieldViolation) ProtoMessage() {}
 
 func (x *FieldViolation) ProtoReflect() protoreflect.Message {
-	mi := &file_dislackso_v1_common_proto_msgTypes[4]
+	mi := &file_dislackso_v1_common_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -414,7 +636,7 @@ func (x *FieldViolation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FieldViolation.ProtoReflect.Descriptor instead.
 func (*FieldViolation) Descriptor() ([]byte, []int) {
-	return file_dislackso_v1_common_proto_rawDescGZIP(), []int{4}
+	return file_dislackso_v1_common_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *FieldViolation) GetField() string {
@@ -441,7 +663,7 @@ type RateLimited struct {
 
 func (x *RateLimited) Reset() {
 	*x = RateLimited{}
-	mi := &file_dislackso_v1_common_proto_msgTypes[5]
+	mi := &file_dislackso_v1_common_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -453,7 +675,7 @@ func (x *RateLimited) String() string {
 func (*RateLimited) ProtoMessage() {}
 
 func (x *RateLimited) ProtoReflect() protoreflect.Message {
-	mi := &file_dislackso_v1_common_proto_msgTypes[5]
+	mi := &file_dislackso_v1_common_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -466,7 +688,7 @@ func (x *RateLimited) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RateLimited.ProtoReflect.Descriptor instead.
 func (*RateLimited) Descriptor() ([]byte, []int) {
-	return file_dislackso_v1_common_proto_rawDescGZIP(), []int{5}
+	return file_dislackso_v1_common_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *RateLimited) GetRetryAfterMs() int64 {
@@ -480,11 +702,15 @@ var File_dislackso_v1_common_proto protoreflect.FileDescriptor
 
 const file_dislackso_v1_common_proto_rawDesc = "" +
 	"\n" +
-	"\x19dislackso/v1/common.proto\x12\fdislackso.v1\"U\n" +
+	"\x19dislackso/v1/common.proto\x12\fdislackso.v1\"\x93\x01\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12!\n" +
-	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\"\x8c\x02\n" +
+	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\x1d\n" +
+	"\n" +
+	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\x12\x1d\n" +
+	"\n" +
+	"updated_at\x18\x05 \x01(\x03R\tupdatedAt\"\x8c\x02\n" +
 	"\x02Me\x12&\n" +
 	"\x04user\x18\x01 \x01(\v2\x12.dislackso.v1.UserR\x04user\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12%\n" +
@@ -493,7 +719,18 @@ const file_dislackso_v1_common_proto_rawDesc = "" +
 	"\rcustom_status\x18\x05 \x01(\tR\fcustomStatus\x12%\n" +
 	"\x0einstance_admin\x18\x06 \x01(\bR\rinstanceAdmin\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\a \x01(\x03R\tcreatedAt\"%\n" +
+	"created_at\x18\a \x01(\x03R\tcreatedAt\"~\n" +
+	"\bPresence\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x124\n" +
+	"\x06status\x18\x02 \x01(\x0e2\x1c.dislackso.v1.PresenceStatusR\x06status\x12#\n" +
+	"\rcustom_status\x18\x03 \x01(\tR\fcustomStatus\"\x81\x01\n" +
+	"\aFileRef\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
+	"\x03url\x18\x02 \x01(\tR\x03url\x12\x12\n" +
+	"\x04mime\x18\x03 \x01(\tR\x04mime\x12\x12\n" +
+	"\x04size\x18\x04 \x01(\x03R\x04size\x12\x14\n" +
+	"\x05width\x18\x05 \x01(\x05R\x05width\x12\x16\n" +
+	"\x06height\x18\x06 \x01(\x05R\x06height\"%\n" +
 	"\vErrorReason\x12\x16\n" +
 	"\x06reason\x18\x01 \x01(\tR\x06reason\"O\n" +
 	"\x0fFieldViolations\x12<\n" +
@@ -510,7 +747,13 @@ const file_dislackso_v1_common_proto_rawDesc = "" +
 	"\x18STATUS_PREFERENCE_ONLINE\x10\x01\x12\x1a\n" +
 	"\x16STATUS_PREFERENCE_IDLE\x10\x02\x12\x19\n" +
 	"\x15STATUS_PREFERENCE_DND\x10\x03\x12\x1f\n" +
-	"\x1bSTATUS_PREFERENCE_INVISIBLE\x10\x04*\x92\x01\n" +
+	"\x1bSTATUS_PREFERENCE_INVISIBLE\x10\x04*\x9d\x01\n" +
+	"\x0ePresenceStatus\x12\x1f\n" +
+	"\x1bPRESENCE_STATUS_UNSPECIFIED\x10\x00\x12\x1b\n" +
+	"\x17PRESENCE_STATUS_OFFLINE\x10\x01\x12\x1a\n" +
+	"\x16PRESENCE_STATUS_ONLINE\x10\x02\x12\x18\n" +
+	"\x14PRESENCE_STATUS_IDLE\x10\x03\x12\x17\n" +
+	"\x13PRESENCE_STATUS_DND\x10\x04*\x92\x01\n" +
 	"\x10RegistrationMode\x12!\n" +
 	"\x1dREGISTRATION_MODE_UNSPECIFIED\x10\x00\x12!\n" +
 	"\x1dREGISTRATION_MODE_INVITE_ONLY\x10\x01\x12\x1a\n" +
@@ -530,27 +773,31 @@ func file_dislackso_v1_common_proto_rawDescGZIP() []byte {
 	return file_dislackso_v1_common_proto_rawDescData
 }
 
-var file_dislackso_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_dislackso_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_dislackso_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_dislackso_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_dislackso_v1_common_proto_goTypes = []any{
 	(StatusPreference)(0),   // 0: dislackso.v1.StatusPreference
-	(RegistrationMode)(0),   // 1: dislackso.v1.RegistrationMode
-	(*User)(nil),            // 2: dislackso.v1.User
-	(*Me)(nil),              // 3: dislackso.v1.Me
-	(*ErrorReason)(nil),     // 4: dislackso.v1.ErrorReason
-	(*FieldViolations)(nil), // 5: dislackso.v1.FieldViolations
-	(*FieldViolation)(nil),  // 6: dislackso.v1.FieldViolation
-	(*RateLimited)(nil),     // 7: dislackso.v1.RateLimited
+	(PresenceStatus)(0),     // 1: dislackso.v1.PresenceStatus
+	(RegistrationMode)(0),   // 2: dislackso.v1.RegistrationMode
+	(*User)(nil),            // 3: dislackso.v1.User
+	(*Me)(nil),              // 4: dislackso.v1.Me
+	(*Presence)(nil),        // 5: dislackso.v1.Presence
+	(*FileRef)(nil),         // 6: dislackso.v1.FileRef
+	(*ErrorReason)(nil),     // 7: dislackso.v1.ErrorReason
+	(*FieldViolations)(nil), // 8: dislackso.v1.FieldViolations
+	(*FieldViolation)(nil),  // 9: dislackso.v1.FieldViolation
+	(*RateLimited)(nil),     // 10: dislackso.v1.RateLimited
 }
 var file_dislackso_v1_common_proto_depIdxs = []int32{
-	2, // 0: dislackso.v1.Me.user:type_name -> dislackso.v1.User
+	3, // 0: dislackso.v1.Me.user:type_name -> dislackso.v1.User
 	0, // 1: dislackso.v1.Me.status:type_name -> dislackso.v1.StatusPreference
-	6, // 2: dislackso.v1.FieldViolations.violations:type_name -> dislackso.v1.FieldViolation
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	1, // 2: dislackso.v1.Presence.status:type_name -> dislackso.v1.PresenceStatus
+	9, // 3: dislackso.v1.FieldViolations.violations:type_name -> dislackso.v1.FieldViolation
+	4, // [4:4] is the sub-list for method output_type
+	4, // [4:4] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_dislackso_v1_common_proto_init() }
@@ -563,8 +810,8 @@ func file_dislackso_v1_common_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_dislackso_v1_common_proto_rawDesc), len(file_dislackso_v1_common_proto_rawDesc)),
-			NumEnums:      2,
-			NumMessages:   6,
+			NumEnums:      3,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

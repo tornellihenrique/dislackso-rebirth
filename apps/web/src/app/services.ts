@@ -5,11 +5,13 @@ import { AUTH_SERVICE_NAME, createHubClients, type HubClients } from '@/core/api
 import { isUnauthenticated } from '@/core/api/errors';
 import { createHealthApi, type HealthApi } from '@/core/api/health';
 import { createHubTransport } from '@/core/api/transport';
+import { createUploadApi, type UploadApi } from '@/core/api/uploads';
 
 /** Everything features need from outside the browser tab, injected through ServicesContext. */
 export interface Services {
   readonly health: HealthApi;
   readonly hub: HubClients;
+  readonly uploads: UploadApi;
 }
 
 /**
@@ -30,6 +32,7 @@ export function createServices(onSessionLost: () => void): Services {
   return {
     health: createHealthApi(transport, () => performance.now()),
     hub: createHubClients(transport),
+    uploads: createUploadApi(),
   };
 }
 

@@ -6,7 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
+
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/domain"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/events"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/fakes"
 )
 
@@ -14,20 +17,35 @@ type verification bool
 
 func (v verification) VerificationRequired(context.Context) bool { return bool(v) }
 
+type statusCall struct {
+	userID domain.ID
+	pref   domain.StatusPref
+	custom string
+}
+
+type statusSink struct{ calls []statusCall }
+
+func (s *statusSink) SetPreference(_ context.Context, userID domain.ID, pref domain.StatusPref, custom string) {
+	s.calls = append(s.calls, statusCall{userID, pref, custom})
+}
+
 type harness struct {
-	svc     *Service
-	store   *fakes.Store
-	clock   *fakes.Clock
-	limiter *fakes.Limiter
-	actor   domain.Actor
+	svc      *Service
+	store    *fakes.Store
+	clock    *fakes.Clock
+	limiter  *fakes.Limiter
+	events   *fakes.Events
+	presence *statusSink
+	actor    domain.Actor
 }
 
 func newHarness(t *testing.T, required, verified bool) *harness {
 	t.Helper()
-	h := &harness{store: fakes.NewStore(), clock: fakes.NewClock(), limiter: &fakes.Limiter{}}
+	h := &harness{store: fakes.NewStore(), clock: fakes.NewClock(), limiter: &fakes.Limiter{}, presence: &statusSink{}}
+	h.events = fakes.NewEvents(h.store)
 	h.svc = New(Deps{
-		Users: h.store, Sessions: h.store, Tx: h.store, Hasher: fakes.Hasher{},
-		Clock: h.clock, Limiter: h.limiter, Verification: verification(required),
+		Users: h.store, Sessions: h.store, Members: h.store, Files: h.store, Tx: h.store, Hasher: fakes.Hasher{},
+		Clock: h.clock, Limiter: h.limiter, Events: h.events, Presence: h.presence, Verification: verification(required),
 	})
 	now := h.clock.Now()
 	user := domain.User{
@@ -60,7 +78,7 @@ func requireReason(t *testing.T, err, kind error, reason string) {
 
 func TestUpdateProfile(t *testing.T) {
 	h := newHarness(t, true, true)
-	u, err := h.svc.UpdateProfile(t.Context(), h.actor, "  Ana Beatriz  ")
+	u, err := h.svc.UpdateProfile(t.Context(), h.actor, ProfilePatch{DisplayName: new("  Ana Beatriz  ")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +86,7 @@ func TestUpdateProfile(t *testing.T) {
 		t.Errorf("DisplayName = %q", u.DisplayName)
 	}
 	for _, name := range []string{"", "   ", "x\x00y", "123456789012345678901234567890123"} {
-		_, err := h.svc.UpdateProfile(t.Context(), h.actor, name)
+		_, err := h.svc.UpdateProfile(t.Context(), h.actor, ProfilePatch{DisplayName: new(name)})
 		if !errors.Is(err, domain.ErrInvalid) {
 			t.Errorf("UpdateProfile(%q) err = %v, want invalid", name, err)
 		}
@@ -78,7 +96,7 @@ func TestUpdateProfile(t *testing.T) {
 func TestUnverifiedAccountsAreGated(t *testing.T) {
 	h := newHarness(t, true, false)
 	ctx := t.Context()
-	_, err := h.svc.UpdateProfile(ctx, h.actor, "Ana")
+	_, err := h.svc.UpdateProfile(ctx, h.actor, ProfilePatch{DisplayName: new("Ana")})
 	requireReason(t, err, domain.ErrFailedPrecondition, domain.ReasonEmailNotVerified)
 	_, err = h.svc.SetStatus(ctx, h.actor, domain.StatusDND, "")
 	requireReason(t, err, domain.ErrFailedPrecondition, domain.ReasonEmailNotVerified)
@@ -89,7 +107,7 @@ func TestUnverifiedAccountsAreGated(t *testing.T) {
 	}
 
 	open := newHarness(t, false, false)
-	if _, err := open.svc.UpdateProfile(ctx, open.actor, "Ana"); err != nil {
+	if _, err := open.svc.UpdateProfile(ctx, open.actor, ProfilePatch{DisplayName: new("Ana")}); err != nil {
 		t.Errorf("without email, unverified accounts work normally: %v", err)
 	}
 }
@@ -156,5 +174,69 @@ func TestSessions(t *testing.T) {
 	}
 	if sessions, _ := h.svc.Sessions(ctx, h.actor); len(sessions) != 1 {
 		t.Errorf("left %v", sessions)
+	}
+}
+
+func TestUpdateProfileAvatarAndEvents(t *testing.T) {
+	h := newHarness(t, true, true)
+	ctx := t.Context()
+	now := h.clock.Now()
+	for _, f := range []domain.File{
+		{ID: 50, OwnerID: 1, Purpose: domain.FileAvatar, CreatedAt: now},
+		{ID: 51, OwnerID: 2, Purpose: domain.FileAvatar, CreatedAt: now},
+		{ID: 52, OwnerID: 1, Purpose: domain.FileGuildIcon, CreatedAt: now},
+	} {
+		if err := h.store.CreateFile(ctx, f); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, g := range []domain.ID{7, 8} {
+		if err := h.store.AddMember(ctx, domain.Member{GuildID: g, UserID: 1, Role: domain.RoleMember, JoinedAt: now}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	u, err := h.svc.UpdateProfile(ctx, h.actor, ProfilePatch{AvatarFileID: new(domain.ID(50))})
+	if err != nil || u.AvatarFileID != 50 || u.DisplayName != "ana" {
+		t.Fatalf("set avatar: %+v, %v", u, err)
+	}
+	evs := h.events.Take()
+	if len(evs) != 2 {
+		t.Fatalf("events = %+v", evs)
+	}
+	if me, ok := evs[0].Payload.(events.MeUpdated); !ok || me.User.AvatarFileID != 50 || !cmp.Equal(evs[0].Topics, []events.Topic{"user:1"}) {
+		t.Errorf("first event: %+v", evs[0])
+	}
+	if _, ok := evs[1].Payload.(events.UserUpdated); !ok || !cmp.Equal(evs[1].Topics, []events.Topic{"user:1", "guild:7", "guild:8"}) {
+		t.Errorf("second event: %+v", evs[1])
+	}
+
+	for _, id := range []domain.ID{51, 52, 99} {
+		_, err := h.svc.UpdateProfile(ctx, h.actor, ProfilePatch{AvatarFileID: new(id)})
+		requireReason(t, err, domain.ErrInvalid, domain.ReasonFieldInvalid)
+	}
+	if u, err := h.svc.UpdateProfile(ctx, h.actor, ProfilePatch{AvatarFileID: new(domain.ID(0))}); err != nil || u.AvatarFileID != 0 {
+		t.Errorf("remove avatar: %+v, %v", u, err)
+	}
+}
+
+func TestSetStatusUpdatesPresence(t *testing.T) {
+	h := newHarness(t, true, true)
+	if _, err := h.svc.SetStatus(t.Context(), h.actor, domain.StatusDND, " focusing "); err != nil {
+		t.Fatal(err)
+	}
+	want := []statusCall{{1, domain.StatusDND, "focusing"}}
+	if !cmp.Equal(h.presence.calls, want, cmp.AllowUnexported(statusCall{})) {
+		t.Errorf("presence calls = %+v", h.presence.calls)
+	}
+	evs := h.events.Take()
+	if len(evs) != 1 {
+		t.Fatalf("status changes stay private: %+v", evs)
+	}
+	if _, ok := evs[0].Payload.(events.MeUpdated); !ok {
+		t.Errorf("event: %+v", evs[0])
+	}
+	if _, err := h.svc.SetStatus(t.Context(), h.actor, "busy", ""); err == nil || len(h.presence.calls) != 1 {
+		t.Errorf("an invalid status reached presence: %v", err)
 	}
 }

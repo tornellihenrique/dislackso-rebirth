@@ -20,14 +20,17 @@ type Store struct {
 	sessions map[domain.ID]domain.Session
 	tokens   map[domain.ID]domain.EmailToken
 	settings *domain.InstanceSettings
-	inTx     bool
+	guildData
+	inTx  bool
+	hooks []func()
 }
 
 func NewStore() *Store {
 	return &Store{
-		users:    map[domain.ID]domain.User{},
-		sessions: map[domain.ID]domain.Session{},
-		tokens:   map[domain.ID]domain.EmailToken{},
+		users:     map[domain.ID]domain.User{},
+		sessions:  map[domain.ID]domain.Session{},
+		tokens:    map[domain.ID]domain.EmailToken{},
+		guildData: newGuildData(),
 	}
 }
 
@@ -39,17 +42,37 @@ func (s *Store) InTx(ctx context.Context, fn func(ctx context.Context) error) er
 	}
 	s.inTx = true
 	users, sessions, tokens, settings := maps.Clone(s.users), maps.Clone(s.sessions), maps.Clone(s.tokens), s.settings
+	guilds := s.cloneGuildData()
 	s.mu.Unlock()
 
 	err := fn(ctx)
 
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.inTx = false
+	hooks := s.hooks
+	s.hooks = nil
 	if err != nil {
 		s.users, s.sessions, s.tokens, s.settings = users, sessions, tokens, settings
+		s.guildData = guilds
+		hooks = nil
+	}
+	s.mu.Unlock()
+	for _, h := range hooks {
+		h()
 	}
 	return err
+}
+
+// AfterCommit runs fn when the current InTx succeeds, or at once outside one.
+func (s *Store) AfterCommit(_ context.Context, fn func()) {
+	s.mu.Lock()
+	if s.inTx {
+		s.hooks = append(s.hooks, fn)
+		s.mu.Unlock()
+		return
+	}
+	s.mu.Unlock()
+	fn()
 }
 
 func (s *Store) CreateUser(_ context.Context, u domain.User) error {

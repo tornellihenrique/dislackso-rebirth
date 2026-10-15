@@ -8,6 +8,7 @@ import (
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/domain"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/auth"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/setup"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/wire"
 )
 
 type SetupService interface {
@@ -55,7 +56,7 @@ func (h *setupHandler) CompleteSetup(ctx context.Context, req *dislacksov1.Compl
 		return nil, h.toConnect(ctx, renameField(err, "name", "instance_name"))
 	}
 	startSession(ctx, signed)
-	return &dislacksov1.CompleteSetupResponse{Me: toMe(signed.User)}, nil
+	return &dislacksov1.CompleteSetupResponse{Me: wire.Me(signed.User)}, nil
 }
 
 // renameField maps a service field name to this request's field name.

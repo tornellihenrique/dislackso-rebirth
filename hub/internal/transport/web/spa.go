@@ -2,10 +2,13 @@ package web
 
 import (
 	"bytes"
+	"crypto/rand"
+	"encoding/base64"
 	"errors"
 	"io/fs"
 	"net/http"
 	"path"
+	"slices"
 	"strings"
 	"time"
 )
@@ -13,10 +16,25 @@ import (
 const indexFile = "index.html"
 
 // contentSecurityPolicy applies to the SPA document. connect-src 'self'
-// also covers same-origin ws:/wss: in current browsers.
-const contentSecurityPolicy = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; " +
-	"form-action 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; " +
-	"media-src 'self' blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self' blob:"
+// also covers same-origin ws:/wss: in current browsers. Styles allow a
+// per-response nonce: UI libraries inject <style> elements (scroll locking
+// in modal dialogs and menus) and tag them with the nonce the page hands them.
+func contentSecurityPolicy(nonce string) string {
+	return "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; " +
+		"form-action 'self'; script-src 'self'; style-src 'self' 'nonce-" + nonce + "'; img-src 'self' data: blob:; " +
+		"media-src 'self' blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self' blob:"
+}
+
+// nonceMeta carries the style nonce to the web client, which reads it at startup.
+const nonceMeta = "csp-nonce"
+
+func newNonce() (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
+}
 
 // reservedPrefixes belong to the API and never fall back to index.html, so a
 // typo in an API path returns 404 instead of an HTML page.
@@ -83,9 +101,21 @@ func (h *spaHandler) serveIndex(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
+	nonce, err := newNonce()
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	meta := []byte(`<meta name="` + nonceMeta + `" content="` + nonce + `">`)
+	if i := bytes.Index(index, []byte("<head>")); i >= 0 {
+		index = slices.Concat(index[:i+len("<head>")], meta, index[i+len("<head>"):])
+	} else {
+		index = append(meta, index...)
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Content-Security-Policy", contentSecurityPolicy)
+	// A nonce must never be reused, so the page is never cached.
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Security-Policy", contentSecurityPolicy(nonce))
 	http.ServeContent(w, r, indexFile, time.Time{}, bytes.NewReader(index))
 }
 

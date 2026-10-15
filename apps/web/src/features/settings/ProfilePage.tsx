@@ -11,6 +11,7 @@ import { Alert } from '@/ui/Alert';
 import { Button } from '@/ui/Button';
 import { SelectField, TextField } from '@/ui/Fields';
 
+import { AvatarEditor } from './AvatarEditor';
 import { SettingsSection } from './SettingsLayout';
 import { STATUS_OPTIONS, statusKey } from './status';
 
@@ -19,6 +20,7 @@ export function ProfilePage() {
   return (
     <>
       <h1 className="mb-8 text-xl font-semibold">{t('settings.profile.title')}</h1>
+      <AvatarEditor />
       <DisplayNameForm />
       <StatusForm />
     </>

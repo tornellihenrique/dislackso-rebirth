@@ -20,7 +20,7 @@ type stubChecker struct{ report health.Report }
 func (s stubChecker) Check(context.Context) health.Report { return s.report }
 
 var builtClient = fstest.MapFS{
-	"index.html":         {Data: []byte("<!doctype html><title>app</title>")},
+	"index.html":         {Data: []byte("<!doctype html><html><head><title>app</title></head></html>")},
 	"favicon.svg":        {Data: []byte("<svg/>")},
 	"assets/app-abc.js":  {Data: []byte("console.log(1)")},
 	"assets/app-abc.css": {Data: []byte("body{}")},
@@ -77,7 +77,7 @@ func TestSPA(t *testing.T) {
 		wantCache string
 		wantCSP   bool
 	}{
-		{name: "root serves index", path: "/", wantCode: http.StatusOK, wantBody: "<title>app</title>", wantCache: "no-cache", wantCSP: true},
+		{name: "root serves index", path: "/", wantCode: http.StatusOK, wantBody: "<title>app</title>", wantCache: "no-store", wantCSP: true},
 		{name: "index.html is not redirected", path: "/index.html", wantCode: http.StatusOK, wantBody: "<title>app</title>", wantCSP: true},
 		{name: "client route falls back to index", path: "/channels/123/456", wantCode: http.StatusOK, wantBody: "<title>app</title>", wantCSP: true},
 		{name: "fingerprinted asset is immutable", path: "/assets/app-abc.js", wantCode: http.StatusOK, wantBody: "console.log(1)", wantCache: "public, max-age=31536000, immutable"},
@@ -120,6 +120,28 @@ func TestSPA(t *testing.T) {
 				t.Error("missing X-Content-Type-Options: nosniff")
 			}
 		})
+	}
+}
+
+// The style nonce in the CSP header is the one handed to the page, and a
+// new one comes with every response.
+func TestSPAStyleNonce(t *testing.T) {
+	nonceOf := func() (header, meta string) {
+		rec := httptest.NewRecorder()
+		newMux(builtClient, health.Report{}).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", http.NoBody))
+		_, after, _ := strings.Cut(rec.Header().Get("Content-Security-Policy"), "'nonce-")
+		header, _, _ = strings.Cut(after, "'")
+		_, after, _ = strings.Cut(rec.Body.String(), `<meta name="csp-nonce" content="`)
+		meta, _, _ = strings.Cut(after, `"`)
+		return header, meta
+	}
+	h1, m1 := nonceOf()
+	h2, _ := nonceOf()
+	if len(h1) < 20 || h1 != m1 {
+		t.Errorf("header nonce %q, page nonce %q", h1, m1)
+	}
+	if h1 == h2 {
+		t.Error("the nonce was reused")
 	}
 }
 

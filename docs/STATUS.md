@@ -2,8 +2,35 @@
 
 ## Current phase
 
-**Phase 1 — Accounts & instance setup: implemented, waiting for review.** Next: Phase 2 — Guilds,
-channels, realtime shell, basic moderation.
+**Phase 2 — Guilds, channels, realtime shell, basic moderation: implemented, waiting for
+review.** Next: Phase 3 — Voice.
+
+### Phase 2 acceptance
+
+- [x] Two browsers: creating a guild, channel and invite, joining, renaming, reordering, role
+      changes and presence changes appear on the other browser in < 500 ms without refresh. The
+      Playwright suite (`e2e/tests/guilds.spec.ts`) drives an admin and a member in two browser
+      contexts and asserts each change on the other side with a 500 ms timeout: join, channel
+      create, rename, drag-and-drop reorder, promotion to admin and a Do Not Disturb status.
+- [x] Killing the network for 30 s then restoring resumes the gateway without a full reload
+      (verified by seq replay test); after 3 min it re-identifies cleanly. Replay is tested in Go
+      (`transport/gateway`: drop without a close frame, events while away, Resume with the last
+      seq, replay in order, no presence flap) and in the browser: the suite cuts the gateway
+      WebSocket, renames a channel meanwhile, restores the network and checks that the page
+      resumed (first frame Resume, not Identify), applied the rename and was not reloaded. The
+      expired path is tested on both sides: the hub answers InvalidSession after the resume
+      window or a gap in the replay buffer, and the client then identifies on the same
+      connection. The E2E outage lasts a few seconds rather than 30 s; the resume window is 120 s.
+- [x] `max_guilds_owned_per_user` enforced (creation and ownership transfer); non-members cannot
+      see a guild in any API or gateway event. Every guild, channel, invite and moderation method
+      answers `NotFound` to outsiders (service tests and an HTTP test with a banned user); the
+      gateway delivers guild events only to sessions subscribed to that guild's topics (topic
+      tests: join subscribes, kick unsubscribes after the removal event).
+- [x] Kick/ban remove the guild from the target's UI immediately; a banned user cannot accept new
+      invites. Covered in Go (HTTP + gateway) and in the browser: the kicked member's rail loses
+      the server and a notice explains why; after a ban, the invite page says the user is banned.
+- [x] Policy matrix fully unit-tested (owner/admin/member × every action), including target
+      rules (owner, self, admin on admin) and the members-can-invite setting.
 
 ### Phase 1 acceptance
 
@@ -38,6 +65,66 @@ channels, realtime shell, basic moderation.
       typecheck + tests, build + Playwright smoke).
 
 ## Done
+
+### Phase 2 — Guilds, channels, realtime shell, basic moderation
+
+- **Contract.** `GuildService`, `ChannelService`, `InviteService` (guild invites, preview and
+  accept) and `ModerationService` (kick, ban, unban, bans, audit log); the gateway protocol in
+  `gateway.proto` (frames, close codes as an enum, the event catalog for this phase); presence,
+  file references and avatars on `User`.
+- **Domain.** Guilds, members, channels (category, text, voice; text names normalized to
+  `release-notes` style), guild invites (8-character codes from an unambiguous alphabet, fixed
+  expiry and use options), bans, audit entries, files, presence, and the whole permission matrix
+  in `domain.Policy` (`Can` plus target rules for moderation, roles and ownership).
+- **Data.** Migration `00002_guilds.sql` (files, guilds, members, bans, invites, channels,
+  audit log; deleting a guild cascades). Repositories with tests on real SQLite. Transactions
+  gained after-commit hooks.
+- **Events.** An in-process bus. Services publish through a publisher that waits for the
+  transaction to commit, so receivers never see rolled-back changes and a snapshot read after an
+  event always includes it.
+- **Services.** `guild` (create with default channels named in the creator's language, update,
+  delete with name confirmation, leave, transfer ownership, roles, members), `channel` (create,
+  update, delete — a category's channels move out —, full reorder), guild invites in `invite`
+  (create, list, revoke, preview signed out, accept, and registration with a guild invite),
+  `moderation`, `presence` (in memory: online while a gateway session lives; idle when every
+  connection reports inactivity; dnd and invisible from the preference), `snapshot` (Ready), and
+  `file` (avatar and icon uploads). `account` now sets avatars and publishes profile and
+  status changes. Every moderation and settings change writes the audit log and tells admins.
+- **Gateway** (`/gateway`). Hello → Identify or Resume → Ready or Resumed with replay; 25 s
+  heartbeats with a dead-connection watchdog and a session re-check on each beat; 2,000-event,
+  120 s replay buffers; topics per user, guild and guild admins, updated as people join, leave
+  and change roles; close codes; Origin check; per-connection frame rate limit; slow readers are
+  dropped and resume; shutdown closes everyone with "hub restarting".
+- **Files.** `POST /api/uploads` (multipart, size cap, rate limit), `GET /files/{id}/{name}`
+  (session required; sandbox CSP, nosniff, immutable caching), and the invite landing icon at
+  `/api/invites/{code}/icon`. Images are decoded and re-encoded on the hub (a square of at
+  most 256 px, centered or the part picked in the avatar cropper; JPEG, PNG when transparent),
+  which drops metadata and anything hidden after the image; decompression bombs are refused
+  before decoding. Animated GIFs stay animated (at most 160 px, 300 frames, 2000 × 2000):
+  frames are decoded one at a time, composed as browsers do and re-quantized, and files
+  `image/gif` refuses but browsers show (frames past the logical screen, a broken last frame)
+  still work. Blobs are stored by
+  SHA-256 under `files/`.
+- **Web core.** `GatewayClient` (resume first, backoff 0.5–15 s with jitter, retry at once when
+  the browser comes back online or visible, zombie detection by missed heartbeat acks, idle after
+  10 min without input) and `GatewayDispatcher`, the only writer of entity stores from push
+  events; RPC results go through the same reducers, which keep the newest copy by `updated_at`.
+  Stores for entities, presence, realtime status, notices, appearance and local UI preferences.
+- **Web UI.** The §15.1 frame: rail (server icons with pill and tooltip, drag to reorder on this
+  device, add server), channel sidebar (server menu, collapsible categories, hover actions,
+  context menus, drag-and-drop reorder for admins), channel header with member list toggle,
+  placeholders for voice and text, member list (owner, admins, online, offline) with profile
+  popout and moderation menu, connection banner, notices. Dialogs to create or join a server,
+  create channels and categories, edit channels, and invite people. Invite landing page. Server
+  settings: overview, channels, members, invites, bans, audit log, danger zone. User settings:
+  avatar with cropping, appearance (theme and density, applied before the first paint).
+- **Tests.** Go: policy matrix, validators, repositories, every new service on fakes, adapters
+  (imaging, blob store, codes), gateway over real WebSockets (identify, ordering, resume,
+  refusals, close codes, heartbeat timeout, shutdown, origin, topics), and HTTP flows in
+  `internal/app` (guild invite registration, gateway delivery between two users, kick, ban,
+  uploads). Web: gateway client with a fake socket and fake timers, dispatcher, reducers, channel
+  tree and drag math, member groups, permissions mirror, upload errors, and the invite landing
+  page and member list. E2E: `guilds.spec.ts` as above.
 
 ### Phase 1 — Accounts & instance setup
 
@@ -189,6 +276,40 @@ channels, realtime shell, basic moderation.
 - **Settings are a full-screen route** (`/settings/...`) rather than a modal over the app, so deep
   links and the back button work. Phase 2 can render it as a modal over the shell.
 
+### Phase 2
+
+- No ledger decision was changed.
+- **`UpdatePresence` carries only `idle`.** The status preference and custom status go through
+  `AccountService.SetStatusPreference`, so they persist across restarts and reach every device;
+  the frame only reports inactivity (ARCHITECTURE §8.4 updated).
+- **Revoked sessions end their gateway connection at the next heartbeat** (≤ 25 s) instead of
+  through a `SESSION_REVOKED` event; RPCs fail at once. The re-check also catches expiry and
+  disabled accounts without extra events.
+- **No missed events between snapshot and subscription:** events are published after commit, and
+  Identify subscribes before it reads the snapshot (§8.1 updated).
+- **Presence survives a dropped connection for the resume window** (120 s), so a network blip
+  does not flap; closing the tab or signing out ends it at once.
+- **Deleting a guild deletes it for good** (channels, members, invites, bans, audit log), rather
+  than a soft delete: nothing references a deleted guild yet.
+- **Avatars and guild icons are visible to every signed-in user,** like profile pictures; the
+  invite landing page gets the icon through the invite code. Uploaded images are stored at most
+  256 px; `?size=` thumbnails are not needed yet.
+- **Guild invites also register newcomers** while registration is invite-only, and the account
+  joins the guild. Members see and revoke their own invites; owners and admins see all.
+- **Banning works on former members too,** and ownership transfer respects the new owner's limit
+  of owned guilds.
+- **CSP style nonce.** Radix injects a `<style>` element to lock scrolling behind dialogs and
+  menus; the hub now issues a fresh nonce per page (in the CSP header and a meta tag) instead of
+  allowing `'unsafe-inline'` (§5.4 updated).
+- **Local preferences** (member list shown, collapsed categories, last channel per server, rail
+  order, theme, density) live in versioned `localStorage` entries; `public/appearance.js`
+  applies the theme before the app loads, so a light theme never flashes dark.
+- **Settings stay routes:** user settings at `/settings/...` and server settings at
+  `/guilds/{id}/settings/...`, both full screen with Escape to close.
+- **New dependencies:** radix-ui 1.8.1, @dnd-kit/core 6.3.1 + sortable 10.0.0, react-easy-crop
+  6.2.4, get-nonce 1.0.1 (already used by Radix; set with the page nonce), coder/websocket 1.8.15,
+  golang.org/x/image 0.47.0.
+
 ## Known issues
 
 - **Client IP is the TCP peer.** That is correct for direct connections. A tunnel or reverse proxy
@@ -199,18 +320,59 @@ channels, realtime shell, basic moderation.
   from the exposure provider, since tunnels terminate TLS before the hub.
 - Expired sessions and used or expired email tokens are never purged yet; a periodic cleanup job
   is still to come.
-- The status preference is stored but has no effect until presence exists (Phase 2).
+- Replaced avatars and icons stay on disk, like expired sessions; the cleanup job will cover
+  both.
+- The dev-build frame inspector (§8.1) is not built yet.
+- Rail badges (unread, mentions) wait for text chat.
 - No `LICENSE` file yet: the license is the owner's choice.
-- The web bundle is ~580 kB minified (178 kB gzip), so Vite prints its 500 kB chunk warning on
-  build. Route-level code splitting will come with the larger features.
+- The web bundle is ~870 kB minified (266 kB gzip), so Vite prints its 500 kB chunk warning on
+  build. Route-level code splitting (settings, server settings) is the next easy win.
 - Go's `Server.Shutdown` waits up to 5 s for connections a client opened but never used (for
   example a browser preconnect), so stopping the hub can take a few seconds.
 - `task dev` does not start LiveKit yet (Phase 3), and `task test:int` has no tests yet.
-- Lessons from the reference repo still to apply: apply the persisted theme before the first render
-  to avoid a flash (Phase 2 Appearance settings); keep the remote-audio elements mounted for as long
-  as the user is in the room, not tied to the stage view (Phase 3).
+- Lesson from the reference repo still to apply: keep the remote-audio elements mounted for as
+  long as the user is in the room, not tied to the stage view (Phase 3).
 
 ## Manual test script
+
+### Phase 2
+
+Prerequisites: `task setup`. Use two browser profiles (or one normal and one private window) so
+two accounts can be signed in at once.
+
+1. `task check` is green, and `task e2e` passes 12 Playwright tests.
+2. **Setup.** Delete `.dev/data`, run `task dev`, finish setup at
+   <http://localhost:5173/setup?token=dev-setup-token>. Home shows "Welcome" with Create and Join.
+3. **Create a server.** Use the **+** in the rail (or Create a server): pick an icon and a name.
+   You land in #general; the sidebar has a text and a voice category; the member list shows you as
+   owner with a crown, online.
+4. **Invite and join.** Server menu (click the server name) → Invite people. Change the expiry and
+   uses and see the link change. Open the link in the other profile: the landing page shows the
+   server, who invited you and member counts. Choose Create an account (the code is filled in);
+   confirm the email with the link from the hub log. The new member appears in the first
+   profile's member list right away, as online.
+5. **Live changes.** In the first profile: create a channel (server menu → Create channel), rename
+   it (right-click → Edit channel), drag it to another category, make the other user admin
+   (right-click them in the member list). Each change appears in the second profile at once. In
+   the second profile set Do Not Disturb with a custom status (click your name in the user panel,
+   or Settings → Profile): the first profile shows the red dot and the status.
+6. **Reconnect.** In the second profile, stop the hub for ~10 s (Ctrl+C on `task dev:hub` in a
+   separate terminal) and start it again: a "Reconnecting…" banner appears after 2 s and goes away
+   by itself; nothing reloads. (A hub restart starts a new session; a network drop resumes.)
+7. **Server settings** (server menu → Server settings): rename the server, change or remove the
+   icon; the Audit log lists every change with who did it; Invites lists active links and revokes
+   them; Members offers the same actions as the member list.
+8. **Moderation.** Kick the second user: their rail loses the server at once with a notice. Invite
+   them again, then ban them with a reason: they lose the server, the invite page tells them they
+   are banned, and Bans lists them until you revoke the ban.
+9. **Owner rules.** Transfer ownership to another member (you become admin); the Danger zone
+   deletes a server only after typing its name. An admin cannot kick another admin (the action is
+   missing; the hub answers `cannot_target_admin`).
+10. **Profile and appearance.** Settings → Profile → Change avatar: crop and apply; the avatar shows
+    in the user panel and, for others, in the member list. Settings → Appearance: switch to Light
+    and Compact, reload: no dark flash, the choice stays.
+11. **Language.** With the browser in Portuguese (Brazil), every new screen, dialog, menu, notice
+    and error is in pt-BR; default channel names of a new server are Portuguese.
 
 ### Phase 1
 

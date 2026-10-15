@@ -6,11 +6,13 @@ import (
 	dislacksov1 "github.com/tornellihenrique/dislackso-rebirth/hub/gen/dislackso/v1"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/gen/dislackso/v1/dislacksov1connect"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/domain"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/account"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/wire"
 )
 
 type AccountService interface {
 	Me(ctx context.Context, actor domain.Actor) (domain.User, error)
-	UpdateProfile(ctx context.Context, actor domain.Actor, displayName string) (domain.User, error)
+	UpdateProfile(ctx context.Context, actor domain.Actor, p account.ProfilePatch) (domain.User, error)
 	SetStatus(ctx context.Context, actor domain.Actor, pref domain.StatusPref, custom string) (domain.User, error)
 	ChangePassword(ctx context.Context, actor domain.Actor, current, next string) error
 	Sessions(ctx context.Context, actor domain.Actor) ([]domain.Session, error)
@@ -33,7 +35,7 @@ func (h *accountHandler) GetMe(ctx context.Context, _ *dislacksov1.GetMeRequest)
 	if err != nil {
 		return nil, h.toConnect(ctx, err)
 	}
-	return &dislacksov1.GetMeResponse{Me: toMe(u)}, nil
+	return &dislacksov1.GetMeResponse{Me: wire.Me(u)}, nil
 }
 
 func (h *accountHandler) UpdateProfile(ctx context.Context, req *dislacksov1.UpdateProfileRequest) (*dislacksov1.UpdateProfileResponse, error) {
@@ -41,11 +43,22 @@ func (h *accountHandler) UpdateProfile(ctx context.Context, req *dislacksov1.Upd
 	if err != nil {
 		return nil, err
 	}
-	u, err := h.svc.UpdateProfile(ctx, actor, req.GetDisplayName())
+	var p account.ProfilePatch
+	if req.DisplayName != nil {
+		p.DisplayName = req.DisplayName
+	}
+	if req.AvatarFileId != nil {
+		id, err := optionalID(req.GetAvatarFileId(), "avatar_file_id")
+		if err != nil {
+			return nil, h.toConnect(ctx, err)
+		}
+		p.AvatarFileID = &id
+	}
+	u, err := h.svc.UpdateProfile(ctx, actor, p)
 	if err != nil {
 		return nil, h.toConnect(ctx, err)
 	}
-	return &dislacksov1.UpdateProfileResponse{Me: toMe(u)}, nil
+	return &dislacksov1.UpdateProfileResponse{Me: wire.Me(u)}, nil
 }
 
 func (h *accountHandler) ChangePassword(ctx context.Context, req *dislacksov1.ChangePasswordRequest) (*dislacksov1.ChangePasswordResponse, error) {
@@ -64,11 +77,11 @@ func (h *accountHandler) SetStatusPreference(ctx context.Context, req *dislackso
 	if err != nil {
 		return nil, err
 	}
-	u, err := h.svc.SetStatus(ctx, actor, statusFromProto(req.GetStatus()), req.GetCustomStatus())
+	u, err := h.svc.SetStatus(ctx, actor, wire.StatusFromProto(req.GetStatus()), req.GetCustomStatus())
 	if err != nil {
 		return nil, h.toConnect(ctx, err)
 	}
-	return &dislacksov1.SetStatusPreferenceResponse{Me: toMe(u)}, nil
+	return &dislacksov1.SetStatusPreferenceResponse{Me: wire.Me(u)}, nil
 }
 
 func (h *accountHandler) ListSessions(ctx context.Context, _ *dislacksov1.ListSessionsRequest) (*dislacksov1.ListSessionsResponse, error) {
@@ -114,5 +127,5 @@ func (h *accountHandler) RevokeOtherSessions(ctx context.Context, _ *dislacksov1
 	if err != nil {
 		return nil, h.toConnect(ctx, err)
 	}
-	return &dislacksov1.RevokeOtherSessionsResponse{Revoked: clampInt32(n)}, nil
+	return &dislacksov1.RevokeOtherSessionsResponse{Revoked: wire.ClampInt32(n)}, nil
 }

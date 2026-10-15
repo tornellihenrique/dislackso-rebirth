@@ -26,8 +26,11 @@ message GetMeResponse {
   Me me = 1;
 }
 
+// Unset fields keep their value.
 message UpdateProfileRequest {
-  string display_name = 1;
+  optional string display_name = 1;
+  // A file uploaded with purpose "avatar"; empty removes the avatar.
+  optional string avatar_file_id = 2;
 }
 
 message UpdateProfileResponse {

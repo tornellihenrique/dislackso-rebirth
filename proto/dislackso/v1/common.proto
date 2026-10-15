@@ -7,6 +7,10 @@ message User {
   string id = 1;
   string username = 2;
   string display_name = 3;
+  // Empty when the user has no avatar.
+  string avatar_url = 4;
+  // Unix ms; clients keep the newest copy they have seen.
+  int64 updated_at = 5;
 }
 
 enum StatusPreference {
@@ -28,6 +32,34 @@ message Me {
   bool instance_admin = 6;
   // Unix ms.
   int64 created_at = 7;
+}
+
+// PresenceStatus is what other users see.
+enum PresenceStatus {
+  PRESENCE_STATUS_UNSPECIFIED = 0;
+  PRESENCE_STATUS_OFFLINE = 1;
+  PRESENCE_STATUS_ONLINE = 2;
+  PRESENCE_STATUS_IDLE = 3;
+  PRESENCE_STATUS_DND = 4;
+}
+
+message Presence {
+  string user_id = 1;
+  PresenceStatus status = 2;
+  // Empty while offline.
+  string custom_status = 3;
+}
+
+// FileRef describes an uploaded file. Uploads go through POST /api/uploads,
+// never through RPC.
+message FileRef {
+  string id = 1;
+  // Same-origin download URL.
+  string url = 2;
+  string mime = 3;
+  int64 size = 4;
+  int32 width = 5;
+  int32 height = 6;
 }
 
 enum RegistrationMode {

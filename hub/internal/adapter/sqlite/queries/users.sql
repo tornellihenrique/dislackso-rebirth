@@ -1,8 +1,8 @@
 -- name: CreateUser :exec
 INSERT INTO users (
-  id, username, email, email_verified_at, password_hash, display_name,
+  id, username, email, email_verified_at, password_hash, display_name, avatar_file_id,
   status_pref, custom_status, is_instance_admin, disabled_at, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: GetUserByID :one
 SELECT * FROM users WHERE id = ? AND deleted_at IS NULL;
@@ -22,6 +22,7 @@ UPDATE users SET
   email_verified_at = ?,
   password_hash = ?,
   display_name = ?,
+  avatar_file_id = ?,
   status_pref = ?,
   custom_status = ?,
   is_instance_admin = ?,
@@ -34,3 +35,9 @@ SELECT * FROM users WHERE deleted_at IS NULL ORDER BY id;
 
 -- name: CountUsers :one
 SELECT count(*) FROM users WHERE deleted_at IS NULL;
+
+-- name: ListGuildUsers :many
+SELECT u.* FROM users u
+JOIN guild_members m ON m.user_id = u.id
+WHERE m.guild_id = ? AND u.deleted_at IS NULL
+ORDER BY u.id;

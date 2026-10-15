@@ -14,7 +14,9 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/blob"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/clock"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/imaging"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/mail"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/password"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/ratelimit"
@@ -24,15 +26,24 @@ import (
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/token"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/buildinfo"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/config"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/events"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/account"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/auth"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/channel"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/file"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/guild"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/health"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/instance"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/invite"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/moderation"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/notify"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/presence"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/settings"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/setup"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/snapshot"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/clientip"
+	filehttp "github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/files"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/gateway"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/rpc"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/web"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/webdist"
@@ -52,10 +63,17 @@ type App struct {
 	db       *sqlite.DB
 	settings *settings.Service
 	setup    *setup.Service
+	gateway  *gateway.Server
 	server   *http.Server
 	listener net.Listener
 	devMail  bool
 }
+
+// verifier breaks the auth ↔ invite cycle: guild services ask auth whether
+// accounts must confirm their email, while auth redeems invites.
+type verifier func(ctx context.Context) bool
+
+func (f verifier) VerificationRequired(ctx context.Context) bool { return f(ctx) }
 
 func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*App, error) {
 	files, err := webFiles(cfg.Web)
@@ -98,16 +116,45 @@ func wire(cfg config.Config, logger *slog.Logger, db *sqlite.DB, files fs.FS) (*
 	}
 	notifier := &notify.Notifier{Mailer: mailer, Settings: settingsSvc}
 
+	bus := events.NewBus()
+	publisher := events.Publisher{Bus: bus, Hooks: db}
+	tracker := presence.New(db, publisher, logger)
+	var authSvc *auth.Service
+	verification := verifier(func(ctx context.Context) bool { return authSvc.VerificationRequired(ctx) })
+
 	invites := invite.New(invite.Deps{
-		Tokens: db, Users: db, TokenGen: tokens, IDs: ids, Clock: clk, Settings: settingsSvc,
+		Tokens: db, Users: db, Guilds: db, Members: db, Channels: db, Invites: db, Bans: db, Audit: db, Tx: db,
+		TokenGen: tokens, Codes: tokens, IDs: ids, Clock: clk, Limiter: limiter, Events: publisher,
+		Settings: settingsSvc, Presence: tracker, Verification: verification,
 	})
-	authSvc := auth.New(auth.Deps{
+	authSvc = auth.New(auth.Deps{
 		Users: db, Sessions: db, Tokens: db, Tx: db,
 		Hasher: hasher, TokenGen: tokens, IDs: ids, Clock: clk, Limiter: limiter,
 		Mail: mailer, Settings: settingsSvc, Emails: notifier, Invites: invites, Logger: logger,
 	})
 	accountSvc := account.New(account.Deps{
-		Users: db, Sessions: db, Tx: db, Hasher: hasher, Clock: clk, Limiter: limiter, Verification: authSvc,
+		Users: db, Sessions: db, Members: db, Files: db, Tx: db, Hasher: hasher, Clock: clk, Limiter: limiter,
+		Events: publisher, Presence: tracker, Verification: authSvc,
+	})
+	guildSvc := guild.New(guild.Deps{
+		Guilds: db, Members: db, Channels: db, Users: db, Files: db, Audit: db, Tx: db, IDs: ids, Clock: clk,
+		Events: publisher, Settings: settingsSvc, Presence: tracker, Verification: authSvc,
+	})
+	channelSvc := channel.New(channel.Deps{
+		Guilds: db, Members: db, Channels: db, Users: db, Audit: db, Tx: db, IDs: ids, Clock: clk,
+		Events: publisher, Settings: settingsSvc, Presence: tracker, Verification: authSvc,
+	})
+	moderationSvc := moderation.New(moderation.Deps{
+		Guilds: db, Members: db, Channels: db, Users: db, Bans: db, Audit: db, Tx: db, IDs: ids, Clock: clk,
+		Events: publisher, Presence: tracker, Verification: authSvc,
+	})
+	fileSvc := file.New(file.Deps{
+		Files: db, Blobs: blob.LocalFS{Root: filepath.Join(cfg.DataDir, "files")}, Images: imaging.Processor{},
+		Invites: db, Guilds: db, IDs: ids, Clock: clk, Limiter: limiter, Verification: authSvc,
+	})
+	snapshotSvc := snapshot.New(snapshot.Deps{
+		Users: db, Guilds: db, Members: db, Channels: db, Settings: settingsSvc,
+		Presence: tracker, Verification: authSvc,
 	})
 	instanceSvc := instance.New(instance.Deps{
 		Users: db, Sessions: db, Tx: db, Clock: clk,
@@ -134,9 +181,19 @@ func wire(cfg config.Config, logger *slog.Logger, db *sqlite.DB, files fs.FS) (*
 		Instance:      instanceSvc,
 		Invites:       invites,
 		Setup:         setupSvc,
+		Guilds:        guildSvc,
+		Channels:      channelSvc,
+		GuildInvites:  invites,
+		Moderation:    moderationSvc,
 		ClientIP:      clientip.RemoteAddr,
 		Logger:        logger,
 	})
+	gw := gateway.New(gateway.Options{
+		Events: bus, Auth: authSvc, Snapshots: snapshotSvc, Presence: tracker,
+		Tokens: tokens, Clock: clk, Logger: logger,
+	})
+	mux.Handle("GET "+gateway.Path, gw)
+	filehttp.Register(mux, filehttp.Options{Files: fileSvc, Auth: authSvc, Logger: logger})
 	web.Register(mux, web.Options{Files: files, Health: healthSvc, Setup: setupSvc, ClientIP: clientip.RemoteAddr})
 
 	server := &http.Server{
@@ -147,7 +204,7 @@ func wire(cfg config.Config, logger *slog.Logger, db *sqlite.DB, files fs.FS) (*
 	}
 	return &App{
 		cfg: cfg, logger: logger, db: db, settings: settingsSvc, setup: setupSvc,
-		server: server, devMail: cfg.Mail.DevLog,
+		gateway: gw, server: server, devMail: cfg.Mail.DevLog,
 	}, nil
 }
 
@@ -194,6 +251,8 @@ func (a *App) Serve(ctx context.Context) error {
 	a.logger.InfoContext(ctx, "shutting down")
 	shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), shutdownTimeout)
 	defer cancel()
+	// Gateway connections are hijacked, so the HTTP server does not wait for them.
+	a.gateway.Shutdown(shutdownCtx)
 	if err := a.server.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("shut down http: %w", err)
 	}

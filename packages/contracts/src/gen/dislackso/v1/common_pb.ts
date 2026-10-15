@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dislackso/v1/common.proto.
  */
 export const file_dislackso_v1_common: GenFile = /*@__PURE__*/
-  fileDesc("ChlkaXNsYWNrc28vdjEvY29tbW9uLnByb3RvEgxkaXNsYWNrc28udjEiOgoEVXNlchIKCgJpZBgBIAEoCRIQCgh1c2VybmFtZRgCIAEoCRIUCgxkaXNwbGF5X25hbWUYAyABKAkiwAEKAk1lEiAKBHVzZXIYASABKAsyEi5kaXNsYWNrc28udjEuVXNlchINCgVlbWFpbBgCIAEoCRIWCg5lbWFpbF92ZXJpZmllZBgDIAEoCBIuCgZzdGF0dXMYBCABKA4yHi5kaXNsYWNrc28udjEuU3RhdHVzUHJlZmVyZW5jZRIVCg1jdXN0b21fc3RhdHVzGAUgASgJEhYKDmluc3RhbmNlX2FkbWluGAYgASgIEhIKCmNyZWF0ZWRfYXQYByABKAMiHQoLRXJyb3JSZWFzb24SDgoGcmVhc29uGAEgASgJIkMKD0ZpZWxkVmlvbGF0aW9ucxIwCgp2aW9sYXRpb25zGAEgAygLMhwuZGlzbGFja3NvLnYxLkZpZWxkVmlvbGF0aW9uIi8KDkZpZWxkVmlvbGF0aW9uEg0KBWZpZWxkGAEgASgJEg4KBnJlYXNvbhgCIAEoCSIlCgtSYXRlTGltaXRlZBIWCg5yZXRyeV9hZnRlcl9tcxgBIAEoAyqrAQoQU3RhdHVzUHJlZmVyZW5jZRIhCh1TVEFUVVNfUFJFRkVSRU5DRV9VTlNQRUNJRklFRBAAEhwKGFNUQVRVU19QUkVGRVJFTkNFX09OTElORRABEhoKFlNUQVRVU19QUkVGRVJFTkNFX0lETEUQAhIZChVTVEFUVVNfUFJFRkVSRU5DRV9ETkQQAxIfChtTVEFUVVNfUFJFRkVSRU5DRV9JTlZJU0lCTEUQBCqSAQoQUmVnaXN0cmF0aW9uTW9kZRIhCh1SRUdJU1RSQVRJT05fTU9ERV9VTlNQRUNJRklFRBAAEiEKHVJFR0lTVFJBVElPTl9NT0RFX0lOVklURV9PTkxZEAESGgoWUkVHSVNUUkFUSU9OX01PREVfT1BFThACEhwKGFJFR0lTVFJBVElPTl9NT0RFX0NMT1NFRBADQsABChBjb20uZGlzbGFja3NvLnYxQgtDb21tb25Qcm90b1ABWk5naXRodWIuY29tL3Rvcm5lbGxpaGVucmlxdWUvZGlzbGFja3NvLXJlYmlydGgvaHViL2dlbi9kaXNsYWNrc28vdjE7ZGlzbGFja3NvdjGiAgNEWFiqAgxEaXNsYWNrc28uVjHKAgxEaXNsYWNrc29cVjHiAhhEaXNsYWNrc29cVjFcR1BCTWV0YWRhdGHqAg1EaXNsYWNrc286OlYxYgZwcm90bzM");
+  fileDesc("ChlkaXNsYWNrc28vdjEvY29tbW9uLnByb3RvEgxkaXNsYWNrc28udjEiYgoEVXNlchIKCgJpZBgBIAEoCRIQCgh1c2VybmFtZRgCIAEoCRIUCgxkaXNwbGF5X25hbWUYAyABKAkSEgoKYXZhdGFyX3VybBgEIAEoCRISCgp1cGRhdGVkX2F0GAUgASgDIsABCgJNZRIgCgR1c2VyGAEgASgLMhIuZGlzbGFja3NvLnYxLlVzZXISDQoFZW1haWwYAiABKAkSFgoOZW1haWxfdmVyaWZpZWQYAyABKAgSLgoGc3RhdHVzGAQgASgOMh4uZGlzbGFja3NvLnYxLlN0YXR1c1ByZWZlcmVuY2USFQoNY3VzdG9tX3N0YXR1cxgFIAEoCRIWCg5pbnN0YW5jZV9hZG1pbhgGIAEoCBISCgpjcmVhdGVkX2F0GAcgASgDImAKCFByZXNlbmNlEg8KB3VzZXJfaWQYASABKAkSLAoGc3RhdHVzGAIgASgOMhwuZGlzbGFja3NvLnYxLlByZXNlbmNlU3RhdHVzEhUKDWN1c3RvbV9zdGF0dXMYAyABKAkiXQoHRmlsZVJlZhIKCgJpZBgBIAEoCRILCgN1cmwYAiABKAkSDAoEbWltZRgDIAEoCRIMCgRzaXplGAQgASgDEg0KBXdpZHRoGAUgASgFEg4KBmhlaWdodBgGIAEoBSIdCgtFcnJvclJlYXNvbhIOCgZyZWFzb24YASABKAkiQwoPRmllbGRWaW9sYXRpb25zEjAKCnZpb2xhdGlvbnMYASADKAsyHC5kaXNsYWNrc28udjEuRmllbGRWaW9sYXRpb24iLwoORmllbGRWaW9sYXRpb24SDQoFZmllbGQYASABKAkSDgoGcmVhc29uGAIgASgJIiUKC1JhdGVMaW1pdGVkEhYKDnJldHJ5X2FmdGVyX21zGAEgASgDKqsBChBTdGF0dXNQcmVmZXJlbmNlEiEKHVNUQVRVU19QUkVGRVJFTkNFX1VOU1BFQ0lGSUVEEAASHAoYU1RBVFVTX1BSRUZFUkVOQ0VfT05MSU5FEAESGgoWU1RBVFVTX1BSRUZFUkVOQ0VfSURMRRACEhkKFVNUQVRVU19QUkVGRVJFTkNFX0RORBADEh8KG1NUQVRVU19QUkVGRVJFTkNFX0lOVklTSUJMRRAEKp0BCg5QcmVzZW5jZVN0YXR1cxIfChtQUkVTRU5DRV9TVEFUVVNfVU5TUEVDSUZJRUQQABIbChdQUkVTRU5DRV9TVEFUVVNfT0ZGTElORRABEhoKFlBSRVNFTkNFX1NUQVRVU19PTkxJTkUQAhIYChRQUkVTRU5DRV9TVEFUVVNfSURMRRADEhcKE1BSRVNFTkNFX1NUQVRVU19ETkQQBCqSAQoQUmVnaXN0cmF0aW9uTW9kZRIhCh1SRUdJU1RSQVRJT05fTU9ERV9VTlNQRUNJRklFRBAAEiEKHVJFR0lTVFJBVElPTl9NT0RFX0lOVklURV9PTkxZEAESGgoWUkVHSVNUUkFUSU9OX01PREVfT1BFThACEhwKGFJFR0lTVFJBVElPTl9NT0RFX0NMT1NFRBADQsABChBjb20uZGlzbGFja3NvLnYxQgtDb21tb25Qcm90b1ABWk5naXRodWIuY29tL3Rvcm5lbGxpaGVucmlxdWUvZGlzbGFja3NvLXJlYmlydGgvaHViL2dlbi9kaXNsYWNrc28vdjE7ZGlzbGFja3NvdjGiAgNEWFiqAgxEaXNsYWNrc28uVjHKAgxEaXNsYWNrc29cVjHiAhhEaXNsYWNrc29cVjFcR1BCTWV0YWRhdGHqAg1EaXNsYWNrc286OlYxYgZwcm90bzM");
 
 /**
  * User is the public profile shown to anyone who shares a guild with the user.
@@ -32,6 +32,20 @@ export type User = Message<"dislackso.v1.User"> & {
    * @generated from field: string display_name = 3;
    */
   displayName: string;
+
+  /**
+   * Empty when the user has no avatar.
+   *
+   * @generated from field: string avatar_url = 4;
+   */
+  avatarUrl: string;
+
+  /**
+   * Unix ms; clients keep the newest copy they have seen.
+   *
+   * @generated from field: int64 updated_at = 5;
+   */
+  updatedAt: bigint;
 };
 
 /**
@@ -93,6 +107,82 @@ export const MeSchema: GenMessage<Me> = /*@__PURE__*/
   messageDesc(file_dislackso_v1_common, 1);
 
 /**
+ * @generated from message dislackso.v1.Presence
+ */
+export type Presence = Message<"dislackso.v1.Presence"> & {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: dislackso.v1.PresenceStatus status = 2;
+   */
+  status: PresenceStatus;
+
+  /**
+   * Empty while offline.
+   *
+   * @generated from field: string custom_status = 3;
+   */
+  customStatus: string;
+};
+
+/**
+ * Describes the message dislackso.v1.Presence.
+ * Use `create(PresenceSchema)` to create a new message.
+ */
+export const PresenceSchema: GenMessage<Presence> = /*@__PURE__*/
+  messageDesc(file_dislackso_v1_common, 2);
+
+/**
+ * FileRef describes an uploaded file. Uploads go through POST /api/uploads,
+ * never through RPC.
+ *
+ * @generated from message dislackso.v1.FileRef
+ */
+export type FileRef = Message<"dislackso.v1.FileRef"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * Same-origin download URL.
+   *
+   * @generated from field: string url = 2;
+   */
+  url: string;
+
+  /**
+   * @generated from field: string mime = 3;
+   */
+  mime: string;
+
+  /**
+   * @generated from field: int64 size = 4;
+   */
+  size: bigint;
+
+  /**
+   * @generated from field: int32 width = 5;
+   */
+  width: number;
+
+  /**
+   * @generated from field: int32 height = 6;
+   */
+  height: number;
+};
+
+/**
+ * Describes the message dislackso.v1.FileRef.
+ * Use `create(FileRefSchema)` to create a new message.
+ */
+export const FileRefSchema: GenMessage<FileRef> = /*@__PURE__*/
+  messageDesc(file_dislackso_v1_common, 3);
+
+/**
  * ErrorReason is attached to errors whose code alone does not tell the client
  * what happened, such as "invalid_credentials" or "registration_closed".
  *
@@ -110,7 +200,7 @@ export type ErrorReason = Message<"dislackso.v1.ErrorReason"> & {
  * Use `create(ErrorReasonSchema)` to create a new message.
  */
 export const ErrorReasonSchema: GenMessage<ErrorReason> = /*@__PURE__*/
-  messageDesc(file_dislackso_v1_common, 2);
+  messageDesc(file_dislackso_v1_common, 4);
 
 /**
  * FieldViolations is attached to InvalidArgument and AlreadyExists errors.
@@ -129,7 +219,7 @@ export type FieldViolations = Message<"dislackso.v1.FieldViolations"> & {
  * Use `create(FieldViolationsSchema)` to create a new message.
  */
 export const FieldViolationsSchema: GenMessage<FieldViolations> = /*@__PURE__*/
-  messageDesc(file_dislackso_v1_common, 3);
+  messageDesc(file_dislackso_v1_common, 5);
 
 /**
  * @generated from message dislackso.v1.FieldViolation
@@ -156,7 +246,7 @@ export type FieldViolation = Message<"dislackso.v1.FieldViolation"> & {
  * Use `create(FieldViolationSchema)` to create a new message.
  */
 export const FieldViolationSchema: GenMessage<FieldViolation> = /*@__PURE__*/
-  messageDesc(file_dislackso_v1_common, 4);
+  messageDesc(file_dislackso_v1_common, 6);
 
 /**
  * RateLimited is attached to ResourceExhausted errors.
@@ -175,7 +265,7 @@ export type RateLimited = Message<"dislackso.v1.RateLimited"> & {
  * Use `create(RateLimitedSchema)` to create a new message.
  */
 export const RateLimitedSchema: GenMessage<RateLimited> = /*@__PURE__*/
-  messageDesc(file_dislackso_v1_common, 5);
+  messageDesc(file_dislackso_v1_common, 7);
 
 /**
  * @generated from enum dislackso.v1.StatusPreference
@@ -216,6 +306,44 @@ export const StatusPreferenceSchema: GenEnum<StatusPreference> = /*@__PURE__*/
   enumDesc(file_dislackso_v1_common, 0);
 
 /**
+ * PresenceStatus is what other users see.
+ *
+ * @generated from enum dislackso.v1.PresenceStatus
+ */
+export enum PresenceStatus {
+  /**
+   * @generated from enum value: PRESENCE_STATUS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: PRESENCE_STATUS_OFFLINE = 1;
+   */
+  OFFLINE = 1,
+
+  /**
+   * @generated from enum value: PRESENCE_STATUS_ONLINE = 2;
+   */
+  ONLINE = 2,
+
+  /**
+   * @generated from enum value: PRESENCE_STATUS_IDLE = 3;
+   */
+  IDLE = 3,
+
+  /**
+   * @generated from enum value: PRESENCE_STATUS_DND = 4;
+   */
+  DND = 4,
+}
+
+/**
+ * Describes the enum dislackso.v1.PresenceStatus.
+ */
+export const PresenceStatusSchema: GenEnum<PresenceStatus> = /*@__PURE__*/
+  enumDesc(file_dislackso_v1_common, 1);
+
+/**
  * @generated from enum dislackso.v1.RegistrationMode
  */
 export enum RegistrationMode {
@@ -246,5 +374,5 @@ export enum RegistrationMode {
  * Describes the enum dislackso.v1.RegistrationMode.
  */
 export const RegistrationModeSchema: GenEnum<RegistrationMode> = /*@__PURE__*/
-  enumDesc(file_dislackso_v1_common, 1);
+  enumDesc(file_dislackso_v1_common, 2);
 

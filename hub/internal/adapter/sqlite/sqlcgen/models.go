@@ -8,6 +8,32 @@ import (
 	"database/sql"
 )
 
+type AuditLog struct {
+	ID         int64
+	GuildID    int64
+	ActorID    sql.NullInt64
+	Action     string
+	TargetType string
+	TargetID   string
+	DataJson   string
+	CreatedAt  int64
+}
+
+type Channel struct {
+	ID              int64
+	GuildID         sql.NullInt64
+	ParentID        sql.NullInt64
+	Type            string
+	Name            string
+	Topic           string
+	Position        int64
+	UserLimit       int64
+	DrawingAllowed  int64
+	MaxShareQuality string
+	CreatedAt       int64
+	UpdatedAt       int64
+}
+
 type EmailToken struct {
 	ID        int64
 	UserID    sql.NullInt64
@@ -19,10 +45,60 @@ type EmailToken struct {
 	CreatedAt int64
 }
 
+type File struct {
+	ID           int64
+	OwnerID      sql.NullInt64
+	Purpose      string
+	Sha256       []byte
+	Size         int64
+	Mime         string
+	OriginalName string
+	Width        int64
+	Height       int64
+	StorageKey   string
+	CreatedAt    int64
+}
+
+type Guild struct {
+	ID         int64
+	Name       string
+	IconFileID sql.NullInt64
+	OwnerID    int64
+	CreatedAt  int64
+	UpdatedAt  int64
+}
+
+type GuildBan struct {
+	GuildID   int64
+	UserID    int64
+	BannedBy  sql.NullInt64
+	Reason    string
+	CreatedAt int64
+}
+
+type GuildMember struct {
+	GuildID   int64
+	UserID    int64
+	Role      string
+	JoinedAt  int64
+	UpdatedAt int64
+}
+
 type InstanceSetting struct {
 	Key       string
 	ValueJson string
 	UpdatedAt int64
+}
+
+type Invite struct {
+	Code      string
+	GuildID   int64
+	CreatedBy int64
+	MaxUses   int64
+	Uses      int64
+	ExpiresAt sql.NullInt64
+	RevokedAt sql.NullInt64
+	CreatedAt int64
 }
 
 type Session struct {

@@ -2,15 +2,25 @@
 // @generated from file dislackso/gateway/v1/gateway.proto (package dislackso.gateway.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import type { Channel } from "../../v1/channel_pb";
+import { file_dislackso_v1_channel } from "../../v1/channel_pb";
+import type { Me, Presence, User } from "../../v1/common_pb";
+import { file_dislackso_v1_common } from "../../v1/common_pb";
+import type { Guild, GuildState, Member } from "../../v1/guild_pb";
+import { file_dislackso_v1_guild } from "../../v1/guild_pb";
+import type { Invite } from "../../v1/invite_pb";
+import { file_dislackso_v1_invite } from "../../v1/invite_pb";
+import type { AuditEntry, Ban } from "../../v1/moderation_pb";
+import { file_dislackso_v1_moderation } from "../../v1/moderation_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file dislackso/gateway/v1/gateway.proto.
  */
 export const file_dislackso_gateway_v1_gateway: GenFile = /*@__PURE__*/
-  fileDesc("CiJkaXNsYWNrc28vZ2F0ZXdheS92MS9nYXRld2F5LnByb3RvEhRkaXNsYWNrc28uZ2F0ZXdheS52MSINCgtDbGllbnRGcmFtZSINCgtTZXJ2ZXJGcmFtZULwAQoYY29tLmRpc2xhY2tzby5nYXRld2F5LnYxQgxHYXRld2F5UHJvdG9QAVpUZ2l0aHViLmNvbS90b3JuZWxsaWhlbnJpcXVlL2Rpc2xhY2tzby1yZWJpcnRoL2h1Yi9nZW4vZGlzbGFja3NvL2dhdGV3YXkvdjE7Z2F0ZXdheXYxogIDREdYqgIURGlzbGFja3NvLkdhdGV3YXkuVjHKAhREaXNsYWNrc29cR2F0ZXdheVxWMeICIERpc2xhY2tzb1xHYXRld2F5XFYxXEdQQk1ldGFkYXRh6gIWRGlzbGFja3NvOjpHYXRld2F5OjpWMWIGcHJvdG8z");
+  fileDesc("CiJkaXNsYWNrc28vZ2F0ZXdheS92MS9nYXRld2F5LnByb3RvEhRkaXNsYWNrc28uZ2F0ZXdheS52MSLwAQoLQ2xpZW50RnJhbWUSMgoIaWRlbnRpZnkYASABKAsyHi5kaXNsYWNrc28uZ2F0ZXdheS52MS5JZGVudGlmeUgAEi4KBnJlc3VtZRgCIAEoCzIcLmRpc2xhY2tzby5nYXRld2F5LnYxLlJlc3VtZUgAEjQKCWhlYXJ0YmVhdBgDIAEoCzIfLmRpc2xhY2tzby5nYXRld2F5LnYxLkhlYXJ0YmVhdEgAEj8KD3VwZGF0ZV9wcmVzZW5jZRgEIAEoCzIkLmRpc2xhY2tzby5nYXRld2F5LnYxLlVwZGF0ZVByZXNlbmNlSABCBgoEa2luZCLVAgoLU2VydmVyRnJhbWUSLAoFaGVsbG8YASABKAsyGy5kaXNsYWNrc28uZ2F0ZXdheS52MS5IZWxsb0gAEiwKBXJlYWR5GAIgASgLMhsuZGlzbGFja3NvLmdhdGV3YXkudjEuUmVhZHlIABIwCgdyZXN1bWVkGAMgASgLMh0uZGlzbGFja3NvLmdhdGV3YXkudjEuUmVzdW1lZEgAEj8KD2ludmFsaWRfc2Vzc2lvbhgEIAEoCzIkLmRpc2xhY2tzby5nYXRld2F5LnYxLkludmFsaWRTZXNzaW9uSAASOwoNaGVhcnRiZWF0X2FjaxgFIAEoCzIiLmRpc2xhY2tzby5nYXRld2F5LnYxLkhlYXJ0YmVhdEFja0gAEjIKCGRpc3BhdGNoGAYgASgLMh4uZGlzbGFja3NvLmdhdGV3YXkudjEuRGlzcGF0Y2hIAEIGCgRraW5kIkAKBUhlbGxvEh0KFWhlYXJ0YmVhdF9pbnRlcnZhbF9tcxgBIAEoBRIYChByZXN1bWVfd2luZG93X21zGAIgASgFIi8KCkNsaWVudEluZm8SEAoIcGxhdGZvcm0YASABKAkSDwoHdmVyc2lvbhgCIAEoCSI8CghJZGVudGlmeRIwCgZjbGllbnQYASABKAsyIC5kaXNsYWNrc28uZ2F0ZXdheS52MS5DbGllbnRJbmZvIi4KBlJlc3VtZRISCgpzZXNzaW9uX2lkGAEgASgJEhAKCGxhc3Rfc2VxGAIgASgEIh0KCUhlYXJ0YmVhdBIQCghsYXN0X3NlcRgBIAEoBCIOCgxIZWFydGJlYXRBY2siHgoOVXBkYXRlUHJlc2VuY2USDAoEaWRsZRgBIAEoCCLPAQoMSW5zdGFuY2VJbmZvEgwKBG5hbWUYASABKAkSGgoSbWVtYmVyc19jYW5faW52aXRlGAIgASgIEiEKGW1heF9ndWlsZHNfb3duZWRfcGVyX3VzZXIYAyABKAUSHgoWbWF4X2NoYW5uZWxzX3Blcl9ndWlsZBgEIAEoBRIZChFtYXhfZ3VpbGRfbWVtYmVycxgFIAEoBRIgChhkZWZhdWx0X3ZvaWNlX3VzZXJfbGltaXQYBiABKAUSFQoNbWF4X3VwbG9hZF9tYhgHIAEoBSKZAQoFUmVhZHkSEgoKc2Vzc2lvbl9pZBgBIAEoCRIcCgJtZRgCIAEoCzIQLmRpc2xhY2tzby52MS5NZRI0CghpbnN0YW5jZRgDIAEoCzIiLmRpc2xhY2tzby5nYXRld2F5LnYxLkluc3RhbmNlSW5mbxIoCgZndWlsZHMYBCADKAsyGC5kaXNsYWNrc28udjEuR3VpbGRTdGF0ZSIJCgdSZXN1bWVkIiMKDkludmFsaWRTZXNzaW9uEhEKCXJlc3VtYWJsZRgBIAEoCCJDCghEaXNwYXRjaBILCgNzZXEYASABKAQSKgoFZXZlbnQYAiABKAsyGy5kaXNsYWNrc28uZ2F0ZXdheS52MS5FdmVudCKzBwoFRXZlbnQSMAoMZ3VpbGRfY3JlYXRlGAEgASgLMhguZGlzbGFja3NvLnYxLkd1aWxkU3RhdGVIABIrCgxndWlsZF91cGRhdGUYAiABKAsyEy5kaXNsYWNrc28udjEuR3VpbGRIABI5CgxndWlsZF9kZWxldGUYAyABKAsyIS5kaXNsYWNrc28uZ2F0ZXdheS52MS5HdWlsZERlbGV0ZUgAEjUKCm1lbWJlcl9hZGQYBCABKAsyHy5kaXNsYWNrc28uZ2F0ZXdheS52MS5NZW1iZXJBZGRIABItCg1tZW1iZXJfdXBkYXRlGAUgASgLMhQuZGlzbGFja3NvLnYxLk1lbWJlckgAEjsKDW1lbWJlcl9yZW1vdmUYBiABKAsyIi5kaXNsYWNrc28uZ2F0ZXdheS52MS5NZW1iZXJSZW1vdmVIABIvCg5jaGFubmVsX2NyZWF0ZRgHIAEoCzIVLmRpc2xhY2tzby52MS5DaGFubmVsSAASLwoOY2hhbm5lbF91cGRhdGUYCCABKAsyFS5kaXNsYWNrc28udjEuQ2hhbm5lbEgAEj0KDmNoYW5uZWxfZGVsZXRlGAkgASgLMiMuZGlzbGFja3NvLmdhdGV3YXkudjEuQ2hhbm5lbERlbGV0ZUgAEkUKEmNoYW5uZWxzX3Jlb3JkZXJlZBgKIAEoCzInLmRpc2xhY2tzby5nYXRld2F5LnYxLkNoYW5uZWxzUmVvcmRlcmVkSAASKQoLdXNlcl91cGRhdGUYCyABKAsyEi5kaXNsYWNrc28udjEuVXNlckgAEjEKD3ByZXNlbmNlX3VwZGF0ZRgMIAEoCzIWLmRpc2xhY2tzby52MS5QcmVzZW5jZUgAEi0KDWludml0ZV9jcmVhdGUYDSABKAsyFC5kaXNsYWNrc28udjEuSW52aXRlSAASOwoNaW52aXRlX2RlbGV0ZRgOIAEoCzIiLmRpc2xhY2tzby5nYXRld2F5LnYxLkludml0ZURlbGV0ZUgAEiQKB2Jhbl9hZGQYDyABKAsyES5kaXNsYWNrc28udjEuQmFuSAASNQoKYmFuX3JlbW92ZRgQIAEoCzIfLmRpc2xhY2tzby5nYXRld2F5LnYxLkJhblJlbW92ZUgAEi8KC2F1ZGl0X2VudHJ5GBEgASgLMhguZGlzbGFja3NvLnYxLkF1ZGl0RW50cnlIABIlCgltZV91cGRhdGUYEiABKAsyEC5kaXNsYWNrc28udjEuTWVIAEIGCgRraW5kIlgKC0d1aWxkRGVsZXRlEhAKCGd1aWxkX2lkGAEgASgJEjcKBnJlYXNvbhgCIAEoDjInLmRpc2xhY2tzby5nYXRld2F5LnYxLkd1aWxkRGVsZXRlUmVhc29uIn0KCU1lbWJlckFkZBIkCgZtZW1iZXIYASABKAsyFC5kaXNsYWNrc28udjEuTWVtYmVyEiAKBHVzZXIYAiABKAsyEi5kaXNsYWNrc28udjEuVXNlchIoCghwcmVzZW5jZRgDIAEoCzIWLmRpc2xhY2tzby52MS5QcmVzZW5jZSIxCgxNZW1iZXJSZW1vdmUSEAoIZ3VpbGRfaWQYASABKAkSDwoHdXNlcl9pZBgCIAEoCSI1Cg1DaGFubmVsRGVsZXRlEhAKCGd1aWxkX2lkGAEgASgJEhIKCmNoYW5uZWxfaWQYAiABKAkiTgoRQ2hhbm5lbHNSZW9yZGVyZWQSEAoIZ3VpbGRfaWQYASABKAkSJwoIY2hhbm5lbHMYAiADKAsyFS5kaXNsYWNrc28udjEuQ2hhbm5lbCIuCgxJbnZpdGVEZWxldGUSEAoIZ3VpbGRfaWQYASABKAkSDAoEY29kZRgCIAEoCSIuCglCYW5SZW1vdmUSEAoIZ3VpbGRfaWQYASABKAkSDwoHdXNlcl9pZBgCIAEoCSreAgoJQ2xvc2VDb2RlEhoKFkNMT1NFX0NPREVfVU5TUEVDSUZJRUQQABIXChJDTE9TRV9DT0RFX1VOS05PV04QoB8SGgoVQ0xPU0VfQ09ERV9CQURfT1BDT0RFEKEfEhwKF0NMT1NFX0NPREVfREVDT0RFX0VSUk9SEKIfEiEKHENMT1NFX0NPREVfTk9UX0FVVEhFTlRJQ0FURUQQox8SHwoaQ0xPU0VfQ09ERV9TRVNTSU9OX1JFVk9LRUQQpB8SIgodQ0xPU0VfQ09ERV9BTFJFQURZX0lERU5USUZJRUQQpR8SGwoWQ0xPU0VfQ09ERV9JTlZBTElEX1NFURCnHxIcChdDTE9TRV9DT0RFX1JBVEVfTElNSVRFRBCoHxIfChpDTE9TRV9DT0RFX1NFU1NJT05fRVhQSVJFRBCpHxIeChlDTE9TRV9DT0RFX0hVQl9SRVNUQVJUSU5HEKofKrcBChFHdWlsZERlbGV0ZVJlYXNvbhIjCh9HVUlMRF9ERUxFVEVfUkVBU09OX1VOU1BFQ0lGSUVEEAASHwobR1VJTERfREVMRVRFX1JFQVNPTl9ERUxFVEVEEAESHgoaR1VJTERfREVMRVRFX1JFQVNPTl9LSUNLRUQQAhIeChpHVUlMRF9ERUxFVEVfUkVBU09OX0JBTk5FRBADEhwKGEdVSUxEX0RFTEVURV9SRUFTT05fTEVGVBAEQvABChhjb20uZGlzbGFja3NvLmdhdGV3YXkudjFCDEdhdGV3YXlQcm90b1ABWlRnaXRodWIuY29tL3Rvcm5lbGxpaGVucmlxdWUvZGlzbGFja3NvLXJlYmlydGgvaHViL2dlbi9kaXNsYWNrc28vZ2F0ZXdheS92MTtnYXRld2F5djGiAgNER1iqAhREaXNsYWNrc28uR2F0ZXdheS5WMcoCFERpc2xhY2tzb1xHYXRld2F5XFYx4gIgRGlzbGFja3NvXEdhdGV3YXlcVjFcR1BCTWV0YWRhdGHqAhZEaXNsYWNrc286OkdhdGV3YXk6OlYxYgZwcm90bzM", [file_dislackso_v1_channel, file_dislackso_v1_common, file_dislackso_v1_guild, file_dislackso_v1_invite, file_dislackso_v1_moderation]);
 
 /**
  * ClientFrame is sent from the client to the hub.
@@ -18,6 +28,34 @@ export const file_dislackso_gateway_v1_gateway: GenFile = /*@__PURE__*/
  * @generated from message dislackso.gateway.v1.ClientFrame
  */
 export type ClientFrame = Message<"dislackso.gateway.v1.ClientFrame"> & {
+  /**
+   * @generated from oneof dislackso.gateway.v1.ClientFrame.kind
+   */
+  kind: {
+    /**
+     * @generated from field: dislackso.gateway.v1.Identify identify = 1;
+     */
+    value: Identify;
+    case: "identify";
+  } | {
+    /**
+     * @generated from field: dislackso.gateway.v1.Resume resume = 2;
+     */
+    value: Resume;
+    case: "resume";
+  } | {
+    /**
+     * @generated from field: dislackso.gateway.v1.Heartbeat heartbeat = 3;
+     */
+    value: Heartbeat;
+    case: "heartbeat";
+  } | {
+    /**
+     * @generated from field: dislackso.gateway.v1.UpdatePresence update_presence = 4;
+     */
+    value: UpdatePresence;
+    case: "updatePresence";
+  } | { case: undefined; value?: undefined };
 };
 
 /**
@@ -33,6 +71,46 @@ export const ClientFrameSchema: GenMessage<ClientFrame> = /*@__PURE__*/
  * @generated from message dislackso.gateway.v1.ServerFrame
  */
 export type ServerFrame = Message<"dislackso.gateway.v1.ServerFrame"> & {
+  /**
+   * @generated from oneof dislackso.gateway.v1.ServerFrame.kind
+   */
+  kind: {
+    /**
+     * @generated from field: dislackso.gateway.v1.Hello hello = 1;
+     */
+    value: Hello;
+    case: "hello";
+  } | {
+    /**
+     * @generated from field: dislackso.gateway.v1.Ready ready = 2;
+     */
+    value: Ready;
+    case: "ready";
+  } | {
+    /**
+     * @generated from field: dislackso.gateway.v1.Resumed resumed = 3;
+     */
+    value: Resumed;
+    case: "resumed";
+  } | {
+    /**
+     * @generated from field: dislackso.gateway.v1.InvalidSession invalid_session = 4;
+     */
+    value: InvalidSession;
+    case: "invalidSession";
+  } | {
+    /**
+     * @generated from field: dislackso.gateway.v1.HeartbeatAck heartbeat_ack = 5;
+     */
+    value: HeartbeatAck;
+    case: "heartbeatAck";
+  } | {
+    /**
+     * @generated from field: dislackso.gateway.v1.Dispatch dispatch = 6;
+     */
+    value: Dispatch;
+    case: "dispatch";
+  } | { case: undefined; value?: undefined };
 };
 
 /**
@@ -41,4 +119,688 @@ export type ServerFrame = Message<"dislackso.gateway.v1.ServerFrame"> & {
  */
 export const ServerFrameSchema: GenMessage<ServerFrame> = /*@__PURE__*/
   messageDesc(file_dislackso_gateway_v1_gateway, 1);
+
+/**
+ * @generated from message dislackso.gateway.v1.Hello
+ */
+export type Hello = Message<"dislackso.gateway.v1.Hello"> & {
+  /**
+   * @generated from field: int32 heartbeat_interval_ms = 1;
+   */
+  heartbeatIntervalMs: number;
+
+  /**
+   * How long a dropped session can still be resumed.
+   *
+   * @generated from field: int32 resume_window_ms = 2;
+   */
+  resumeWindowMs: number;
+};
+
+/**
+ * Describes the message dislackso.gateway.v1.Hello.
+ * Use `create(HelloSchema)` to create a new message.
+ */
+export const HelloSchema: GenMessage<Hello> = /*@__PURE__*/
+  messageDesc(file_dislackso_gateway_v1_gateway, 2);
+
+/**
+ * @generated from message dislackso.gateway.v1.ClientInfo
+ */
+export type ClientInfo = Message<"dislackso.gateway.v1.ClientInfo"> & {
+  /**
+   * "web" or "desktop".
+   *
+   * @generated from field: string platform = 1;
+   */
+  platform: string;
+
+  /**
+   * @generated from field: string version = 2;
+   */
+  version: string;
+};
+
+/**
+ * Describes the message dislackso.gateway.v1.ClientInfo.
+ * Use `create(ClientInfoSchema)` to create a new message.
+ */
+export const ClientInfoSchema: GenMessage<ClientInfo> = /*@__PURE__*/
+  messageDesc(file_dislackso_gateway_v1_gateway, 3);
+
+/**
+ * @generated from message dislackso.gateway.v1.Identify
+ */
+export type Identify = Message<"dislackso.gateway.v1.Identify"> & {
+  /**
+   * @generated from field: dislackso.gateway.v1.ClientInfo client = 1;
+   */
+  client?: ClientInfo | undefined;
+};
+
+/**
+ * Describes the message dislackso.gateway.v1.Identify.
+ * Use `create(IdentifySchema)` to create a new message.
+ */
+export const IdentifySchema: GenMessage<Identify> = /*@__PURE__*/
+  messageDesc(file_dislackso_gateway_v1_gateway, 4);
+
+/**
+ * @generated from message dislackso.gateway.v1.Resume
+ */
+export type Resume = Message<"dislackso.gateway.v1.Resume"> & {
+  /**
+   * @generated from field: string session_id = 1;
+   */
+  sessionId: string;
+
+  /**
+   * The seq of the last dispatch the client processed.
+   *
+   * @generated from field: uint64 last_seq = 2;
+   */
+  lastSeq: bigint;
+};
+
+/**
+ * Describes the message dislackso.gateway.v1.Resume.
+ * Use `create(ResumeSchema)` to create a new message.
+ */
+export const ResumeSchema: GenMessage<Resume> = /*@__PURE__*/
+  messageDesc(file_dislackso_gateway_v1_gateway, 5);
+
+/**
+ * @generated from message dislackso.gateway.v1.Heartbeat
+ */
+export type Heartbeat = Message<"dislackso.gateway.v1.Heartbeat"> & {
+  /**
+   * @generated from field: uint64 last_seq = 1;
+   */
+  lastSeq: bigint;
+};
+
+/**
+ * Describes the message dislackso.gateway.v1.Heartbeat.
+ * Use `create(HeartbeatSchema)` to create a new message.
+ */
+export const HeartbeatSchema: GenMessage<Heartbeat> = /*@__PURE__*/
+  messageDesc(file_dislackso_gateway_v1_gateway, 6);
+
+/**
+ * @generated from message dislackso.gateway.v1.HeartbeatAck
+ */
+export type HeartbeatAck = Message<"dislackso.gateway.v1.HeartbeatAck"> & {
+};
+
+/**
+ * Describes the message dislackso.gateway.v1.HeartbeatAck.
+ * Use `create(HeartbeatAckSchema)` to create a new message.
+ */
+export const HeartbeatAckSchema: GenMessage<HeartbeatAck> = /*@__PURE__*/
+  messageDesc(file_dislackso_gateway_v1_gateway, 7);
+
+/**
+ * UpdatePresence reports activity; the status preference itself is set
+ * through AccountService.
+ *
+ * @generated from message dislackso.gateway.v1.UpdatePresence
+ */
+export type UpdatePresence = Message<"dislackso.gateway.v1.UpdatePresence"> & {
+  /**
+   * No input for a while on this client.
+   *
+   * @generated from field: bool idle = 1;
+   */
+  idle: boolean;
+};
+
+/**
+ * Describes the message dislackso.gateway.v1.UpdatePresence.
+ * Use `create(UpdatePresenceSchema)` to create a new message.
+ */
+export const UpdatePresenceSchema: GenMessage<UpdatePresence> = /*@__PURE__*/
+  messageDesc(file_dislackso_gateway_v1_gateway, 8);
+
+/**
+ * @generated from message dislackso.gateway.v1.InstanceInfo
+ */
+export type InstanceInfo = Message<"dislackso.gateway.v1.InstanceInfo"> & {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * @generated from field: bool members_can_invite = 2;
+   */
+  membersCanInvite: boolean;
+
+  /**
+   * @generated from field: int32 max_guilds_owned_per_user = 3;
+   */
+  maxGuildsOwnedPerUser: number;
+
+  /**
+   * @generated from field: int32 max_channels_per_guild = 4;
+   */
+  maxChannelsPerGuild: number;
+
+  /**
+   * @generated from field: int32 max_guild_members = 5;
+   */
+  maxGuildMembers: number;
+
+  /**
+   * @generated from field: int32 default_voice_user_limit = 6;
+   */
+  defaultVoiceUserLimit: number;
+
+  /**
+   * @generated from field: int32 max_upload_mb = 7;
+   */
+  maxUploadMb: number;
+};
+
+/**
+ * Describes the message dislackso.gateway.v1.InstanceInfo.
+ * Use `create(InstanceInfoSchema)` to create a new message.
+ */
+export const InstanceInfoSchema: GenMessage<InstanceInfo> = /*@__PURE__*/
+  messageDesc(file_dislackso_gateway_v1_gateway, 9);
+
+/**
+ * @generated from message dislackso.gateway.v1.Ready
+ */
+export type Ready = Message<"dislackso.gateway.v1.Ready"> & {
+  /**
+   * @generated from field: string session_id = 1;
+   */
+  sessionId: string;
+
+  /**
+   * @generated from field: dislackso.v1.Me me = 2;
+   */
+  me?: Me | undefined;
+
+  /**
+   * @generated from field: dislackso.gateway.v1.InstanceInfo instance = 3;
+   */
+  instance?: InstanceInfo | undefined;
+
+  /**
+   * @generated from field: repeated dislackso.v1.GuildState guilds = 4;
+   */
+  guilds: GuildState[];
+};
+
+/**
+ * Describes the message dislackso.gateway.v1.Ready.
+ * Use `create(ReadySchema)` to create a new message.
+ */
+export const ReadySchema: GenMessage<Ready> = /*@__PURE__*/
+  messageDesc(file_dislackso_gateway_v1_gateway, 10);
+
+/**
+ * @generated from message dislackso.gateway.v1.Resumed
+ */
+export type Resumed = Message<"dislackso.gateway.v1.Resumed"> & {
+};
+
+/**
+ * Describes the message dislackso.gateway.v1.Resumed.
+ * Use `create(ResumedSchema)` to create a new message.
+ */
+export const ResumedSchema: GenMessage<Resumed> = /*@__PURE__*/
+  messageDesc(file_dislackso_gateway_v1_gateway, 11);
+
+/**
+ * @generated from message dislackso.gateway.v1.InvalidSession
+ */
+export type InvalidSession = Message<"dislackso.gateway.v1.InvalidSession"> & {
+  /**
+   * Always false today: the client identifies again and rebuilds from Ready.
+   *
+   * @generated from field: bool resumable = 1;
+   */
+  resumable: boolean;
+};
+
+/**
+ * Describes the message dislackso.gateway.v1.InvalidSession.
+ * Use `create(InvalidSessionSchema)` to create a new message.
+ */
+export const InvalidSessionSchema: GenMessage<InvalidSession> = /*@__PURE__*/
+  messageDesc(file_dislackso_gateway_v1_gateway, 12);
+
+/**
+ * @generated from message dislackso.gateway.v1.Dispatch
+ */
+export type Dispatch = Message<"dislackso.gateway.v1.Dispatch"> & {
+  /**
+   * @generated from field: uint64 seq = 1;
+   */
+  seq: bigint;
+
+  /**
+   * @generated from field: dislackso.gateway.v1.Event event = 2;
+   */
+  event?: Event | undefined;
+};
+
+/**
+ * Describes the message dislackso.gateway.v1.Dispatch.
+ * Use `create(DispatchSchema)` to create a new message.
+ */
+export const DispatchSchema: GenMessage<Dispatch> = /*@__PURE__*/
+  messageDesc(file_dislackso_gateway_v1_gateway, 13);
+
+/**
+ * @generated from message dislackso.gateway.v1.Event
+ */
+export type Event = Message<"dislackso.gateway.v1.Event"> & {
+  /**
+   * @generated from oneof dislackso.gateway.v1.Event.kind
+   */
+  kind: {
+    /**
+     * The receiver joined or created a guild.
+     *
+     * @generated from field: dislackso.v1.GuildState guild_create = 1;
+     */
+    value: GuildState;
+    case: "guildCreate";
+  } | {
+    /**
+     * @generated from field: dislackso.v1.Guild guild_update = 2;
+     */
+    value: Guild;
+    case: "guildUpdate";
+  } | {
+    /**
+     * The receiver can no longer see the guild.
+     *
+     * @generated from field: dislackso.gateway.v1.GuildDelete guild_delete = 3;
+     */
+    value: GuildDelete;
+    case: "guildDelete";
+  } | {
+    /**
+     * @generated from field: dislackso.gateway.v1.MemberAdd member_add = 4;
+     */
+    value: MemberAdd;
+    case: "memberAdd";
+  } | {
+    /**
+     * @generated from field: dislackso.v1.Member member_update = 5;
+     */
+    value: Member;
+    case: "memberUpdate";
+  } | {
+    /**
+     * @generated from field: dislackso.gateway.v1.MemberRemove member_remove = 6;
+     */
+    value: MemberRemove;
+    case: "memberRemove";
+  } | {
+    /**
+     * @generated from field: dislackso.v1.Channel channel_create = 7;
+     */
+    value: Channel;
+    case: "channelCreate";
+  } | {
+    /**
+     * @generated from field: dislackso.v1.Channel channel_update = 8;
+     */
+    value: Channel;
+    case: "channelUpdate";
+  } | {
+    /**
+     * @generated from field: dislackso.gateway.v1.ChannelDelete channel_delete = 9;
+     */
+    value: ChannelDelete;
+    case: "channelDelete";
+  } | {
+    /**
+     * @generated from field: dislackso.gateway.v1.ChannelsReordered channels_reordered = 10;
+     */
+    value: ChannelsReordered;
+    case: "channelsReordered";
+  } | {
+    /**
+     * A public profile of someone sharing a guild with the receiver.
+     *
+     * @generated from field: dislackso.v1.User user_update = 11;
+     */
+    value: User;
+    case: "userUpdate";
+  } | {
+    /**
+     * @generated from field: dislackso.v1.Presence presence_update = 12;
+     */
+    value: Presence;
+    case: "presenceUpdate";
+  } | {
+    /**
+     * Owners, admins and the invite's creator only.
+     *
+     * @generated from field: dislackso.v1.Invite invite_create = 13;
+     */
+    value: Invite;
+    case: "inviteCreate";
+  } | {
+    /**
+     * @generated from field: dislackso.gateway.v1.InviteDelete invite_delete = 14;
+     */
+    value: InviteDelete;
+    case: "inviteDelete";
+  } | {
+    /**
+     * Owners and admins only.
+     *
+     * @generated from field: dislackso.v1.Ban ban_add = 15;
+     */
+    value: Ban;
+    case: "banAdd";
+  } | {
+    /**
+     * @generated from field: dislackso.gateway.v1.BanRemove ban_remove = 16;
+     */
+    value: BanRemove;
+    case: "banRemove";
+  } | {
+    /**
+     * @generated from field: dislackso.v1.AuditEntry audit_entry = 17;
+     */
+    value: AuditEntry;
+    case: "auditEntry";
+  } | {
+    /**
+     * The receiver's own account changed, possibly from another device.
+     *
+     * @generated from field: dislackso.v1.Me me_update = 18;
+     */
+    value: Me;
+    case: "meUpdate";
+  } | { case: undefined; value?: undefined };
+};
+
+/**
+ * Describes the message dislackso.gateway.v1.Event.
+ * Use `create(EventSchema)` to create a new message.
+ */
+export const EventSchema: GenMessage<Event> = /*@__PURE__*/
+  messageDesc(file_dislackso_gateway_v1_gateway, 14);
+
+/**
+ * @generated from message dislackso.gateway.v1.GuildDelete
+ */
+export type GuildDelete = Message<"dislackso.gateway.v1.GuildDelete"> & {
+  /**
+   * @generated from field: string guild_id = 1;
+   */
+  guildId: string;
+
+  /**
+   * @generated from field: dislackso.gateway.v1.GuildDeleteReason reason = 2;
+   */
+  reason: GuildDeleteReason;
+};
+
+/**
+ * Describes the message dislackso.gateway.v1.GuildDelete.
+ * Use `create(GuildDeleteSchema)` to create a new message.
+ */
+export const GuildDeleteSchema: GenMessage<GuildDelete> = /*@__PURE__*/
+  messageDesc(file_dislackso_gateway_v1_gateway, 15);
+
+/**
+ * @generated from message dislackso.gateway.v1.MemberAdd
+ */
+export type MemberAdd = Message<"dislackso.gateway.v1.MemberAdd"> & {
+  /**
+   * @generated from field: dislackso.v1.Member member = 1;
+   */
+  member?: Member | undefined;
+
+  /**
+   * @generated from field: dislackso.v1.User user = 2;
+   */
+  user?: User | undefined;
+
+  /**
+   * @generated from field: dislackso.v1.Presence presence = 3;
+   */
+  presence?: Presence | undefined;
+};
+
+/**
+ * Describes the message dislackso.gateway.v1.MemberAdd.
+ * Use `create(MemberAddSchema)` to create a new message.
+ */
+export const MemberAddSchema: GenMessage<MemberAdd> = /*@__PURE__*/
+  messageDesc(file_dislackso_gateway_v1_gateway, 16);
+
+/**
+ * @generated from message dislackso.gateway.v1.MemberRemove
+ */
+export type MemberRemove = Message<"dislackso.gateway.v1.MemberRemove"> & {
+  /**
+   * @generated from field: string guild_id = 1;
+   */
+  guildId: string;
+
+  /**
+   * @generated from field: string user_id = 2;
+   */
+  userId: string;
+};
+
+/**
+ * Describes the message dislackso.gateway.v1.MemberRemove.
+ * Use `create(MemberRemoveSchema)` to create a new message.
+ */
+export const MemberRemoveSchema: GenMessage<MemberRemove> = /*@__PURE__*/
+  messageDesc(file_dislackso_gateway_v1_gateway, 17);
+
+/**
+ * @generated from message dislackso.gateway.v1.ChannelDelete
+ */
+export type ChannelDelete = Message<"dislackso.gateway.v1.ChannelDelete"> & {
+  /**
+   * @generated from field: string guild_id = 1;
+   */
+  guildId: string;
+
+  /**
+   * @generated from field: string channel_id = 2;
+   */
+  channelId: string;
+};
+
+/**
+ * Describes the message dislackso.gateway.v1.ChannelDelete.
+ * Use `create(ChannelDeleteSchema)` to create a new message.
+ */
+export const ChannelDeleteSchema: GenMessage<ChannelDelete> = /*@__PURE__*/
+  messageDesc(file_dislackso_gateway_v1_gateway, 18);
+
+/**
+ * @generated from message dislackso.gateway.v1.ChannelsReordered
+ */
+export type ChannelsReordered = Message<"dislackso.gateway.v1.ChannelsReordered"> & {
+  /**
+   * @generated from field: string guild_id = 1;
+   */
+  guildId: string;
+
+  /**
+   * Every channel whose parent or position changed.
+   *
+   * @generated from field: repeated dislackso.v1.Channel channels = 2;
+   */
+  channels: Channel[];
+};
+
+/**
+ * Describes the message dislackso.gateway.v1.ChannelsReordered.
+ * Use `create(ChannelsReorderedSchema)` to create a new message.
+ */
+export const ChannelsReorderedSchema: GenMessage<ChannelsReordered> = /*@__PURE__*/
+  messageDesc(file_dislackso_gateway_v1_gateway, 19);
+
+/**
+ * @generated from message dislackso.gateway.v1.InviteDelete
+ */
+export type InviteDelete = Message<"dislackso.gateway.v1.InviteDelete"> & {
+  /**
+   * @generated from field: string guild_id = 1;
+   */
+  guildId: string;
+
+  /**
+   * @generated from field: string code = 2;
+   */
+  code: string;
+};
+
+/**
+ * Describes the message dislackso.gateway.v1.InviteDelete.
+ * Use `create(InviteDeleteSchema)` to create a new message.
+ */
+export const InviteDeleteSchema: GenMessage<InviteDelete> = /*@__PURE__*/
+  messageDesc(file_dislackso_gateway_v1_gateway, 20);
+
+/**
+ * @generated from message dislackso.gateway.v1.BanRemove
+ */
+export type BanRemove = Message<"dislackso.gateway.v1.BanRemove"> & {
+  /**
+   * @generated from field: string guild_id = 1;
+   */
+  guildId: string;
+
+  /**
+   * @generated from field: string user_id = 2;
+   */
+  userId: string;
+};
+
+/**
+ * Describes the message dislackso.gateway.v1.BanRemove.
+ * Use `create(BanRemoveSchema)` to create a new message.
+ */
+export const BanRemoveSchema: GenMessage<BanRemove> = /*@__PURE__*/
+  messageDesc(file_dislackso_gateway_v1_gateway, 21);
+
+/**
+ * CloseCode is the WebSocket close code the hub uses when it ends a connection.
+ *
+ * @generated from enum dislackso.gateway.v1.CloseCode
+ */
+export enum CloseCode {
+  /**
+   * @generated from enum value: CLOSE_CODE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: CLOSE_CODE_UNKNOWN = 4000;
+   */
+  UNKNOWN = 4000,
+
+  /**
+   * @generated from enum value: CLOSE_CODE_BAD_OPCODE = 4001;
+   */
+  BAD_OPCODE = 4001,
+
+  /**
+   * @generated from enum value: CLOSE_CODE_DECODE_ERROR = 4002;
+   */
+  DECODE_ERROR = 4002,
+
+  /**
+   * No valid session cookie: sign in again.
+   *
+   * @generated from enum value: CLOSE_CODE_NOT_AUTHENTICATED = 4003;
+   */
+  NOT_AUTHENTICATED = 4003,
+
+  /**
+   * The session was signed out or the account disabled: sign in again.
+   *
+   * @generated from enum value: CLOSE_CODE_SESSION_REVOKED = 4004;
+   */
+  SESSION_REVOKED = 4004,
+
+  /**
+   * @generated from enum value: CLOSE_CODE_ALREADY_IDENTIFIED = 4005;
+   */
+  ALREADY_IDENTIFIED = 4005,
+
+  /**
+   * @generated from enum value: CLOSE_CODE_INVALID_SEQ = 4007;
+   */
+  INVALID_SEQ = 4007,
+
+  /**
+   * @generated from enum value: CLOSE_CODE_RATE_LIMITED = 4008;
+   */
+  RATE_LIMITED = 4008,
+
+  /**
+   * Heartbeats stopped arriving; resuming is still possible.
+   *
+   * @generated from enum value: CLOSE_CODE_SESSION_EXPIRED = 4009;
+   */
+  SESSION_EXPIRED = 4009,
+
+  /**
+   * Reconnect later and identify; the session cannot be resumed.
+   *
+   * @generated from enum value: CLOSE_CODE_HUB_RESTARTING = 4010;
+   */
+  HUB_RESTARTING = 4010,
+}
+
+/**
+ * Describes the enum dislackso.gateway.v1.CloseCode.
+ */
+export const CloseCodeSchema: GenEnum<CloseCode> = /*@__PURE__*/
+  enumDesc(file_dislackso_gateway_v1_gateway, 0);
+
+/**
+ * @generated from enum dislackso.gateway.v1.GuildDeleteReason
+ */
+export enum GuildDeleteReason {
+  /**
+   * @generated from enum value: GUILD_DELETE_REASON_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: GUILD_DELETE_REASON_DELETED = 1;
+   */
+  DELETED = 1,
+
+  /**
+   * @generated from enum value: GUILD_DELETE_REASON_KICKED = 2;
+   */
+  KICKED = 2,
+
+  /**
+   * @generated from enum value: GUILD_DELETE_REASON_BANNED = 3;
+   */
+  BANNED = 3,
+
+  /**
+   * @generated from enum value: GUILD_DELETE_REASON_LEFT = 4;
+   */
+  LEFT = 4,
+}
+
+/**
+ * Describes the enum dislackso.gateway.v1.GuildDeleteReason.
+ */
+export const GuildDeleteReasonSchema: GenEnum<GuildDeleteReason> = /*@__PURE__*/
+  enumDesc(file_dislackso_gateway_v1_gateway, 1);
 

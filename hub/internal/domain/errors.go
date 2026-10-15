@@ -39,6 +39,24 @@ const (
 	ReasonUserNotFound         = "user_not_found"
 	ReasonSessionNotFound      = "session_not_found"
 	ReasonInviteNotFound       = "invite_not_found"
+	ReasonGuildNotFound        = "guild_not_found"
+	ReasonChannelNotFound      = "channel_not_found"
+	ReasonMemberNotFound       = "member_not_found"
+	ReasonBanNotFound          = "ban_not_found"
+	ReasonFileNotFound         = "file_not_found"
+	ReasonMissingPermission    = "missing_permission"
+	ReasonInvitesDisabled      = "invites_disabled"
+	ReasonCannotTargetOwner    = "cannot_target_owner"
+	ReasonCannotTargetAdmin    = "cannot_target_admin"
+	ReasonOwnerCannotLeave     = "owner_cannot_leave"
+	ReasonGuildLimitReached    = "guild_limit_reached"
+	ReasonChannelLimitReached  = "channel_limit_reached"
+	ReasonGuildFull            = "guild_full"
+	ReasonBanned               = "banned"
+	ReasonUnsupportedFile      = "unsupported_file"
+	ReasonFileTooLarge         = "file_too_large"
+	// ReasonImageTooLarge: the image decodes to more pixels or frames than the hub processes.
+	ReasonImageTooLarge = "image_too_large"
 )
 
 // Field violation reasons.

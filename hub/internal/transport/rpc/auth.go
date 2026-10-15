@@ -7,6 +7,7 @@ import (
 	"github.com/tornellihenrique/dislackso-rebirth/hub/gen/dislackso/v1/dislacksov1connect"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/domain"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/auth"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/wire"
 )
 
 type AuthService interface {
@@ -51,7 +52,7 @@ func (h *authHandler) Register(ctx context.Context, req *dislacksov1.RegisterReq
 		return nil, h.toConnect(ctx, err)
 	}
 	startSession(ctx, signed)
-	return &dislacksov1.RegisterResponse{Me: toMe(signed.User)}, nil
+	return &dislacksov1.RegisterResponse{Me: wire.Me(signed.User)}, nil
 }
 
 func (h *authHandler) Login(ctx context.Context, req *dislacksov1.LoginRequest) (*dislacksov1.LoginResponse, error) {
@@ -60,7 +61,7 @@ func (h *authHandler) Login(ctx context.Context, req *dislacksov1.LoginRequest) 
 		return nil, h.toConnect(ctx, err)
 	}
 	startSession(ctx, signed)
-	return &dislacksov1.LoginResponse{Me: toMe(signed.User)}, nil
+	return &dislacksov1.LoginResponse{Me: wire.Me(signed.User)}, nil
 }
 
 // Logout always clears the cookie, even when the session was already gone.
