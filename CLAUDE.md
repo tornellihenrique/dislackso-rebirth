@@ -12,7 +12,8 @@ Read before working:
 - Never change a locked decision (ARCHITECTURE §2) on your own. If one blocks you, stop and explain the trade-off. Approved changes get an ADR in `docs/adr/` and an update to the ledger.
 - Before using a library API you are not sure about (LiveKit, tsnet, Connect, Electron), check its current docs/source instead of guessing. Pin versions.
 - Contract first: edit `proto/`, run `task gen`, commit generated code with the change.
-- Commit at logical checkpoints with Conventional Commits (`feat(voice): ...`). Do not push or open PRs unless asked.
+- Commit at logical checkpoints with Conventional Commits (`feat(voice): ...`).
+- When a phase or requested change is done and `task check` is green, push a branch and open a PR against `master`, then stop. The owner watches CI and merges: do not merge, enable auto-merge or keep checking CI. If CI fails, the owner will ask for a fix.
 
 ## Commands
 ```
