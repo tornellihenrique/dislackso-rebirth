@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package dislackso.v1;
+
+import "dislackso/v1/common.proto";
+
+// AccountService manages the signed-in user's own account.
+service AccountService {
+  rpc GetMe(GetMeRequest) returns (GetMeResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileResponse);
+  // Signs out every other session of the account.
+  rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
+  rpc SetStatusPreference(SetStatusPreferenceRequest) returns (SetStatusPreferenceResponse);
+  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc RevokeSession(RevokeSessionRequest) returns (RevokeSessionResponse);
+  rpc RevokeOtherSessions(RevokeOtherSessionsRequest) returns (RevokeOtherSessionsResponse);
+}
+
+message GetMeRequest {}
+
+message GetMeResponse {
+  Me me = 1;
+}
+
+message UpdateProfileRequest {
+  string display_name = 1;
+}
+
+message UpdateProfileResponse {
+  Me me = 1;
+}
+
+message ChangePasswordRequest {
+  string current_password = 1;
+  string new_password = 2;
+}
+
+message ChangePasswordResponse {}
+
+message SetStatusPreferenceRequest {
+  StatusPreference status = 1;
+  string custom_status = 2;
+}
+
+message SetStatusPreferenceResponse {
+  Me me = 1;
+}
+
+message Session {
+  string id = 1;
+  // Unix ms.
+  int64 created_at = 2;
+  // Unix ms.
+  int64 last_seen_at = 3;
+  string user_agent = 4;
+  string ip = 5;
+  // True for the session making this request.
+  bool current = 6;
+}
+
+message ListSessionsRequest {}
+
+message ListSessionsResponse {
+  repeated Session sessions = 1;
+}
+
+message RevokeSessionRequest {
+  string session_id = 1;
+}
+
+message RevokeSessionResponse {}
+
+message RevokeOtherSessionsRequest {}
+
+message RevokeOtherSessionsResponse {
+  int32 revoked = 1;
+}

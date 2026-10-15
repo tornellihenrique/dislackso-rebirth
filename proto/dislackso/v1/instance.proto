@@ -1,0 +1,180 @@
+syntax = "proto3";
+
+package dislackso.v1;
+
+import "dislackso/v1/common.proto";
+
+// InstanceService is the instance admin's control panel. Every method
+// requires an instance admin.
+service InstanceService {
+  rpc GetSettings(GetSettingsRequest) returns (GetSettingsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc UpdateSettings(UpdateSettingsRequest) returns (UpdateSettingsResponse);
+  // Sends a test email with the saved SMTP settings to the given address.
+  rpc SendTestEmail(SendTestEmailRequest) returns (SendTestEmailResponse);
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  // Disabling also signs out every session of the user.
+  rpc SetUserDisabled(SetUserDisabledRequest) returns (SetUserDisabledResponse);
+  rpc SetUserInstanceAdmin(SetUserInstanceAdminRequest) returns (SetUserInstanceAdminResponse);
+  // For instances without email: the admin hands the link to the user.
+  rpc CreatePasswordResetLink(CreatePasswordResetLinkRequest) returns (CreatePasswordResetLinkResponse);
+  rpc CreateInstanceInvite(CreateInstanceInviteRequest) returns (CreateInstanceInviteResponse);
+  rpc ListInstanceInvites(ListInstanceInvitesRequest) returns (ListInstanceInvitesResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc RevokeInstanceInvite(RevokeInstanceInviteRequest) returns (RevokeInstanceInviteResponse);
+}
+
+enum SmtpSecurity {
+  SMTP_SECURITY_UNSPECIFIED = 0;
+  // Plain connection upgraded with STARTTLS (usually port 587).
+  SMTP_SECURITY_STARTTLS = 1;
+  // TLS from the first byte (usually port 465).
+  SMTP_SECURITY_TLS = 2;
+  // Unencrypted; only for local relays.
+  SMTP_SECURITY_NONE = 3;
+}
+
+message SmtpSettings {
+  bool enabled = 1;
+  string host = 2;
+  uint32 port = 3;
+  string username = 4;
+  // Write-only. Empty keeps the stored password.
+  string password = 5;
+  // Read-only: whether a password is stored.
+  bool password_set = 6;
+  SmtpSecurity security = 7;
+  string from_address = 8;
+  string from_name = 9;
+}
+
+message InstanceLimits {
+  int32 max_guilds_owned_per_user = 1;
+  int32 max_guild_members = 2;
+  int32 max_channels_per_guild = 3;
+  int32 default_voice_user_limit = 4;
+  int32 max_shares_per_channel = 5;
+  string max_share_preset = 6;
+  int32 max_upload_mb = 7;
+  int32 stroke_hold_max_ms = 8;
+  int32 mic_bitrate_max_kbps = 9;
+  int32 turn_monthly_budget_gb = 10;
+}
+
+message InstanceSettings {
+  string name = 1;
+  // Base URL used in links sent by email, e.g. "https://hub.example.ts.net".
+  string public_url = 2;
+  RegistrationMode registration_mode = 3;
+  bool members_can_invite = 4;
+  SmtpSettings smtp = 5;
+  InstanceLimits limits = 6;
+}
+
+message GetSettingsRequest {}
+
+message GetSettingsResponse {
+  InstanceSettings settings = 1;
+}
+
+// Unset fields keep their current value.
+message UpdateSettingsRequest {
+  optional string name = 1;
+  optional string public_url = 2;
+  RegistrationMode registration_mode = 3;
+  optional bool members_can_invite = 4;
+  SmtpSettings smtp = 5;
+}
+
+message UpdateSettingsResponse {
+  InstanceSettings settings = 1;
+}
+
+message SendTestEmailRequest {
+  string to = 1;
+}
+
+message SendTestEmailResponse {}
+
+message InstanceUser {
+  User user = 1;
+  string email = 2;
+  bool email_verified = 3;
+  bool instance_admin = 4;
+  bool disabled = 5;
+  // Unix ms.
+  int64 created_at = 6;
+}
+
+message ListUsersRequest {}
+
+message ListUsersResponse {
+  repeated InstanceUser users = 1;
+}
+
+message SetUserDisabledRequest {
+  string user_id = 1;
+  bool disabled = 2;
+}
+
+message SetUserDisabledResponse {
+  InstanceUser user = 1;
+}
+
+message SetUserInstanceAdminRequest {
+  string user_id = 1;
+  bool instance_admin = 2;
+}
+
+message SetUserInstanceAdminResponse {
+  InstanceUser user = 1;
+}
+
+message CreatePasswordResetLinkRequest {
+  string user_id = 1;
+}
+
+message CreatePasswordResetLinkResponse {
+  string url = 1;
+  // Unix ms.
+  int64 expires_at = 2;
+}
+
+message InstanceInvite {
+  string id = 1;
+  // Unix ms.
+  int64 created_at = 2;
+  // Unix ms.
+  int64 expires_at = 3;
+  // Unix ms; zero while unused.
+  int64 used_at = 4;
+  User created_by = 5;
+}
+
+message CreateInstanceInviteRequest {
+  // Zero selects the default lifetime.
+  int64 expires_in_ms = 1;
+}
+
+message CreateInstanceInviteResponse {
+  InstanceInvite invite = 1;
+  // Only returned here: the hub stores a hash of the code.
+  string code = 2;
+  string url = 3;
+}
+
+message ListInstanceInvitesRequest {}
+
+message ListInstanceInvitesResponse {
+  repeated InstanceInvite invites = 1;
+}
+
+message RevokeInstanceInviteRequest {
+  string invite_id = 1;
+}
+
+message RevokeInstanceInviteResponse {}

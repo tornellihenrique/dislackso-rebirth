@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package dislackso.v1;
+
+import "dislackso/v1/common.proto";
+import "dislackso/v1/instance.proto";
+
+// SetupService runs the first-run wizard. It only answers requests from the
+// host machine that carry the one-time setup token the hub prints on start,
+// and only until setup completes.
+service SetupService {
+  rpc CheckSetupToken(CheckSetupTokenRequest) returns (CheckSetupTokenResponse);
+  rpc SendSetupTestEmail(SendSetupTestEmailRequest) returns (SendSetupTestEmailResponse);
+  // Creates the instance admin, saves the settings and signs the admin in.
+  rpc CompleteSetup(CompleteSetupRequest) returns (CompleteSetupResponse);
+}
+
+message CheckSetupTokenRequest {
+  string token = 1;
+}
+
+message CheckSetupTokenResponse {}
+
+message SendSetupTestEmailRequest {
+  string token = 1;
+  SmtpSettings smtp = 2;
+  string to = 3;
+}
+
+message SendSetupTestEmailResponse {}
+
+message CompleteSetupRequest {
+  string token = 1;
+  string instance_name = 2;
+  string public_url = 3;
+  string admin_username = 4;
+  string admin_email = 5;
+  string admin_password = 6;
+  // Omit or leave disabled to run without email.
+  SmtpSettings smtp = 7;
+}
+
+message CompleteSetupResponse {
+  Me me = 1;
+}
