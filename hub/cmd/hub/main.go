@@ -79,11 +79,16 @@ func runHub(args []string, stderr io.Writer) int {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	a, err := app.New(cfg, logger)
+	a, err := app.New(ctx, cfg, logger)
 	if err != nil {
 		logger.Error("hub failed to start", "error", err)
 		return 1
 	}
+	defer func() {
+		if err := a.Close(); err != nil {
+			logger.Error("close hub", "error", err)
+		}
+	}()
 	if err := a.Run(ctx); err != nil {
 		logger.Error("hub stopped with an error", "error", err)
 		return 1

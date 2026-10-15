@@ -33,7 +33,9 @@ linters:
     gocritic:
       enabled-tags: [diagnostic, performance, style]
       disabled-checks:
+        # Domain entities are passed and ranged over by value on purpose.
         - hugeParam
+        - rangeValCopy
         - unnamedResult
         - whyNoLint
     nolintlint:

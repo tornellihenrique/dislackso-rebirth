@@ -13,4 +13,5 @@
 
 hub/gen/** linguist-generated=true
 packages/contracts/src/gen/** linguist-generated=true
+hub/internal/adapter/sqlite/sqlcgen/** linguist-generated=true
 pnpm-lock.yaml linguist-generated=true

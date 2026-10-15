@@ -33,6 +33,8 @@ type Config struct {
 	HTTP    HTTP   `yaml:"http"`
 	Log     Log    `yaml:"log"`
 	Web     Web    `yaml:"web"`
+	Mail    Mail   `yaml:"mail"`
+	Setup   Setup  `yaml:"setup"`
 }
 
 type HTTP struct {
@@ -54,6 +56,18 @@ type Web struct {
 	Dir string `yaml:"dir"`
 }
 
+type Mail struct {
+	// DevLog writes emails to the log while SMTP is disabled, so email flows
+	// can be tried without a mail server. Development only.
+	DevLog bool `yaml:"dev_log"`
+}
+
+type Setup struct {
+	// Token fixes the one-time setup token, for headless hosts and tests.
+	// Empty means a random token on every start.
+	Token string `yaml:"token"`
+}
+
 // setting is one key that can be set from config.yaml, the environment and
 // flags. The env var and flag names are derived from the key.
 type setting struct {
@@ -67,6 +81,8 @@ var settings = []setting{
 	{key: "log.level", usage: "log level: debug, info, warn or error"},
 	{key: "log.format", usage: "log format: text or json"},
 	{key: "web.dir", usage: "serve the web client from this directory instead of the embedded build"},
+	{key: "mail.dev_log", usage: "true to log emails instead of sending them while SMTP is off (development)"},
+	{key: "setup.token", usage: "use this setup token instead of a random one"},
 }
 
 func (s setting) envName() string {

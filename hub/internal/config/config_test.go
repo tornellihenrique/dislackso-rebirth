@@ -53,6 +53,12 @@ func TestLoad(t *testing.T) {
 			want: base(func(c *Config) { c.HTTP.Addr = "127.0.0.1:9100"; c.Web.Dir = "/srv/web" }),
 		},
 		{
+			name: "booleans and strings from flags and env",
+			args: []string{"--mail-dev-log=true"},
+			env:  map[string]string{"DSX_SETUP_TOKEN": "fixed"},
+			want: base(func(c *Config) { c.Mail.DevLog = true; c.Setup.Token = "fixed" }),
+		},
+		{
 			name: "empty env var is ignored",
 			env:  map[string]string{"DSX_HTTP_ADDR": ""},
 			want: base(nil),
