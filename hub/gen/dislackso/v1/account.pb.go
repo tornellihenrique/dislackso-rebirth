@@ -101,9 +101,12 @@ func (x *GetMeResponse) GetMe() *Me {
 	return nil
 }
 
+// Unset fields keep their value.
 type UpdateProfileRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	DisplayName   string                 `protobuf:"bytes,1,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	DisplayName *string                `protobuf:"bytes,1,opt,name=display_name,json=displayName,proto3,oneof" json:"display_name,omitempty"`
+	// A file uploaded with purpose "avatar"; empty removes the avatar.
+	AvatarFileId  *string `protobuf:"bytes,2,opt,name=avatar_file_id,json=avatarFileId,proto3,oneof" json:"avatar_file_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -139,8 +142,15 @@ func (*UpdateProfileRequest) Descriptor() ([]byte, []int) {
 }
 
 func (x *UpdateProfileRequest) GetDisplayName() string {
-	if x != nil {
-		return x.DisplayName
+	if x != nil && x.DisplayName != nil {
+		return *x.DisplayName
+	}
+	return ""
+}
+
+func (x *UpdateProfileRequest) GetAvatarFileId() string {
+	if x != nil && x.AvatarFileId != nil {
+		return *x.AvatarFileId
 	}
 	return ""
 }
@@ -707,9 +717,12 @@ const file_dislackso_v1_account_proto_rawDesc = "" +
 	"\x1adislackso/v1/account.proto\x12\fdislackso.v1\x1a\x19dislackso/v1/common.proto\"\x0e\n" +
 	"\fGetMeRequest\"1\n" +
 	"\rGetMeResponse\x12 \n" +
-	"\x02me\x18\x01 \x01(\v2\x10.dislackso.v1.MeR\x02me\"9\n" +
-	"\x14UpdateProfileRequest\x12!\n" +
-	"\fdisplay_name\x18\x01 \x01(\tR\vdisplayName\"9\n" +
+	"\x02me\x18\x01 \x01(\v2\x10.dislackso.v1.MeR\x02me\"\x8d\x01\n" +
+	"\x14UpdateProfileRequest\x12&\n" +
+	"\fdisplay_name\x18\x01 \x01(\tH\x00R\vdisplayName\x88\x01\x01\x12)\n" +
+	"\x0eavatar_file_id\x18\x02 \x01(\tH\x01R\favatarFileId\x88\x01\x01B\x0f\n" +
+	"\r_display_nameB\x11\n" +
+	"\x0f_avatar_file_id\"9\n" +
 	"\x15UpdateProfileResponse\x12 \n" +
 	"\x02me\x18\x01 \x01(\v2\x10.dislackso.v1.MeR\x02me\"e\n" +
 	"\x15ChangePasswordRequest\x12)\n" +
@@ -816,6 +829,7 @@ func file_dislackso_v1_account_proto_init() {
 		return
 	}
 	file_dislackso_v1_common_proto_init()
+	file_dislackso_v1_account_proto_msgTypes[2].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

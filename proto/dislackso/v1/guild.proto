@@ -1,0 +1,129 @@
+syntax = "proto3";
+
+package dislackso.v1;
+
+import "dislackso/v1/channel.proto";
+import "dislackso/v1/common.proto";
+
+// GuildService manages guilds and their members. Guilds are private: to
+// anyone outside a guild, its ID answers NotFound.
+service GuildService {
+  // Creates the guild with a text and a voice channel; the caller owns it.
+  rpc CreateGuild(CreateGuildRequest) returns (CreateGuildResponse);
+  rpc UpdateGuild(UpdateGuildRequest) returns (UpdateGuildResponse);
+  // Owner only; the name must be typed again to confirm.
+  rpc DeleteGuild(DeleteGuildRequest) returns (DeleteGuildResponse);
+  // The owner must transfer ownership or delete the guild instead.
+  rpc LeaveGuild(LeaveGuildRequest) returns (LeaveGuildResponse);
+  // The previous owner becomes an admin.
+  rpc TransferOwnership(TransferOwnershipRequest) returns (TransferOwnershipResponse);
+  // Owner only: makes a member an admin or back.
+  rpc SetMemberRole(SetMemberRoleRequest) returns (SetMemberRoleResponse);
+  rpc ListMembers(ListMembersRequest) returns (ListMembersResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}
+
+enum GuildRole {
+  GUILD_ROLE_UNSPECIFIED = 0;
+  GUILD_ROLE_OWNER = 1;
+  GUILD_ROLE_ADMIN = 2;
+  GUILD_ROLE_MEMBER = 3;
+}
+
+message Guild {
+  string id = 1;
+  string name = 2;
+  // Empty when the guild has no icon.
+  string icon_url = 3;
+  string owner_id = 4;
+  // Unix ms.
+  int64 created_at = 5;
+  // Unix ms; clients keep the newest copy they have seen.
+  int64 updated_at = 6;
+}
+
+message Member {
+  string guild_id = 1;
+  string user_id = 2;
+  GuildRole role = 3;
+  // Unix ms.
+  int64 joined_at = 4;
+  // Unix ms; clients keep the newest copy they have seen.
+  int64 updated_at = 5;
+}
+
+// GuildState is everything a member needs to show a guild.
+message GuildState {
+  Guild guild = 1;
+  repeated Channel channels = 2;
+  repeated Member members = 3;
+  // Public profiles of every member.
+  repeated User users = 4;
+  repeated Presence presences = 5;
+}
+
+message CreateGuildRequest {
+  string name = 1;
+  // A file uploaded with purpose "guild_icon"; empty for none.
+  string icon_file_id = 2;
+}
+
+message CreateGuildResponse {
+  GuildState state = 1;
+}
+
+// Unset fields keep their value.
+message UpdateGuildRequest {
+  string guild_id = 1;
+  optional string name = 2;
+  // A file uploaded with purpose "guild_icon"; empty removes the icon.
+  optional string icon_file_id = 3;
+}
+
+message UpdateGuildResponse {
+  Guild guild = 1;
+}
+
+message DeleteGuildRequest {
+  string guild_id = 1;
+  string confirm_name = 2;
+}
+
+message DeleteGuildResponse {}
+
+message LeaveGuildRequest {
+  string guild_id = 1;
+}
+
+message LeaveGuildResponse {}
+
+message TransferOwnershipRequest {
+  string guild_id = 1;
+  string user_id = 2;
+}
+
+message TransferOwnershipResponse {
+  Guild guild = 1;
+}
+
+message SetMemberRoleRequest {
+  string guild_id = 1;
+  string user_id = 2;
+  // ADMIN or MEMBER.
+  GuildRole role = 3;
+}
+
+message SetMemberRoleResponse {
+  Member member = 1;
+}
+
+message ListMembersRequest {
+  string guild_id = 1;
+}
+
+message ListMembersResponse {
+  repeated Member members = 1;
+  repeated User users = 2;
+  repeated Presence presences = 3;
+}

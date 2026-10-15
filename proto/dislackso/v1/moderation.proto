@@ -1,0 +1,115 @@
+syntax = "proto3";
+
+package dislackso.v1;
+
+import "dislackso/v1/common.proto";
+
+// ModerationService removes and bans members and reads the audit log. Every
+// method requires the guild owner or an admin; nobody can target the owner,
+// and admins cannot target other admins.
+service ModerationService {
+  rpc KickMember(KickMemberRequest) returns (KickMemberResponse);
+  // Removes the member and blocks them from accepting new invites.
+  rpc BanMember(BanMemberRequest) returns (BanMemberResponse);
+  rpc UnbanMember(UnbanMemberRequest) returns (UnbanMemberResponse);
+  rpc ListBans(ListBansRequest) returns (ListBansResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  // Newest first.
+  rpc ListAuditLog(ListAuditLogRequest) returns (ListAuditLogResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}
+
+message Ban {
+  string guild_id = 1;
+  User user = 2;
+  // Unset when that account no longer exists.
+  User banned_by = 3;
+  string reason = 4;
+  // Unix ms.
+  int64 created_at = 5;
+}
+
+enum AuditAction {
+  AUDIT_ACTION_UNSPECIFIED = 0;
+  AUDIT_ACTION_GUILD_UPDATE = 1;
+  AUDIT_ACTION_CHANNEL_CREATE = 2;
+  AUDIT_ACTION_CHANNEL_UPDATE = 3;
+  AUDIT_ACTION_CHANNEL_DELETE = 4;
+  AUDIT_ACTION_CHANNELS_REORDER = 5;
+  AUDIT_ACTION_INVITE_CREATE = 6;
+  AUDIT_ACTION_INVITE_REVOKE = 7;
+  AUDIT_ACTION_MEMBER_KICK = 8;
+  AUDIT_ACTION_MEMBER_BAN = 9;
+  AUDIT_ACTION_MEMBER_UNBAN = 10;
+  AUDIT_ACTION_MEMBER_ROLE_UPDATE = 11;
+  AUDIT_ACTION_OWNERSHIP_TRANSFER = 12;
+}
+
+enum AuditTargetType {
+  AUDIT_TARGET_TYPE_UNSPECIFIED = 0;
+  AUDIT_TARGET_TYPE_GUILD = 1;
+  AUDIT_TARGET_TYPE_CHANNEL = 2;
+  AUDIT_TARGET_TYPE_USER = 3;
+  AUDIT_TARGET_TYPE_INVITE = 4;
+}
+
+message AuditEntry {
+  string id = 1;
+  string guild_id = 2;
+  string actor_id = 3;
+  AuditAction action = 4;
+  AuditTargetType target_type = 5;
+  // A user, channel or guild ID, or an invite code.
+  string target_id = 6;
+  // Action details such as "name", "old_name", "role" or "reason".
+  map<string, string> data = 7;
+  // Unix ms.
+  int64 created_at = 8;
+}
+
+message KickMemberRequest {
+  string guild_id = 1;
+  string user_id = 2;
+  string reason = 3;
+}
+
+message KickMemberResponse {}
+
+message BanMemberRequest {
+  string guild_id = 1;
+  string user_id = 2;
+  string reason = 3;
+}
+
+message BanMemberResponse {}
+
+message UnbanMemberRequest {
+  string guild_id = 1;
+  string user_id = 2;
+}
+
+message UnbanMemberResponse {}
+
+message ListBansRequest {
+  string guild_id = 1;
+}
+
+message ListBansResponse {
+  repeated Ban bans = 1;
+}
+
+message ListAuditLogRequest {
+  string guild_id = 1;
+  // Entries older than this ID; empty starts from the newest.
+  string before = 2;
+  // At most 100; 0 means 50.
+  int32 limit = 3;
+}
+
+message ListAuditLogResponse {
+  repeated AuditEntry entries = 1;
+  // Actors and targets that still exist.
+  repeated User users = 2;
+}

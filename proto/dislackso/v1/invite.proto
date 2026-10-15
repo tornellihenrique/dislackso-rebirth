@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package dislackso.v1;
+
+import "dislackso/v1/common.proto";
+import "dislackso/v1/guild.proto";
+
+// InviteService manages guild invites. The landing page at /invite/<code>
+// previews the guild before signing in.
+service InviteService {
+  // Members may invite when the instance allows it; owners and admins always may.
+  rpc CreateInvite(CreateInviteRequest) returns (CreateInviteResponse);
+  // Owners and admins see every invite; members see their own.
+  rpc ListInvites(ListInvitesRequest) returns (ListInvitesResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc RevokeInvite(RevokeInviteRequest) returns (RevokeInviteResponse);
+  // Works signed out. Unknown, expired and used-up codes answer NotFound.
+  rpc PreviewInvite(PreviewInviteRequest) returns (PreviewInviteResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  // Joins the guild; accepting while already a member returns the guild.
+  rpc AcceptInvite(AcceptInviteRequest) returns (AcceptInviteResponse);
+}
+
+message Invite {
+  string code = 1;
+  string guild_id = 2;
+  User created_by = 3;
+  // 0 means unlimited.
+  int32 max_uses = 4;
+  int32 uses = 5;
+  // Unix ms; 0 never expires.
+  int64 expires_at = 6;
+  // Unix ms.
+  int64 created_at = 7;
+  // Absolute link to the landing page.
+  string url = 8;
+}
+
+message CreateInviteRequest {
+  string guild_id = 1;
+  // One of 30 min, 1 h, 6 h, 1 d or 7 d in ms; 0 never expires.
+  int64 max_age_ms = 2;
+  // One of 1, 5, 10 or 25; 0 is unlimited.
+  int32 max_uses = 3;
+}
+
+message CreateInviteResponse {
+  Invite invite = 1;
+}
+
+message ListInvitesRequest {
+  string guild_id = 1;
+}
+
+message ListInvitesResponse {
+  repeated Invite invites = 1;
+}
+
+message RevokeInviteRequest {
+  string code = 1;
+}
+
+message RevokeInviteResponse {}
+
+message PreviewInviteRequest {
+  string code = 1;
+}
+
+message InvitePreview {
+  string code = 1;
+  string guild_id = 2;
+  string guild_name = 3;
+  // Empty when the guild has no icon.
+  string guild_icon_url = 4;
+  int32 member_count = 5;
+  int32 online_count = 6;
+  User inviter = 7;
+  // Unix ms; 0 never expires.
+  int64 expires_at = 8;
+  // Set when the caller is signed in and already a member.
+  bool member = 9;
+}
+
+message PreviewInviteResponse {
+  InvitePreview preview = 1;
+}
+
+message AcceptInviteRequest {
+  string code = 1;
+}
+
+message AcceptInviteResponse {
+  GuildState state = 1;
+}

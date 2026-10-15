@@ -7,6 +7,7 @@
 package gatewayv1
 
 import (
+	v1 "github.com/tornellihenrique/dislackso-rebirth/hub/gen/dislackso/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -21,9 +22,149 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// CloseCode is the WebSocket close code the hub uses when it ends a connection.
+type CloseCode int32
+
+const (
+	CloseCode_CLOSE_CODE_UNSPECIFIED  CloseCode = 0
+	CloseCode_CLOSE_CODE_UNKNOWN      CloseCode = 4000
+	CloseCode_CLOSE_CODE_BAD_OPCODE   CloseCode = 4001
+	CloseCode_CLOSE_CODE_DECODE_ERROR CloseCode = 4002
+	// No valid session cookie: sign in again.
+	CloseCode_CLOSE_CODE_NOT_AUTHENTICATED CloseCode = 4003
+	// The session was signed out or the account disabled: sign in again.
+	CloseCode_CLOSE_CODE_SESSION_REVOKED    CloseCode = 4004
+	CloseCode_CLOSE_CODE_ALREADY_IDENTIFIED CloseCode = 4005
+	CloseCode_CLOSE_CODE_INVALID_SEQ        CloseCode = 4007
+	CloseCode_CLOSE_CODE_RATE_LIMITED       CloseCode = 4008
+	// Heartbeats stopped arriving; resuming is still possible.
+	CloseCode_CLOSE_CODE_SESSION_EXPIRED CloseCode = 4009
+	// Reconnect later and identify; the session cannot be resumed.
+	CloseCode_CLOSE_CODE_HUB_RESTARTING CloseCode = 4010
+)
+
+// Enum value maps for CloseCode.
+var (
+	CloseCode_name = map[int32]string{
+		0:    "CLOSE_CODE_UNSPECIFIED",
+		4000: "CLOSE_CODE_UNKNOWN",
+		4001: "CLOSE_CODE_BAD_OPCODE",
+		4002: "CLOSE_CODE_DECODE_ERROR",
+		4003: "CLOSE_CODE_NOT_AUTHENTICATED",
+		4004: "CLOSE_CODE_SESSION_REVOKED",
+		4005: "CLOSE_CODE_ALREADY_IDENTIFIED",
+		4007: "CLOSE_CODE_INVALID_SEQ",
+		4008: "CLOSE_CODE_RATE_LIMITED",
+		4009: "CLOSE_CODE_SESSION_EXPIRED",
+		4010: "CLOSE_CODE_HUB_RESTARTING",
+	}
+	CloseCode_value = map[string]int32{
+		"CLOSE_CODE_UNSPECIFIED":        0,
+		"CLOSE_CODE_UNKNOWN":            4000,
+		"CLOSE_CODE_BAD_OPCODE":         4001,
+		"CLOSE_CODE_DECODE_ERROR":       4002,
+		"CLOSE_CODE_NOT_AUTHENTICATED":  4003,
+		"CLOSE_CODE_SESSION_REVOKED":    4004,
+		"CLOSE_CODE_ALREADY_IDENTIFIED": 4005,
+		"CLOSE_CODE_INVALID_SEQ":        4007,
+		"CLOSE_CODE_RATE_LIMITED":       4008,
+		"CLOSE_CODE_SESSION_EXPIRED":    4009,
+		"CLOSE_CODE_HUB_RESTARTING":     4010,
+	}
+)
+
+func (x CloseCode) Enum() *CloseCode {
+	p := new(CloseCode)
+	*p = x
+	return p
+}
+
+func (x CloseCode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CloseCode) Descriptor() protoreflect.EnumDescriptor {
+	return file_dislackso_gateway_v1_gateway_proto_enumTypes[0].Descriptor()
+}
+
+func (CloseCode) Type() protoreflect.EnumType {
+	return &file_dislackso_gateway_v1_gateway_proto_enumTypes[0]
+}
+
+func (x CloseCode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CloseCode.Descriptor instead.
+func (CloseCode) EnumDescriptor() ([]byte, []int) {
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{0}
+}
+
+type GuildDeleteReason int32
+
+const (
+	GuildDeleteReason_GUILD_DELETE_REASON_UNSPECIFIED GuildDeleteReason = 0
+	GuildDeleteReason_GUILD_DELETE_REASON_DELETED     GuildDeleteReason = 1
+	GuildDeleteReason_GUILD_DELETE_REASON_KICKED      GuildDeleteReason = 2
+	GuildDeleteReason_GUILD_DELETE_REASON_BANNED      GuildDeleteReason = 3
+	GuildDeleteReason_GUILD_DELETE_REASON_LEFT        GuildDeleteReason = 4
+)
+
+// Enum value maps for GuildDeleteReason.
+var (
+	GuildDeleteReason_name = map[int32]string{
+		0: "GUILD_DELETE_REASON_UNSPECIFIED",
+		1: "GUILD_DELETE_REASON_DELETED",
+		2: "GUILD_DELETE_REASON_KICKED",
+		3: "GUILD_DELETE_REASON_BANNED",
+		4: "GUILD_DELETE_REASON_LEFT",
+	}
+	GuildDeleteReason_value = map[string]int32{
+		"GUILD_DELETE_REASON_UNSPECIFIED": 0,
+		"GUILD_DELETE_REASON_DELETED":     1,
+		"GUILD_DELETE_REASON_KICKED":      2,
+		"GUILD_DELETE_REASON_BANNED":      3,
+		"GUILD_DELETE_REASON_LEFT":        4,
+	}
+)
+
+func (x GuildDeleteReason) Enum() *GuildDeleteReason {
+	p := new(GuildDeleteReason)
+	*p = x
+	return p
+}
+
+func (x GuildDeleteReason) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (GuildDeleteReason) Descriptor() protoreflect.EnumDescriptor {
+	return file_dislackso_gateway_v1_gateway_proto_enumTypes[1].Descriptor()
+}
+
+func (GuildDeleteReason) Type() protoreflect.EnumType {
+	return &file_dislackso_gateway_v1_gateway_proto_enumTypes[1]
+}
+
+func (x GuildDeleteReason) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use GuildDeleteReason.Descriptor instead.
+func (GuildDeleteReason) EnumDescriptor() ([]byte, []int) {
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{1}
+}
+
 // ClientFrame is sent from the client to the hub.
 type ClientFrame struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Kind:
+	//
+	//	*ClientFrame_Identify
+	//	*ClientFrame_Resume
+	//	*ClientFrame_Heartbeat
+	//	*ClientFrame_UpdatePresence
+	Kind          isClientFrame_Kind `protobuf_oneof:"kind"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -58,9 +199,89 @@ func (*ClientFrame) Descriptor() ([]byte, []int) {
 	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{0}
 }
 
+func (x *ClientFrame) GetKind() isClientFrame_Kind {
+	if x != nil {
+		return x.Kind
+	}
+	return nil
+}
+
+func (x *ClientFrame) GetIdentify() *Identify {
+	if x != nil {
+		if x, ok := x.Kind.(*ClientFrame_Identify); ok {
+			return x.Identify
+		}
+	}
+	return nil
+}
+
+func (x *ClientFrame) GetResume() *Resume {
+	if x != nil {
+		if x, ok := x.Kind.(*ClientFrame_Resume); ok {
+			return x.Resume
+		}
+	}
+	return nil
+}
+
+func (x *ClientFrame) GetHeartbeat() *Heartbeat {
+	if x != nil {
+		if x, ok := x.Kind.(*ClientFrame_Heartbeat); ok {
+			return x.Heartbeat
+		}
+	}
+	return nil
+}
+
+func (x *ClientFrame) GetUpdatePresence() *UpdatePresence {
+	if x != nil {
+		if x, ok := x.Kind.(*ClientFrame_UpdatePresence); ok {
+			return x.UpdatePresence
+		}
+	}
+	return nil
+}
+
+type isClientFrame_Kind interface {
+	isClientFrame_Kind()
+}
+
+type ClientFrame_Identify struct {
+	Identify *Identify `protobuf:"bytes,1,opt,name=identify,proto3,oneof"`
+}
+
+type ClientFrame_Resume struct {
+	Resume *Resume `protobuf:"bytes,2,opt,name=resume,proto3,oneof"`
+}
+
+type ClientFrame_Heartbeat struct {
+	Heartbeat *Heartbeat `protobuf:"bytes,3,opt,name=heartbeat,proto3,oneof"`
+}
+
+type ClientFrame_UpdatePresence struct {
+	UpdatePresence *UpdatePresence `protobuf:"bytes,4,opt,name=update_presence,json=updatePresence,proto3,oneof"`
+}
+
+func (*ClientFrame_Identify) isClientFrame_Kind() {}
+
+func (*ClientFrame_Resume) isClientFrame_Kind() {}
+
+func (*ClientFrame_Heartbeat) isClientFrame_Kind() {}
+
+func (*ClientFrame_UpdatePresence) isClientFrame_Kind() {}
+
 // ServerFrame is sent from the hub to the client.
 type ServerFrame struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Kind:
+	//
+	//	*ServerFrame_Hello
+	//	*ServerFrame_Ready
+	//	*ServerFrame_Resumed
+	//	*ServerFrame_InvalidSession
+	//	*ServerFrame_HeartbeatAck
+	//	*ServerFrame_Dispatch
+	Kind          isServerFrame_Kind `protobuf_oneof:"kind"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -95,13 +316,1570 @@ func (*ServerFrame) Descriptor() ([]byte, []int) {
 	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{1}
 }
 
+func (x *ServerFrame) GetKind() isServerFrame_Kind {
+	if x != nil {
+		return x.Kind
+	}
+	return nil
+}
+
+func (x *ServerFrame) GetHello() *Hello {
+	if x != nil {
+		if x, ok := x.Kind.(*ServerFrame_Hello); ok {
+			return x.Hello
+		}
+	}
+	return nil
+}
+
+func (x *ServerFrame) GetReady() *Ready {
+	if x != nil {
+		if x, ok := x.Kind.(*ServerFrame_Ready); ok {
+			return x.Ready
+		}
+	}
+	return nil
+}
+
+func (x *ServerFrame) GetResumed() *Resumed {
+	if x != nil {
+		if x, ok := x.Kind.(*ServerFrame_Resumed); ok {
+			return x.Resumed
+		}
+	}
+	return nil
+}
+
+func (x *ServerFrame) GetInvalidSession() *InvalidSession {
+	if x != nil {
+		if x, ok := x.Kind.(*ServerFrame_InvalidSession); ok {
+			return x.InvalidSession
+		}
+	}
+	return nil
+}
+
+func (x *ServerFrame) GetHeartbeatAck() *HeartbeatAck {
+	if x != nil {
+		if x, ok := x.Kind.(*ServerFrame_HeartbeatAck); ok {
+			return x.HeartbeatAck
+		}
+	}
+	return nil
+}
+
+func (x *ServerFrame) GetDispatch() *Dispatch {
+	if x != nil {
+		if x, ok := x.Kind.(*ServerFrame_Dispatch); ok {
+			return x.Dispatch
+		}
+	}
+	return nil
+}
+
+type isServerFrame_Kind interface {
+	isServerFrame_Kind()
+}
+
+type ServerFrame_Hello struct {
+	Hello *Hello `protobuf:"bytes,1,opt,name=hello,proto3,oneof"`
+}
+
+type ServerFrame_Ready struct {
+	Ready *Ready `protobuf:"bytes,2,opt,name=ready,proto3,oneof"`
+}
+
+type ServerFrame_Resumed struct {
+	Resumed *Resumed `protobuf:"bytes,3,opt,name=resumed,proto3,oneof"`
+}
+
+type ServerFrame_InvalidSession struct {
+	InvalidSession *InvalidSession `protobuf:"bytes,4,opt,name=invalid_session,json=invalidSession,proto3,oneof"`
+}
+
+type ServerFrame_HeartbeatAck struct {
+	HeartbeatAck *HeartbeatAck `protobuf:"bytes,5,opt,name=heartbeat_ack,json=heartbeatAck,proto3,oneof"`
+}
+
+type ServerFrame_Dispatch struct {
+	Dispatch *Dispatch `protobuf:"bytes,6,opt,name=dispatch,proto3,oneof"`
+}
+
+func (*ServerFrame_Hello) isServerFrame_Kind() {}
+
+func (*ServerFrame_Ready) isServerFrame_Kind() {}
+
+func (*ServerFrame_Resumed) isServerFrame_Kind() {}
+
+func (*ServerFrame_InvalidSession) isServerFrame_Kind() {}
+
+func (*ServerFrame_HeartbeatAck) isServerFrame_Kind() {}
+
+func (*ServerFrame_Dispatch) isServerFrame_Kind() {}
+
+type Hello struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	HeartbeatIntervalMs int32                  `protobuf:"varint,1,opt,name=heartbeat_interval_ms,json=heartbeatIntervalMs,proto3" json:"heartbeat_interval_ms,omitempty"`
+	// How long a dropped session can still be resumed.
+	ResumeWindowMs int32 `protobuf:"varint,2,opt,name=resume_window_ms,json=resumeWindowMs,proto3" json:"resume_window_ms,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *Hello) Reset() {
+	*x = Hello{}
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Hello) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Hello) ProtoMessage() {}
+
+func (x *Hello) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Hello.ProtoReflect.Descriptor instead.
+func (*Hello) Descriptor() ([]byte, []int) {
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *Hello) GetHeartbeatIntervalMs() int32 {
+	if x != nil {
+		return x.HeartbeatIntervalMs
+	}
+	return 0
+}
+
+func (x *Hello) GetResumeWindowMs() int32 {
+	if x != nil {
+		return x.ResumeWindowMs
+	}
+	return 0
+}
+
+type ClientInfo struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// "web" or "desktop".
+	Platform      string `protobuf:"bytes,1,opt,name=platform,proto3" json:"platform,omitempty"`
+	Version       string `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClientInfo) Reset() {
+	*x = ClientInfo{}
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClientInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClientInfo) ProtoMessage() {}
+
+func (x *ClientInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClientInfo.ProtoReflect.Descriptor instead.
+func (*ClientInfo) Descriptor() ([]byte, []int) {
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ClientInfo) GetPlatform() string {
+	if x != nil {
+		return x.Platform
+	}
+	return ""
+}
+
+func (x *ClientInfo) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+type Identify struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Client        *ClientInfo            `protobuf:"bytes,1,opt,name=client,proto3" json:"client,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Identify) Reset() {
+	*x = Identify{}
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Identify) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Identify) ProtoMessage() {}
+
+func (x *Identify) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Identify.ProtoReflect.Descriptor instead.
+func (*Identify) Descriptor() ([]byte, []int) {
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *Identify) GetClient() *ClientInfo {
+	if x != nil {
+		return x.Client
+	}
+	return nil
+}
+
+type Resume struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	SessionId string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	// The seq of the last dispatch the client processed.
+	LastSeq       uint64 `protobuf:"varint,2,opt,name=last_seq,json=lastSeq,proto3" json:"last_seq,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Resume) Reset() {
+	*x = Resume{}
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Resume) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Resume) ProtoMessage() {}
+
+func (x *Resume) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Resume.ProtoReflect.Descriptor instead.
+func (*Resume) Descriptor() ([]byte, []int) {
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *Resume) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *Resume) GetLastSeq() uint64 {
+	if x != nil {
+		return x.LastSeq
+	}
+	return 0
+}
+
+type Heartbeat struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	LastSeq       uint64                 `protobuf:"varint,1,opt,name=last_seq,json=lastSeq,proto3" json:"last_seq,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Heartbeat) Reset() {
+	*x = Heartbeat{}
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Heartbeat) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Heartbeat) ProtoMessage() {}
+
+func (x *Heartbeat) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Heartbeat.ProtoReflect.Descriptor instead.
+func (*Heartbeat) Descriptor() ([]byte, []int) {
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *Heartbeat) GetLastSeq() uint64 {
+	if x != nil {
+		return x.LastSeq
+	}
+	return 0
+}
+
+type HeartbeatAck struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HeartbeatAck) Reset() {
+	*x = HeartbeatAck{}
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HeartbeatAck) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HeartbeatAck) ProtoMessage() {}
+
+func (x *HeartbeatAck) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HeartbeatAck.ProtoReflect.Descriptor instead.
+func (*HeartbeatAck) Descriptor() ([]byte, []int) {
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{7}
+}
+
+// UpdatePresence reports activity; the status preference itself is set
+// through AccountService.
+type UpdatePresence struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// No input for a while on this client.
+	Idle          bool `protobuf:"varint,1,opt,name=idle,proto3" json:"idle,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdatePresence) Reset() {
+	*x = UpdatePresence{}
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdatePresence) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdatePresence) ProtoMessage() {}
+
+func (x *UpdatePresence) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdatePresence.ProtoReflect.Descriptor instead.
+func (*UpdatePresence) Descriptor() ([]byte, []int) {
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *UpdatePresence) GetIdle() bool {
+	if x != nil {
+		return x.Idle
+	}
+	return false
+}
+
+type InstanceInfo struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	Name                  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	MembersCanInvite      bool                   `protobuf:"varint,2,opt,name=members_can_invite,json=membersCanInvite,proto3" json:"members_can_invite,omitempty"`
+	MaxGuildsOwnedPerUser int32                  `protobuf:"varint,3,opt,name=max_guilds_owned_per_user,json=maxGuildsOwnedPerUser,proto3" json:"max_guilds_owned_per_user,omitempty"`
+	MaxChannelsPerGuild   int32                  `protobuf:"varint,4,opt,name=max_channels_per_guild,json=maxChannelsPerGuild,proto3" json:"max_channels_per_guild,omitempty"`
+	MaxGuildMembers       int32                  `protobuf:"varint,5,opt,name=max_guild_members,json=maxGuildMembers,proto3" json:"max_guild_members,omitempty"`
+	DefaultVoiceUserLimit int32                  `protobuf:"varint,6,opt,name=default_voice_user_limit,json=defaultVoiceUserLimit,proto3" json:"default_voice_user_limit,omitempty"`
+	MaxUploadMb           int32                  `protobuf:"varint,7,opt,name=max_upload_mb,json=maxUploadMb,proto3" json:"max_upload_mb,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *InstanceInfo) Reset() {
+	*x = InstanceInfo{}
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InstanceInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InstanceInfo) ProtoMessage() {}
+
+func (x *InstanceInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InstanceInfo.ProtoReflect.Descriptor instead.
+func (*InstanceInfo) Descriptor() ([]byte, []int) {
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *InstanceInfo) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *InstanceInfo) GetMembersCanInvite() bool {
+	if x != nil {
+		return x.MembersCanInvite
+	}
+	return false
+}
+
+func (x *InstanceInfo) GetMaxGuildsOwnedPerUser() int32 {
+	if x != nil {
+		return x.MaxGuildsOwnedPerUser
+	}
+	return 0
+}
+
+func (x *InstanceInfo) GetMaxChannelsPerGuild() int32 {
+	if x != nil {
+		return x.MaxChannelsPerGuild
+	}
+	return 0
+}
+
+func (x *InstanceInfo) GetMaxGuildMembers() int32 {
+	if x != nil {
+		return x.MaxGuildMembers
+	}
+	return 0
+}
+
+func (x *InstanceInfo) GetDefaultVoiceUserLimit() int32 {
+	if x != nil {
+		return x.DefaultVoiceUserLimit
+	}
+	return 0
+}
+
+func (x *InstanceInfo) GetMaxUploadMb() int32 {
+	if x != nil {
+		return x.MaxUploadMb
+	}
+	return 0
+}
+
+type Ready struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	Me            *v1.Me                 `protobuf:"bytes,2,opt,name=me,proto3" json:"me,omitempty"`
+	Instance      *InstanceInfo          `protobuf:"bytes,3,opt,name=instance,proto3" json:"instance,omitempty"`
+	Guilds        []*v1.GuildState       `protobuf:"bytes,4,rep,name=guilds,proto3" json:"guilds,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Ready) Reset() {
+	*x = Ready{}
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Ready) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Ready) ProtoMessage() {}
+
+func (x *Ready) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Ready.ProtoReflect.Descriptor instead.
+func (*Ready) Descriptor() ([]byte, []int) {
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *Ready) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *Ready) GetMe() *v1.Me {
+	if x != nil {
+		return x.Me
+	}
+	return nil
+}
+
+func (x *Ready) GetInstance() *InstanceInfo {
+	if x != nil {
+		return x.Instance
+	}
+	return nil
+}
+
+func (x *Ready) GetGuilds() []*v1.GuildState {
+	if x != nil {
+		return x.Guilds
+	}
+	return nil
+}
+
+type Resumed struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Resumed) Reset() {
+	*x = Resumed{}
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Resumed) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Resumed) ProtoMessage() {}
+
+func (x *Resumed) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Resumed.ProtoReflect.Descriptor instead.
+func (*Resumed) Descriptor() ([]byte, []int) {
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{11}
+}
+
+type InvalidSession struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Always false today: the client identifies again and rebuilds from Ready.
+	Resumable     bool `protobuf:"varint,1,opt,name=resumable,proto3" json:"resumable,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InvalidSession) Reset() {
+	*x = InvalidSession{}
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InvalidSession) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InvalidSession) ProtoMessage() {}
+
+func (x *InvalidSession) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InvalidSession.ProtoReflect.Descriptor instead.
+func (*InvalidSession) Descriptor() ([]byte, []int) {
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *InvalidSession) GetResumable() bool {
+	if x != nil {
+		return x.Resumable
+	}
+	return false
+}
+
+type Dispatch struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Seq           uint64                 `protobuf:"varint,1,opt,name=seq,proto3" json:"seq,omitempty"`
+	Event         *Event                 `protobuf:"bytes,2,opt,name=event,proto3" json:"event,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Dispatch) Reset() {
+	*x = Dispatch{}
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Dispatch) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Dispatch) ProtoMessage() {}
+
+func (x *Dispatch) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Dispatch.ProtoReflect.Descriptor instead.
+func (*Dispatch) Descriptor() ([]byte, []int) {
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *Dispatch) GetSeq() uint64 {
+	if x != nil {
+		return x.Seq
+	}
+	return 0
+}
+
+func (x *Dispatch) GetEvent() *Event {
+	if x != nil {
+		return x.Event
+	}
+	return nil
+}
+
+type Event struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Kind:
+	//
+	//	*Event_GuildCreate
+	//	*Event_GuildUpdate
+	//	*Event_GuildDelete
+	//	*Event_MemberAdd
+	//	*Event_MemberUpdate
+	//	*Event_MemberRemove
+	//	*Event_ChannelCreate
+	//	*Event_ChannelUpdate
+	//	*Event_ChannelDelete
+	//	*Event_ChannelsReordered
+	//	*Event_UserUpdate
+	//	*Event_PresenceUpdate
+	//	*Event_InviteCreate
+	//	*Event_InviteDelete
+	//	*Event_BanAdd
+	//	*Event_BanRemove
+	//	*Event_AuditEntry
+	//	*Event_MeUpdate
+	Kind          isEvent_Kind `protobuf_oneof:"kind"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Event) Reset() {
+	*x = Event{}
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Event) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Event) ProtoMessage() {}
+
+func (x *Event) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Event.ProtoReflect.Descriptor instead.
+func (*Event) Descriptor() ([]byte, []int) {
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *Event) GetKind() isEvent_Kind {
+	if x != nil {
+		return x.Kind
+	}
+	return nil
+}
+
+func (x *Event) GetGuildCreate() *v1.GuildState {
+	if x != nil {
+		if x, ok := x.Kind.(*Event_GuildCreate); ok {
+			return x.GuildCreate
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetGuildUpdate() *v1.Guild {
+	if x != nil {
+		if x, ok := x.Kind.(*Event_GuildUpdate); ok {
+			return x.GuildUpdate
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetGuildDelete() *GuildDelete {
+	if x != nil {
+		if x, ok := x.Kind.(*Event_GuildDelete); ok {
+			return x.GuildDelete
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetMemberAdd() *MemberAdd {
+	if x != nil {
+		if x, ok := x.Kind.(*Event_MemberAdd); ok {
+			return x.MemberAdd
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetMemberUpdate() *v1.Member {
+	if x != nil {
+		if x, ok := x.Kind.(*Event_MemberUpdate); ok {
+			return x.MemberUpdate
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetMemberRemove() *MemberRemove {
+	if x != nil {
+		if x, ok := x.Kind.(*Event_MemberRemove); ok {
+			return x.MemberRemove
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetChannelCreate() *v1.Channel {
+	if x != nil {
+		if x, ok := x.Kind.(*Event_ChannelCreate); ok {
+			return x.ChannelCreate
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetChannelUpdate() *v1.Channel {
+	if x != nil {
+		if x, ok := x.Kind.(*Event_ChannelUpdate); ok {
+			return x.ChannelUpdate
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetChannelDelete() *ChannelDelete {
+	if x != nil {
+		if x, ok := x.Kind.(*Event_ChannelDelete); ok {
+			return x.ChannelDelete
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetChannelsReordered() *ChannelsReordered {
+	if x != nil {
+		if x, ok := x.Kind.(*Event_ChannelsReordered); ok {
+			return x.ChannelsReordered
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetUserUpdate() *v1.User {
+	if x != nil {
+		if x, ok := x.Kind.(*Event_UserUpdate); ok {
+			return x.UserUpdate
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetPresenceUpdate() *v1.Presence {
+	if x != nil {
+		if x, ok := x.Kind.(*Event_PresenceUpdate); ok {
+			return x.PresenceUpdate
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetInviteCreate() *v1.Invite {
+	if x != nil {
+		if x, ok := x.Kind.(*Event_InviteCreate); ok {
+			return x.InviteCreate
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetInviteDelete() *InviteDelete {
+	if x != nil {
+		if x, ok := x.Kind.(*Event_InviteDelete); ok {
+			return x.InviteDelete
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetBanAdd() *v1.Ban {
+	if x != nil {
+		if x, ok := x.Kind.(*Event_BanAdd); ok {
+			return x.BanAdd
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetBanRemove() *BanRemove {
+	if x != nil {
+		if x, ok := x.Kind.(*Event_BanRemove); ok {
+			return x.BanRemove
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetAuditEntry() *v1.AuditEntry {
+	if x != nil {
+		if x, ok := x.Kind.(*Event_AuditEntry); ok {
+			return x.AuditEntry
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetMeUpdate() *v1.Me {
+	if x != nil {
+		if x, ok := x.Kind.(*Event_MeUpdate); ok {
+			return x.MeUpdate
+		}
+	}
+	return nil
+}
+
+type isEvent_Kind interface {
+	isEvent_Kind()
+}
+
+type Event_GuildCreate struct {
+	// The receiver joined or created a guild.
+	GuildCreate *v1.GuildState `protobuf:"bytes,1,opt,name=guild_create,json=guildCreate,proto3,oneof"`
+}
+
+type Event_GuildUpdate struct {
+	GuildUpdate *v1.Guild `protobuf:"bytes,2,opt,name=guild_update,json=guildUpdate,proto3,oneof"`
+}
+
+type Event_GuildDelete struct {
+	// The receiver can no longer see the guild.
+	GuildDelete *GuildDelete `protobuf:"bytes,3,opt,name=guild_delete,json=guildDelete,proto3,oneof"`
+}
+
+type Event_MemberAdd struct {
+	MemberAdd *MemberAdd `protobuf:"bytes,4,opt,name=member_add,json=memberAdd,proto3,oneof"`
+}
+
+type Event_MemberUpdate struct {
+	MemberUpdate *v1.Member `protobuf:"bytes,5,opt,name=member_update,json=memberUpdate,proto3,oneof"`
+}
+
+type Event_MemberRemove struct {
+	MemberRemove *MemberRemove `protobuf:"bytes,6,opt,name=member_remove,json=memberRemove,proto3,oneof"`
+}
+
+type Event_ChannelCreate struct {
+	ChannelCreate *v1.Channel `protobuf:"bytes,7,opt,name=channel_create,json=channelCreate,proto3,oneof"`
+}
+
+type Event_ChannelUpdate struct {
+	ChannelUpdate *v1.Channel `protobuf:"bytes,8,opt,name=channel_update,json=channelUpdate,proto3,oneof"`
+}
+
+type Event_ChannelDelete struct {
+	ChannelDelete *ChannelDelete `protobuf:"bytes,9,opt,name=channel_delete,json=channelDelete,proto3,oneof"`
+}
+
+type Event_ChannelsReordered struct {
+	ChannelsReordered *ChannelsReordered `protobuf:"bytes,10,opt,name=channels_reordered,json=channelsReordered,proto3,oneof"`
+}
+
+type Event_UserUpdate struct {
+	// A public profile of someone sharing a guild with the receiver.
+	UserUpdate *v1.User `protobuf:"bytes,11,opt,name=user_update,json=userUpdate,proto3,oneof"`
+}
+
+type Event_PresenceUpdate struct {
+	PresenceUpdate *v1.Presence `protobuf:"bytes,12,opt,name=presence_update,json=presenceUpdate,proto3,oneof"`
+}
+
+type Event_InviteCreate struct {
+	// Owners, admins and the invite's creator only.
+	InviteCreate *v1.Invite `protobuf:"bytes,13,opt,name=invite_create,json=inviteCreate,proto3,oneof"`
+}
+
+type Event_InviteDelete struct {
+	InviteDelete *InviteDelete `protobuf:"bytes,14,opt,name=invite_delete,json=inviteDelete,proto3,oneof"`
+}
+
+type Event_BanAdd struct {
+	// Owners and admins only.
+	BanAdd *v1.Ban `protobuf:"bytes,15,opt,name=ban_add,json=banAdd,proto3,oneof"`
+}
+
+type Event_BanRemove struct {
+	BanRemove *BanRemove `protobuf:"bytes,16,opt,name=ban_remove,json=banRemove,proto3,oneof"`
+}
+
+type Event_AuditEntry struct {
+	AuditEntry *v1.AuditEntry `protobuf:"bytes,17,opt,name=audit_entry,json=auditEntry,proto3,oneof"`
+}
+
+type Event_MeUpdate struct {
+	// The receiver's own account changed, possibly from another device.
+	MeUpdate *v1.Me `protobuf:"bytes,18,opt,name=me_update,json=meUpdate,proto3,oneof"`
+}
+
+func (*Event_GuildCreate) isEvent_Kind() {}
+
+func (*Event_GuildUpdate) isEvent_Kind() {}
+
+func (*Event_GuildDelete) isEvent_Kind() {}
+
+func (*Event_MemberAdd) isEvent_Kind() {}
+
+func (*Event_MemberUpdate) isEvent_Kind() {}
+
+func (*Event_MemberRemove) isEvent_Kind() {}
+
+func (*Event_ChannelCreate) isEvent_Kind() {}
+
+func (*Event_ChannelUpdate) isEvent_Kind() {}
+
+func (*Event_ChannelDelete) isEvent_Kind() {}
+
+func (*Event_ChannelsReordered) isEvent_Kind() {}
+
+func (*Event_UserUpdate) isEvent_Kind() {}
+
+func (*Event_PresenceUpdate) isEvent_Kind() {}
+
+func (*Event_InviteCreate) isEvent_Kind() {}
+
+func (*Event_InviteDelete) isEvent_Kind() {}
+
+func (*Event_BanAdd) isEvent_Kind() {}
+
+func (*Event_BanRemove) isEvent_Kind() {}
+
+func (*Event_AuditEntry) isEvent_Kind() {}
+
+func (*Event_MeUpdate) isEvent_Kind() {}
+
+type GuildDelete struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	GuildId       string                 `protobuf:"bytes,1,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
+	Reason        GuildDeleteReason      `protobuf:"varint,2,opt,name=reason,proto3,enum=dislackso.gateway.v1.GuildDeleteReason" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GuildDelete) Reset() {
+	*x = GuildDelete{}
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GuildDelete) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GuildDelete) ProtoMessage() {}
+
+func (x *GuildDelete) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GuildDelete.ProtoReflect.Descriptor instead.
+func (*GuildDelete) Descriptor() ([]byte, []int) {
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *GuildDelete) GetGuildId() string {
+	if x != nil {
+		return x.GuildId
+	}
+	return ""
+}
+
+func (x *GuildDelete) GetReason() GuildDeleteReason {
+	if x != nil {
+		return x.Reason
+	}
+	return GuildDeleteReason_GUILD_DELETE_REASON_UNSPECIFIED
+}
+
+type MemberAdd struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Member        *v1.Member             `protobuf:"bytes,1,opt,name=member,proto3" json:"member,omitempty"`
+	User          *v1.User               `protobuf:"bytes,2,opt,name=user,proto3" json:"user,omitempty"`
+	Presence      *v1.Presence           `protobuf:"bytes,3,opt,name=presence,proto3" json:"presence,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MemberAdd) Reset() {
+	*x = MemberAdd{}
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MemberAdd) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MemberAdd) ProtoMessage() {}
+
+func (x *MemberAdd) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MemberAdd.ProtoReflect.Descriptor instead.
+func (*MemberAdd) Descriptor() ([]byte, []int) {
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *MemberAdd) GetMember() *v1.Member {
+	if x != nil {
+		return x.Member
+	}
+	return nil
+}
+
+func (x *MemberAdd) GetUser() *v1.User {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
+func (x *MemberAdd) GetPresence() *v1.Presence {
+	if x != nil {
+		return x.Presence
+	}
+	return nil
+}
+
+type MemberRemove struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	GuildId       string                 `protobuf:"bytes,1,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MemberRemove) Reset() {
+	*x = MemberRemove{}
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MemberRemove) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MemberRemove) ProtoMessage() {}
+
+func (x *MemberRemove) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MemberRemove.ProtoReflect.Descriptor instead.
+func (*MemberRemove) Descriptor() ([]byte, []int) {
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *MemberRemove) GetGuildId() string {
+	if x != nil {
+		return x.GuildId
+	}
+	return ""
+}
+
+func (x *MemberRemove) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+type ChannelDelete struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	GuildId       string                 `protobuf:"bytes,1,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
+	ChannelId     string                 `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChannelDelete) Reset() {
+	*x = ChannelDelete{}
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChannelDelete) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChannelDelete) ProtoMessage() {}
+
+func (x *ChannelDelete) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChannelDelete.ProtoReflect.Descriptor instead.
+func (*ChannelDelete) Descriptor() ([]byte, []int) {
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *ChannelDelete) GetGuildId() string {
+	if x != nil {
+		return x.GuildId
+	}
+	return ""
+}
+
+func (x *ChannelDelete) GetChannelId() string {
+	if x != nil {
+		return x.ChannelId
+	}
+	return ""
+}
+
+type ChannelsReordered struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	GuildId string                 `protobuf:"bytes,1,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
+	// Every channel whose parent or position changed.
+	Channels      []*v1.Channel `protobuf:"bytes,2,rep,name=channels,proto3" json:"channels,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChannelsReordered) Reset() {
+	*x = ChannelsReordered{}
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChannelsReordered) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChannelsReordered) ProtoMessage() {}
+
+func (x *ChannelsReordered) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChannelsReordered.ProtoReflect.Descriptor instead.
+func (*ChannelsReordered) Descriptor() ([]byte, []int) {
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *ChannelsReordered) GetGuildId() string {
+	if x != nil {
+		return x.GuildId
+	}
+	return ""
+}
+
+func (x *ChannelsReordered) GetChannels() []*v1.Channel {
+	if x != nil {
+		return x.Channels
+	}
+	return nil
+}
+
+type InviteDelete struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	GuildId       string                 `protobuf:"bytes,1,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
+	Code          string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InviteDelete) Reset() {
+	*x = InviteDelete{}
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InviteDelete) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InviteDelete) ProtoMessage() {}
+
+func (x *InviteDelete) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InviteDelete.ProtoReflect.Descriptor instead.
+func (*InviteDelete) Descriptor() ([]byte, []int) {
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *InviteDelete) GetGuildId() string {
+	if x != nil {
+		return x.GuildId
+	}
+	return ""
+}
+
+func (x *InviteDelete) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+type BanRemove struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	GuildId       string                 `protobuf:"bytes,1,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BanRemove) Reset() {
+	*x = BanRemove{}
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BanRemove) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BanRemove) ProtoMessage() {}
+
+func (x *BanRemove) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_gateway_v1_gateway_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BanRemove.ProtoReflect.Descriptor instead.
+func (*BanRemove) Descriptor() ([]byte, []int) {
+	return file_dislackso_gateway_v1_gateway_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *BanRemove) GetGuildId() string {
+	if x != nil {
+		return x.GuildId
+	}
+	return ""
+}
+
+func (x *BanRemove) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
 var File_dislackso_gateway_v1_gateway_proto protoreflect.FileDescriptor
 
 const file_dislackso_gateway_v1_gateway_proto_rawDesc = "" +
 	"\n" +
-	"\"dislackso/gateway/v1/gateway.proto\x12\x14dislackso.gateway.v1\"\r\n" +
-	"\vClientFrame\"\r\n" +
-	"\vServerFrameB\xf0\x01\n" +
+	"\"dislackso/gateway/v1/gateway.proto\x12\x14dislackso.gateway.v1\x1a\x1adislackso/v1/channel.proto\x1a\x19dislackso/v1/common.proto\x1a\x18dislackso/v1/guild.proto\x1a\x19dislackso/v1/invite.proto\x1a\x1ddislackso/v1/moderation.proto\"\x9d\x02\n" +
+	"\vClientFrame\x12<\n" +
+	"\bidentify\x18\x01 \x01(\v2\x1e.dislackso.gateway.v1.IdentifyH\x00R\bidentify\x126\n" +
+	"\x06resume\x18\x02 \x01(\v2\x1c.dislackso.gateway.v1.ResumeH\x00R\x06resume\x12?\n" +
+	"\theartbeat\x18\x03 \x01(\v2\x1f.dislackso.gateway.v1.HeartbeatH\x00R\theartbeat\x12O\n" +
+	"\x0fupdate_presence\x18\x04 \x01(\v2$.dislackso.gateway.v1.UpdatePresenceH\x00R\x0eupdatePresenceB\x06\n" +
+	"\x04kind\"\x94\x03\n" +
+	"\vServerFrame\x123\n" +
+	"\x05hello\x18\x01 \x01(\v2\x1b.dislackso.gateway.v1.HelloH\x00R\x05hello\x123\n" +
+	"\x05ready\x18\x02 \x01(\v2\x1b.dislackso.gateway.v1.ReadyH\x00R\x05ready\x129\n" +
+	"\aresumed\x18\x03 \x01(\v2\x1d.dislackso.gateway.v1.ResumedH\x00R\aresumed\x12O\n" +
+	"\x0finvalid_session\x18\x04 \x01(\v2$.dislackso.gateway.v1.InvalidSessionH\x00R\x0einvalidSession\x12I\n" +
+	"\rheartbeat_ack\x18\x05 \x01(\v2\".dislackso.gateway.v1.HeartbeatAckH\x00R\fheartbeatAck\x12<\n" +
+	"\bdispatch\x18\x06 \x01(\v2\x1e.dislackso.gateway.v1.DispatchH\x00R\bdispatchB\x06\n" +
+	"\x04kind\"e\n" +
+	"\x05Hello\x122\n" +
+	"\x15heartbeat_interval_ms\x18\x01 \x01(\x05R\x13heartbeatIntervalMs\x12(\n" +
+	"\x10resume_window_ms\x18\x02 \x01(\x05R\x0eresumeWindowMs\"B\n" +
+	"\n" +
+	"ClientInfo\x12\x1a\n" +
+	"\bplatform\x18\x01 \x01(\tR\bplatform\x12\x18\n" +
+	"\aversion\x18\x02 \x01(\tR\aversion\"D\n" +
+	"\bIdentify\x128\n" +
+	"\x06client\x18\x01 \x01(\v2 .dislackso.gateway.v1.ClientInfoR\x06client\"B\n" +
+	"\x06Resume\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x19\n" +
+	"\blast_seq\x18\x02 \x01(\x04R\alastSeq\"&\n" +
+	"\tHeartbeat\x12\x19\n" +
+	"\blast_seq\x18\x01 \x01(\x04R\alastSeq\"\x0e\n" +
+	"\fHeartbeatAck\"$\n" +
+	"\x0eUpdatePresence\x12\x12\n" +
+	"\x04idle\x18\x01 \x01(\bR\x04idle\"\xc8\x02\n" +
+	"\fInstanceInfo\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12,\n" +
+	"\x12members_can_invite\x18\x02 \x01(\bR\x10membersCanInvite\x128\n" +
+	"\x19max_guilds_owned_per_user\x18\x03 \x01(\x05R\x15maxGuildsOwnedPerUser\x123\n" +
+	"\x16max_channels_per_guild\x18\x04 \x01(\x05R\x13maxChannelsPerGuild\x12*\n" +
+	"\x11max_guild_members\x18\x05 \x01(\x05R\x0fmaxGuildMembers\x127\n" +
+	"\x18default_voice_user_limit\x18\x06 \x01(\x05R\x15defaultVoiceUserLimit\x12\"\n" +
+	"\rmax_upload_mb\x18\a \x01(\x05R\vmaxUploadMb\"\xba\x01\n" +
+	"\x05Ready\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12 \n" +
+	"\x02me\x18\x02 \x01(\v2\x10.dislackso.v1.MeR\x02me\x12>\n" +
+	"\binstance\x18\x03 \x01(\v2\".dislackso.gateway.v1.InstanceInfoR\binstance\x120\n" +
+	"\x06guilds\x18\x04 \x03(\v2\x18.dislackso.v1.GuildStateR\x06guilds\"\t\n" +
+	"\aResumed\".\n" +
+	"\x0eInvalidSession\x12\x1c\n" +
+	"\tresumable\x18\x01 \x01(\bR\tresumable\"O\n" +
+	"\bDispatch\x12\x10\n" +
+	"\x03seq\x18\x01 \x01(\x04R\x03seq\x121\n" +
+	"\x05event\x18\x02 \x01(\v2\x1b.dislackso.gateway.v1.EventR\x05event\"\xa2\t\n" +
+	"\x05Event\x12=\n" +
+	"\fguild_create\x18\x01 \x01(\v2\x18.dislackso.v1.GuildStateH\x00R\vguildCreate\x128\n" +
+	"\fguild_update\x18\x02 \x01(\v2\x13.dislackso.v1.GuildH\x00R\vguildUpdate\x12F\n" +
+	"\fguild_delete\x18\x03 \x01(\v2!.dislackso.gateway.v1.GuildDeleteH\x00R\vguildDelete\x12@\n" +
+	"\n" +
+	"member_add\x18\x04 \x01(\v2\x1f.dislackso.gateway.v1.MemberAddH\x00R\tmemberAdd\x12;\n" +
+	"\rmember_update\x18\x05 \x01(\v2\x14.dislackso.v1.MemberH\x00R\fmemberUpdate\x12I\n" +
+	"\rmember_remove\x18\x06 \x01(\v2\".dislackso.gateway.v1.MemberRemoveH\x00R\fmemberRemove\x12>\n" +
+	"\x0echannel_create\x18\a \x01(\v2\x15.dislackso.v1.ChannelH\x00R\rchannelCreate\x12>\n" +
+	"\x0echannel_update\x18\b \x01(\v2\x15.dislackso.v1.ChannelH\x00R\rchannelUpdate\x12L\n" +
+	"\x0echannel_delete\x18\t \x01(\v2#.dislackso.gateway.v1.ChannelDeleteH\x00R\rchannelDelete\x12X\n" +
+	"\x12channels_reordered\x18\n" +
+	" \x01(\v2'.dislackso.gateway.v1.ChannelsReorderedH\x00R\x11channelsReordered\x125\n" +
+	"\vuser_update\x18\v \x01(\v2\x12.dislackso.v1.UserH\x00R\n" +
+	"userUpdate\x12A\n" +
+	"\x0fpresence_update\x18\f \x01(\v2\x16.dislackso.v1.PresenceH\x00R\x0epresenceUpdate\x12;\n" +
+	"\rinvite_create\x18\r \x01(\v2\x14.dislackso.v1.InviteH\x00R\finviteCreate\x12I\n" +
+	"\rinvite_delete\x18\x0e \x01(\v2\".dislackso.gateway.v1.InviteDeleteH\x00R\finviteDelete\x12,\n" +
+	"\aban_add\x18\x0f \x01(\v2\x11.dislackso.v1.BanH\x00R\x06banAdd\x12@\n" +
+	"\n" +
+	"ban_remove\x18\x10 \x01(\v2\x1f.dislackso.gateway.v1.BanRemoveH\x00R\tbanRemove\x12;\n" +
+	"\vaudit_entry\x18\x11 \x01(\v2\x18.dislackso.v1.AuditEntryH\x00R\n" +
+	"auditEntry\x12/\n" +
+	"\tme_update\x18\x12 \x01(\v2\x10.dislackso.v1.MeH\x00R\bmeUpdateB\x06\n" +
+	"\x04kind\"i\n" +
+	"\vGuildDelete\x12\x19\n" +
+	"\bguild_id\x18\x01 \x01(\tR\aguildId\x12?\n" +
+	"\x06reason\x18\x02 \x01(\x0e2'.dislackso.gateway.v1.GuildDeleteReasonR\x06reason\"\x95\x01\n" +
+	"\tMemberAdd\x12,\n" +
+	"\x06member\x18\x01 \x01(\v2\x14.dislackso.v1.MemberR\x06member\x12&\n" +
+	"\x04user\x18\x02 \x01(\v2\x12.dislackso.v1.UserR\x04user\x122\n" +
+	"\bpresence\x18\x03 \x01(\v2\x16.dislackso.v1.PresenceR\bpresence\"B\n" +
+	"\fMemberRemove\x12\x19\n" +
+	"\bguild_id\x18\x01 \x01(\tR\aguildId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\"I\n" +
+	"\rChannelDelete\x12\x19\n" +
+	"\bguild_id\x18\x01 \x01(\tR\aguildId\x12\x1d\n" +
+	"\n" +
+	"channel_id\x18\x02 \x01(\tR\tchannelId\"a\n" +
+	"\x11ChannelsReordered\x12\x19\n" +
+	"\bguild_id\x18\x01 \x01(\tR\aguildId\x121\n" +
+	"\bchannels\x18\x02 \x03(\v2\x15.dislackso.v1.ChannelR\bchannels\"=\n" +
+	"\fInviteDelete\x12\x19\n" +
+	"\bguild_id\x18\x01 \x01(\tR\aguildId\x12\x12\n" +
+	"\x04code\x18\x02 \x01(\tR\x04code\"?\n" +
+	"\tBanRemove\x12\x19\n" +
+	"\bguild_id\x18\x01 \x01(\tR\aguildId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId*\xde\x02\n" +
+	"\tCloseCode\x12\x1a\n" +
+	"\x16CLOSE_CODE_UNSPECIFIED\x10\x00\x12\x17\n" +
+	"\x12CLOSE_CODE_UNKNOWN\x10\xa0\x1f\x12\x1a\n" +
+	"\x15CLOSE_CODE_BAD_OPCODE\x10\xa1\x1f\x12\x1c\n" +
+	"\x17CLOSE_CODE_DECODE_ERROR\x10\xa2\x1f\x12!\n" +
+	"\x1cCLOSE_CODE_NOT_AUTHENTICATED\x10\xa3\x1f\x12\x1f\n" +
+	"\x1aCLOSE_CODE_SESSION_REVOKED\x10\xa4\x1f\x12\"\n" +
+	"\x1dCLOSE_CODE_ALREADY_IDENTIFIED\x10\xa5\x1f\x12\x1b\n" +
+	"\x16CLOSE_CODE_INVALID_SEQ\x10\xa7\x1f\x12\x1c\n" +
+	"\x17CLOSE_CODE_RATE_LIMITED\x10\xa8\x1f\x12\x1f\n" +
+	"\x1aCLOSE_CODE_SESSION_EXPIRED\x10\xa9\x1f\x12\x1e\n" +
+	"\x19CLOSE_CODE_HUB_RESTARTING\x10\xaa\x1f*\xb7\x01\n" +
+	"\x11GuildDeleteReason\x12#\n" +
+	"\x1fGUILD_DELETE_REASON_UNSPECIFIED\x10\x00\x12\x1f\n" +
+	"\x1bGUILD_DELETE_REASON_DELETED\x10\x01\x12\x1e\n" +
+	"\x1aGUILD_DELETE_REASON_KICKED\x10\x02\x12\x1e\n" +
+	"\x1aGUILD_DELETE_REASON_BANNED\x10\x03\x12\x1c\n" +
+	"\x18GUILD_DELETE_REASON_LEFT\x10\x04B\xf0\x01\n" +
 	"\x18com.dislackso.gateway.v1B\fGatewayProtoP\x01ZTgithub.com/tornellihenrique/dislackso-rebirth/hub/gen/dislackso/gateway/v1;gatewayv1\xa2\x02\x03DGX\xaa\x02\x14Dislackso.Gateway.V1\xca\x02\x14Dislackso\\Gateway\\V1\xe2\x02 Dislackso\\Gateway\\V1\\GPBMetadata\xea\x02\x16Dislackso::Gateway::V1b\x06proto3"
 
 var (
@@ -116,17 +1894,88 @@ func file_dislackso_gateway_v1_gateway_proto_rawDescGZIP() []byte {
 	return file_dislackso_gateway_v1_gateway_proto_rawDescData
 }
 
-var file_dislackso_gateway_v1_gateway_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_dislackso_gateway_v1_gateway_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_dislackso_gateway_v1_gateway_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_dislackso_gateway_v1_gateway_proto_goTypes = []any{
-	(*ClientFrame)(nil), // 0: dislackso.gateway.v1.ClientFrame
-	(*ServerFrame)(nil), // 1: dislackso.gateway.v1.ServerFrame
+	(CloseCode)(0),            // 0: dislackso.gateway.v1.CloseCode
+	(GuildDeleteReason)(0),    // 1: dislackso.gateway.v1.GuildDeleteReason
+	(*ClientFrame)(nil),       // 2: dislackso.gateway.v1.ClientFrame
+	(*ServerFrame)(nil),       // 3: dislackso.gateway.v1.ServerFrame
+	(*Hello)(nil),             // 4: dislackso.gateway.v1.Hello
+	(*ClientInfo)(nil),        // 5: dislackso.gateway.v1.ClientInfo
+	(*Identify)(nil),          // 6: dislackso.gateway.v1.Identify
+	(*Resume)(nil),            // 7: dislackso.gateway.v1.Resume
+	(*Heartbeat)(nil),         // 8: dislackso.gateway.v1.Heartbeat
+	(*HeartbeatAck)(nil),      // 9: dislackso.gateway.v1.HeartbeatAck
+	(*UpdatePresence)(nil),    // 10: dislackso.gateway.v1.UpdatePresence
+	(*InstanceInfo)(nil),      // 11: dislackso.gateway.v1.InstanceInfo
+	(*Ready)(nil),             // 12: dislackso.gateway.v1.Ready
+	(*Resumed)(nil),           // 13: dislackso.gateway.v1.Resumed
+	(*InvalidSession)(nil),    // 14: dislackso.gateway.v1.InvalidSession
+	(*Dispatch)(nil),          // 15: dislackso.gateway.v1.Dispatch
+	(*Event)(nil),             // 16: dislackso.gateway.v1.Event
+	(*GuildDelete)(nil),       // 17: dislackso.gateway.v1.GuildDelete
+	(*MemberAdd)(nil),         // 18: dislackso.gateway.v1.MemberAdd
+	(*MemberRemove)(nil),      // 19: dislackso.gateway.v1.MemberRemove
+	(*ChannelDelete)(nil),     // 20: dislackso.gateway.v1.ChannelDelete
+	(*ChannelsReordered)(nil), // 21: dislackso.gateway.v1.ChannelsReordered
+	(*InviteDelete)(nil),      // 22: dislackso.gateway.v1.InviteDelete
+	(*BanRemove)(nil),         // 23: dislackso.gateway.v1.BanRemove
+	(*v1.Me)(nil),             // 24: dislackso.v1.Me
+	(*v1.GuildState)(nil),     // 25: dislackso.v1.GuildState
+	(*v1.Guild)(nil),          // 26: dislackso.v1.Guild
+	(*v1.Member)(nil),         // 27: dislackso.v1.Member
+	(*v1.Channel)(nil),        // 28: dislackso.v1.Channel
+	(*v1.User)(nil),           // 29: dislackso.v1.User
+	(*v1.Presence)(nil),       // 30: dislackso.v1.Presence
+	(*v1.Invite)(nil),         // 31: dislackso.v1.Invite
+	(*v1.Ban)(nil),            // 32: dislackso.v1.Ban
+	(*v1.AuditEntry)(nil),     // 33: dislackso.v1.AuditEntry
 }
 var file_dislackso_gateway_v1_gateway_proto_depIdxs = []int32{
-	0, // [0:0] is the sub-list for method output_type
-	0, // [0:0] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	6,  // 0: dislackso.gateway.v1.ClientFrame.identify:type_name -> dislackso.gateway.v1.Identify
+	7,  // 1: dislackso.gateway.v1.ClientFrame.resume:type_name -> dislackso.gateway.v1.Resume
+	8,  // 2: dislackso.gateway.v1.ClientFrame.heartbeat:type_name -> dislackso.gateway.v1.Heartbeat
+	10, // 3: dislackso.gateway.v1.ClientFrame.update_presence:type_name -> dislackso.gateway.v1.UpdatePresence
+	4,  // 4: dislackso.gateway.v1.ServerFrame.hello:type_name -> dislackso.gateway.v1.Hello
+	12, // 5: dislackso.gateway.v1.ServerFrame.ready:type_name -> dislackso.gateway.v1.Ready
+	13, // 6: dislackso.gateway.v1.ServerFrame.resumed:type_name -> dislackso.gateway.v1.Resumed
+	14, // 7: dislackso.gateway.v1.ServerFrame.invalid_session:type_name -> dislackso.gateway.v1.InvalidSession
+	9,  // 8: dislackso.gateway.v1.ServerFrame.heartbeat_ack:type_name -> dislackso.gateway.v1.HeartbeatAck
+	15, // 9: dislackso.gateway.v1.ServerFrame.dispatch:type_name -> dislackso.gateway.v1.Dispatch
+	5,  // 10: dislackso.gateway.v1.Identify.client:type_name -> dislackso.gateway.v1.ClientInfo
+	24, // 11: dislackso.gateway.v1.Ready.me:type_name -> dislackso.v1.Me
+	11, // 12: dislackso.gateway.v1.Ready.instance:type_name -> dislackso.gateway.v1.InstanceInfo
+	25, // 13: dislackso.gateway.v1.Ready.guilds:type_name -> dislackso.v1.GuildState
+	16, // 14: dislackso.gateway.v1.Dispatch.event:type_name -> dislackso.gateway.v1.Event
+	25, // 15: dislackso.gateway.v1.Event.guild_create:type_name -> dislackso.v1.GuildState
+	26, // 16: dislackso.gateway.v1.Event.guild_update:type_name -> dislackso.v1.Guild
+	17, // 17: dislackso.gateway.v1.Event.guild_delete:type_name -> dislackso.gateway.v1.GuildDelete
+	18, // 18: dislackso.gateway.v1.Event.member_add:type_name -> dislackso.gateway.v1.MemberAdd
+	27, // 19: dislackso.gateway.v1.Event.member_update:type_name -> dislackso.v1.Member
+	19, // 20: dislackso.gateway.v1.Event.member_remove:type_name -> dislackso.gateway.v1.MemberRemove
+	28, // 21: dislackso.gateway.v1.Event.channel_create:type_name -> dislackso.v1.Channel
+	28, // 22: dislackso.gateway.v1.Event.channel_update:type_name -> dislackso.v1.Channel
+	20, // 23: dislackso.gateway.v1.Event.channel_delete:type_name -> dislackso.gateway.v1.ChannelDelete
+	21, // 24: dislackso.gateway.v1.Event.channels_reordered:type_name -> dislackso.gateway.v1.ChannelsReordered
+	29, // 25: dislackso.gateway.v1.Event.user_update:type_name -> dislackso.v1.User
+	30, // 26: dislackso.gateway.v1.Event.presence_update:type_name -> dislackso.v1.Presence
+	31, // 27: dislackso.gateway.v1.Event.invite_create:type_name -> dislackso.v1.Invite
+	22, // 28: dislackso.gateway.v1.Event.invite_delete:type_name -> dislackso.gateway.v1.InviteDelete
+	32, // 29: dislackso.gateway.v1.Event.ban_add:type_name -> dislackso.v1.Ban
+	23, // 30: dislackso.gateway.v1.Event.ban_remove:type_name -> dislackso.gateway.v1.BanRemove
+	33, // 31: dislackso.gateway.v1.Event.audit_entry:type_name -> dislackso.v1.AuditEntry
+	24, // 32: dislackso.gateway.v1.Event.me_update:type_name -> dislackso.v1.Me
+	1,  // 33: dislackso.gateway.v1.GuildDelete.reason:type_name -> dislackso.gateway.v1.GuildDeleteReason
+	27, // 34: dislackso.gateway.v1.MemberAdd.member:type_name -> dislackso.v1.Member
+	29, // 35: dislackso.gateway.v1.MemberAdd.user:type_name -> dislackso.v1.User
+	30, // 36: dislackso.gateway.v1.MemberAdd.presence:type_name -> dislackso.v1.Presence
+	28, // 37: dislackso.gateway.v1.ChannelsReordered.channels:type_name -> dislackso.v1.Channel
+	38, // [38:38] is the sub-list for method output_type
+	38, // [38:38] is the sub-list for method input_type
+	38, // [38:38] is the sub-list for extension type_name
+	38, // [38:38] is the sub-list for extension extendee
+	0,  // [0:38] is the sub-list for field type_name
 }
 
 func init() { file_dislackso_gateway_v1_gateway_proto_init() }
@@ -134,18 +1983,53 @@ func file_dislackso_gateway_v1_gateway_proto_init() {
 	if File_dislackso_gateway_v1_gateway_proto != nil {
 		return
 	}
+	file_dislackso_gateway_v1_gateway_proto_msgTypes[0].OneofWrappers = []any{
+		(*ClientFrame_Identify)(nil),
+		(*ClientFrame_Resume)(nil),
+		(*ClientFrame_Heartbeat)(nil),
+		(*ClientFrame_UpdatePresence)(nil),
+	}
+	file_dislackso_gateway_v1_gateway_proto_msgTypes[1].OneofWrappers = []any{
+		(*ServerFrame_Hello)(nil),
+		(*ServerFrame_Ready)(nil),
+		(*ServerFrame_Resumed)(nil),
+		(*ServerFrame_InvalidSession)(nil),
+		(*ServerFrame_HeartbeatAck)(nil),
+		(*ServerFrame_Dispatch)(nil),
+	}
+	file_dislackso_gateway_v1_gateway_proto_msgTypes[14].OneofWrappers = []any{
+		(*Event_GuildCreate)(nil),
+		(*Event_GuildUpdate)(nil),
+		(*Event_GuildDelete)(nil),
+		(*Event_MemberAdd)(nil),
+		(*Event_MemberUpdate)(nil),
+		(*Event_MemberRemove)(nil),
+		(*Event_ChannelCreate)(nil),
+		(*Event_ChannelUpdate)(nil),
+		(*Event_ChannelDelete)(nil),
+		(*Event_ChannelsReordered)(nil),
+		(*Event_UserUpdate)(nil),
+		(*Event_PresenceUpdate)(nil),
+		(*Event_InviteCreate)(nil),
+		(*Event_InviteDelete)(nil),
+		(*Event_BanAdd)(nil),
+		(*Event_BanRemove)(nil),
+		(*Event_AuditEntry)(nil),
+		(*Event_MeUpdate)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_dislackso_gateway_v1_gateway_proto_rawDesc), len(file_dislackso_gateway_v1_gateway_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   2,
+			NumEnums:      2,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_dislackso_gateway_v1_gateway_proto_goTypes,
 		DependencyIndexes: file_dislackso_gateway_v1_gateway_proto_depIdxs,
+		EnumInfos:         file_dislackso_gateway_v1_gateway_proto_enumTypes,
 		MessageInfos:      file_dislackso_gateway_v1_gateway_proto_msgTypes,
 	}.Build()
 	File_dislackso_gateway_v1_gateway_proto = out.File

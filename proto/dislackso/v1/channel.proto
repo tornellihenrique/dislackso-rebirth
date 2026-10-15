@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package dislackso.v1;
+
+// ChannelService manages a guild's channels and categories. Every method
+// requires the guild owner or an admin.
+service ChannelService {
+  rpc CreateChannel(CreateChannelRequest) returns (CreateChannelResponse);
+  rpc UpdateChannel(UpdateChannelRequest) returns (UpdateChannelResponse);
+  // Deleting a category moves its channels out of it.
+  rpc DeleteChannel(DeleteChannelRequest) returns (DeleteChannelResponse);
+  rpc ReorderChannels(ReorderChannelsRequest) returns (ReorderChannelsResponse);
+}
+
+enum ChannelType {
+  CHANNEL_TYPE_UNSPECIFIED = 0;
+  CHANNEL_TYPE_CATEGORY = 1;
+  CHANNEL_TYPE_TEXT = 2;
+  CHANNEL_TYPE_VOICE = 3;
+}
+
+message Channel {
+  string id = 1;
+  string guild_id = 2;
+  // The category holding the channel; empty at the top level and for categories.
+  string parent_id = 3;
+  ChannelType type = 4;
+  string name = 5;
+  string topic = 6;
+  // Order among channels with the same parent; categories order among themselves.
+  int32 position = 7;
+  // Voice only; 0 means unlimited.
+  int32 user_limit = 8;
+  // Voice only: whether viewers may draw on screen shares.
+  bool drawing_allowed = 9;
+  // Voice only: a preset such as "1080p60"; empty uses the instance maximum.
+  string max_share_quality = 10;
+  // Unix ms.
+  int64 created_at = 11;
+  // Unix ms; clients keep the newest copy they have seen.
+  int64 updated_at = 12;
+}
+
+message CreateChannelRequest {
+  string guild_id = 1;
+  ChannelType type = 2;
+  string name = 3;
+  // A category of the same guild; empty for the top level. Categories have no parent.
+  string parent_id = 4;
+}
+
+message CreateChannelResponse {
+  Channel channel = 1;
+}
+
+// Unset fields keep their value. Voice-only fields are rejected for other types.
+message UpdateChannelRequest {
+  string channel_id = 1;
+  optional string name = 2;
+  optional string topic = 3;
+  optional int32 user_limit = 4;
+  optional bool drawing_allowed = 5;
+  optional string max_share_quality = 6;
+}
+
+message UpdateChannelResponse {
+  Channel channel = 1;
+}
+
+message DeleteChannelRequest {
+  string channel_id = 1;
+}
+
+message DeleteChannelResponse {}
+
+// ChannelPlacement puts a channel in a category (or the top level).
+message ChannelPlacement {
+  string channel_id = 1;
+  string parent_id = 2;
+}
+
+message ReorderChannelsRequest {
+  string guild_id = 1;
+  // Every channel of the guild, in display order: categories in their order,
+  // and channels in their order within each parent.
+  repeated ChannelPlacement placements = 2;
+}
+
+message ReorderChannelsResponse {
+  repeated Channel channels = 1;
+}

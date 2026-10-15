@@ -2,10 +2,195 @@ syntax = "proto3";
 
 package dislackso.gateway.v1;
 
+import "dislackso/v1/channel.proto";
+import "dislackso/v1/common.proto";
+import "dislackso/v1/guild.proto";
+import "dislackso/v1/invite.proto";
+import "dislackso/v1/moderation.proto";
+
 // Every WebSocket message on /gateway is exactly one binary-encoded frame.
+//
+// server → Hello
+// client → Identify | Resume
+// server → Ready | Resumed (then the missed dispatches) | InvalidSession
+// client ↔ Heartbeat / HeartbeatAck
+// server → Dispatch (seq increases by one per dispatch within a session)
 
 // ClientFrame is sent from the client to the hub.
-message ClientFrame {}
+message ClientFrame {
+  oneof kind {
+    Identify identify = 1;
+    Resume resume = 2;
+    Heartbeat heartbeat = 3;
+    UpdatePresence update_presence = 4;
+  }
+}
 
 // ServerFrame is sent from the hub to the client.
-message ServerFrame {}
+message ServerFrame {
+  oneof kind {
+    Hello hello = 1;
+    Ready ready = 2;
+    Resumed resumed = 3;
+    InvalidSession invalid_session = 4;
+    HeartbeatAck heartbeat_ack = 5;
+    Dispatch dispatch = 6;
+  }
+}
+
+// CloseCode is the WebSocket close code the hub uses when it ends a connection.
+enum CloseCode {
+  CLOSE_CODE_UNSPECIFIED = 0;
+  CLOSE_CODE_UNKNOWN = 4000;
+  CLOSE_CODE_BAD_OPCODE = 4001;
+  CLOSE_CODE_DECODE_ERROR = 4002;
+  // No valid session cookie: sign in again.
+  CLOSE_CODE_NOT_AUTHENTICATED = 4003;
+  // The session was signed out or the account disabled: sign in again.
+  CLOSE_CODE_SESSION_REVOKED = 4004;
+  CLOSE_CODE_ALREADY_IDENTIFIED = 4005;
+  CLOSE_CODE_INVALID_SEQ = 4007;
+  CLOSE_CODE_RATE_LIMITED = 4008;
+  // Heartbeats stopped arriving; resuming is still possible.
+  CLOSE_CODE_SESSION_EXPIRED = 4009;
+  // Reconnect later and identify; the session cannot be resumed.
+  CLOSE_CODE_HUB_RESTARTING = 4010;
+}
+
+message Hello {
+  int32 heartbeat_interval_ms = 1;
+  // How long a dropped session can still be resumed.
+  int32 resume_window_ms = 2;
+}
+
+message ClientInfo {
+  // "web" or "desktop".
+  string platform = 1;
+  string version = 2;
+}
+
+message Identify {
+  ClientInfo client = 1;
+}
+
+message Resume {
+  string session_id = 1;
+  // The seq of the last dispatch the client processed.
+  uint64 last_seq = 2;
+}
+
+message Heartbeat {
+  uint64 last_seq = 1;
+}
+
+message HeartbeatAck {}
+
+// UpdatePresence reports activity; the status preference itself is set
+// through AccountService.
+message UpdatePresence {
+  // No input for a while on this client.
+  bool idle = 1;
+}
+
+message InstanceInfo {
+  string name = 1;
+  bool members_can_invite = 2;
+  int32 max_guilds_owned_per_user = 3;
+  int32 max_channels_per_guild = 4;
+  int32 max_guild_members = 5;
+  int32 default_voice_user_limit = 6;
+  int32 max_upload_mb = 7;
+}
+
+message Ready {
+  string session_id = 1;
+  dislackso.v1.Me me = 2;
+  InstanceInfo instance = 3;
+  repeated dislackso.v1.GuildState guilds = 4;
+}
+
+message Resumed {}
+
+message InvalidSession {
+  // Always false today: the client identifies again and rebuilds from Ready.
+  bool resumable = 1;
+}
+
+message Dispatch {
+  uint64 seq = 1;
+  Event event = 2;
+}
+
+message Event {
+  oneof kind {
+    // The receiver joined or created a guild.
+    dislackso.v1.GuildState guild_create = 1;
+    dislackso.v1.Guild guild_update = 2;
+    // The receiver can no longer see the guild.
+    GuildDelete guild_delete = 3;
+    MemberAdd member_add = 4;
+    dislackso.v1.Member member_update = 5;
+    MemberRemove member_remove = 6;
+    dislackso.v1.Channel channel_create = 7;
+    dislackso.v1.Channel channel_update = 8;
+    ChannelDelete channel_delete = 9;
+    ChannelsReordered channels_reordered = 10;
+    // A public profile of someone sharing a guild with the receiver.
+    dislackso.v1.User user_update = 11;
+    dislackso.v1.Presence presence_update = 12;
+    // Owners, admins and the invite's creator only.
+    dislackso.v1.Invite invite_create = 13;
+    InviteDelete invite_delete = 14;
+    // Owners and admins only.
+    dislackso.v1.Ban ban_add = 15;
+    BanRemove ban_remove = 16;
+    dislackso.v1.AuditEntry audit_entry = 17;
+    // The receiver's own account changed, possibly from another device.
+    dislackso.v1.Me me_update = 18;
+  }
+}
+
+enum GuildDeleteReason {
+  GUILD_DELETE_REASON_UNSPECIFIED = 0;
+  GUILD_DELETE_REASON_DELETED = 1;
+  GUILD_DELETE_REASON_KICKED = 2;
+  GUILD_DELETE_REASON_BANNED = 3;
+  GUILD_DELETE_REASON_LEFT = 4;
+}
+
+message GuildDelete {
+  string guild_id = 1;
+  GuildDeleteReason reason = 2;
+}
+
+message MemberAdd {
+  dislackso.v1.Member member = 1;
+  dislackso.v1.User user = 2;
+  dislackso.v1.Presence presence = 3;
+}
+
+message MemberRemove {
+  string guild_id = 1;
+  string user_id = 2;
+}
+
+message ChannelDelete {
+  string guild_id = 1;
+  string channel_id = 2;
+}
+
+message ChannelsReordered {
+  string guild_id = 1;
+  // Every channel whose parent or position changed.
+  repeated dislackso.v1.Channel channels = 2;
+}
+
+message InviteDelete {
+  string guild_id = 1;
+  string code = 2;
+}
+
+message BanRemove {
+  string guild_id = 1;
+  string user_id = 2;
+}
