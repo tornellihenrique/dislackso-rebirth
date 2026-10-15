@@ -55,6 +55,8 @@ const (
 	ReasonBanned               = "banned"
 	ReasonUnsupportedFile      = "unsupported_file"
 	ReasonFileTooLarge         = "file_too_large"
+	// ReasonImageTooLarge: the image decodes to more pixels or frames than the hub processes.
+	ReasonImageTooLarge = "image_too_large"
 )
 
 // Field violation reasons.

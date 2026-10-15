@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"image"
 	"io"
 	"path"
 	"strings"
@@ -46,19 +47,26 @@ type Service struct {
 	d Deps
 }
 
+// Request describes an upload. Name is the client's file name, kept for
+// display only; Crop selects the part of the image to keep, in source pixels.
+type Request struct {
+	Purpose domain.FilePurpose
+	Name    string
+	Crop    image.Rectangle
+}
+
 func New(d Deps) *Service { return &Service{d: d} }
 
 func tooLarge() error {
 	return &domain.Error{Kind: domain.ErrInvalid, Reason: domain.ReasonFileTooLarge}
 }
 
-// Upload stores an image for purpose. name is the client's file name, kept
-// for display only.
-func (s *Service) Upload(ctx context.Context, actor domain.Actor, purpose domain.FilePurpose, name string, r io.Reader) (domain.File, error) {
+// Upload stores an image.
+func (s *Service) Upload(ctx context.Context, actor domain.Actor, req Request, r io.Reader) (domain.File, error) {
 	if !actor.EmailVerified && s.d.Verification.VerificationRequired(ctx) {
 		return domain.File{}, domain.Precondition(domain.ReasonEmailNotVerified)
 	}
-	if !purpose.Valid() {
+	if !req.Purpose.Valid() {
 		return domain.File{}, domain.Invalid(domain.FieldViolation{Field: "purpose", Reason: domain.ReasonFieldInvalid})
 	}
 	if ok, retry := s.d.Limiter.Allow("upload:user:"+actor.UserID.String(), limitUploadUser); !ok {
@@ -71,7 +79,7 @@ func (s *Service) Upload(ctx context.Context, actor domain.Actor, purpose domain
 	if len(raw) > MaxImageBytes {
 		return domain.File{}, tooLarge()
 	}
-	img, err := s.d.Images.Square(bytes.NewReader(raw), ImageSize)
+	img, err := s.d.Images.Square(bytes.NewReader(raw), ImageSize, req.Crop)
 	if err != nil {
 		return domain.File{}, err
 	}
@@ -83,11 +91,11 @@ func (s *Service) Upload(ctx context.Context, actor domain.Actor, purpose domain
 	f := domain.File{
 		ID:           s.d.IDs.NewID(),
 		OwnerID:      actor.UserID,
-		Purpose:      purpose,
+		Purpose:      req.Purpose,
 		SHA256:       sum[:],
 		Size:         int64(len(img.Data)),
 		Mime:         img.Mime,
-		OriginalName: cleanName(name),
+		OriginalName: cleanName(req.Name),
 		Width:        img.Width,
 		Height:       img.Height,
 		StorageKey:   key,

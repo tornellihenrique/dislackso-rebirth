@@ -2,6 +2,7 @@ package ports
 
 import (
 	"context"
+	"image"
 	"io"
 	"time"
 
@@ -102,7 +103,9 @@ type Image struct {
 
 // ImageProcessor decodes an untrusted upload and re-encodes it.
 type ImageProcessor interface {
-	// Square center-crops the image to a square of at most size pixels.
-	// Unsupported or undecodable input fails with domain.ErrInvalid.
-	Square(r io.Reader, size int) (Image, error)
+	// Square crops the largest square centered in crop (in source pixels;
+	// the whole image when empty) and scales it down to at most size pixels.
+	// Animated images stay animated. Unsupported, undecodable or oversized
+	// input fails with domain.ErrInvalid.
+	Square(r io.Reader, size int, crop image.Rectangle) (Image, error)
 }

@@ -97,9 +97,13 @@ review.** Next: Phase 3 — Voice.
   dropped and resume; shutdown closes everyone with "hub restarting".
 - **Files.** `POST /api/uploads` (multipart, size cap, rate limit), `GET /files/{id}/{name}`
   (session required; sandbox CSP, nosniff, immutable caching), and the invite landing icon at
-  `/api/invites/{code}/icon`. Images are decoded and re-encoded on the hub (center-cropped
-  square of at most 256 px, JPEG or PNG when transparent), which drops metadata and anything
-  hidden after the image; decompression bombs are refused before decoding. Blobs are stored by
+  `/api/invites/{code}/icon`. Images are decoded and re-encoded on the hub (a square of at
+  most 256 px, centered or the part picked in the avatar cropper; JPEG, PNG when transparent),
+  which drops metadata and anything hidden after the image; decompression bombs are refused
+  before decoding. Animated GIFs stay animated (at most 160 px, 300 frames, 2000 × 2000):
+  frames are decoded one at a time, composed as browsers do and re-quantized, and files
+  `image/gif` refuses but browsers show (frames past the logical screen, a broken last frame)
+  still work. Blobs are stored by
   SHA-256 under `files/`.
 - **Web core.** `GatewayClient` (resume first, backoff 0.5–15 s with jitter, retry at once when
   the browser comes back online or visible, zombie detection by missed heartbeat acks, idle after

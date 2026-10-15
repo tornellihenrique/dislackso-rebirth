@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"image"
 	"io"
 	"log/slog"
 	"mime"
@@ -24,15 +25,18 @@ import (
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/wire"
 )
 
-// multipartOverhead allows for the multipart framing around the file.
-const multipartOverhead = 64 << 10
+const (
+	// multipartOverhead allows for the multipart framing around the file.
+	multipartOverhead = 64 << 10
+	maxCropCoord      = 1 << 16
+)
 
 type Authenticator interface {
 	Authenticate(ctx context.Context, raw string) (auth.Principal, error)
 }
 
 type Service interface {
-	Upload(ctx context.Context, actor domain.Actor, purpose domain.FilePurpose, name string, r io.Reader) (domain.File, error)
+	Upload(ctx context.Context, actor domain.Actor, req file.Request, r io.Reader) (domain.File, error)
 	Open(ctx context.Context, actor domain.Actor, id domain.ID) (domain.File, ports.Blob, error)
 	OpenInviteIcon(ctx context.Context, code string) (domain.File, ports.Blob, error)
 }
@@ -60,13 +64,19 @@ func (h handler) actor(r *http.Request) (domain.Actor, error) {
 	return p.Actor, nil
 }
 
-// upload takes one multipart part named "file"; ?purpose= says what it is for.
+// upload takes one multipart part named "file"; ?purpose= says what it is
+// for and the optional ?crop=x,y,w,h which part of it to keep.
 func (h handler) upload(w http.ResponseWriter, r *http.Request) {
 	if !httpauth.SameOrigin(r) {
 		http.Error(w, "cross-origin request refused", http.StatusForbidden)
 		return
 	}
 	actor, err := h.actor(r)
+	if err != nil {
+		h.fail(w, r, err)
+		return
+	}
+	crop, err := parseCrop(r.URL.Query().Get("crop"))
 	if err != nil {
 		h.fail(w, r, err)
 		return
@@ -92,7 +102,11 @@ func (h handler) upload(w http.ResponseWriter, r *http.Request) {
 			_ = part.Close()
 			continue
 		}
-		f, err := h.Files.Upload(r.Context(), actor, domain.FilePurpose(r.URL.Query().Get("purpose")), part.FileName(), part)
+		f, err := h.Files.Upload(r.Context(), actor, file.Request{
+			Purpose: domain.FilePurpose(r.URL.Query().Get("purpose")),
+			Name:    part.FileName(),
+			Crop:    crop,
+		}, part)
 		_ = part.Close()
 		if err != nil {
 			if errors.As(err, new(*http.MaxBytesError)) {
@@ -112,6 +126,30 @@ func (h handler) upload(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write(body) //nolint:gosec // protojson output served as application/json, never HTML
 		return
 	}
+}
+
+// parseCrop reads "x,y,w,h" in source pixels; empty means no crop.
+func parseCrop(v string) (image.Rectangle, error) {
+	if v == "" {
+		return image.Rectangle{}, nil
+	}
+	invalid := domain.Invalid(domain.FieldViolation{Field: "crop", Reason: domain.ReasonFieldInvalid})
+	parts := strings.Split(v, ",")
+	if len(parts) != 4 {
+		return image.Rectangle{}, invalid
+	}
+	var n [4]int
+	for i, p := range parts {
+		x, err := strconv.Atoi(p)
+		if err != nil || x < 0 || x > maxCropCoord {
+			return image.Rectangle{}, invalid
+		}
+		n[i] = x
+	}
+	if n[2] == 0 || n[3] == 0 {
+		return image.Rectangle{}, invalid
+	}
+	return image.Rect(n[0], n[1], n[0]+n[2], n[1]+n[3]), nil
 }
 
 func (h handler) download(w http.ResponseWriter, r *http.Request) {

@@ -13,7 +13,7 @@ import { Button } from '@/ui/Button';
 import { Dialog, DialogFooter } from '@/ui/Dialog';
 import { IMAGE_TYPES } from '@/ui/ImagePicker';
 
-import { cropToBlob } from './crop-image';
+import { cropsOnHub, cropToBlob } from './crop-image';
 import { SettingsSection } from './SettingsLayout';
 
 /** Picks a picture, lets the user crop it to a circle, uploads it and sets it as avatar. */
@@ -22,6 +22,7 @@ export function AvatarEditor() {
   const { hub, uploads } = useServices();
   const me = useSession((s) => s.me);
   const input = useRef<HTMLInputElement>(null);
+  const [picked, setPicked] = useState<File | null>(null);
   const [source, setSource] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -37,9 +38,10 @@ export function AvatarEditor() {
   const save = useMutation({
     mutationFn: async (avatarFileId: string | null) => {
       let id = avatarFileId ?? '';
-      if (avatarFileId === null && source && area) {
-        const blob = await cropToBlob(source, area);
-        id = (await uploads.upload('avatar', blob, 'avatar.png')).id;
+      if (avatarFileId === null && picked && source && area) {
+        id = cropsOnHub(picked)
+          ? (await uploads.upload('avatar', picked, picked.name, area)).id
+          : (await uploads.upload('avatar', await cropToBlob(source, area), 'avatar.png')).id;
       }
       return hub.account.updateProfile({ avatarFileId: id });
     },
@@ -91,6 +93,7 @@ export function AvatarEditor() {
           save.reset();
           setCrop({ x: 0, y: 0 });
           setZoom(1);
+          setPicked(file);
           setSource(URL.createObjectURL(file));
         }}
       />

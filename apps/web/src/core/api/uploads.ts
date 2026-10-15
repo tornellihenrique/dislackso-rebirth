@@ -10,8 +10,17 @@ import {
 
 export type UploadPurpose = 'avatar' | 'guild_icon';
 
+/** A rectangle in source image pixels. */
+export interface CropArea {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface UploadApi {
-  upload(purpose: UploadPurpose, file: Blob, name: string): Promise<FileRef>;
+  /** Uploads an image; with `crop`, the hub keeps only that part of it. */
+  upload(purpose: UploadPurpose, file: Blob, name: string, crop?: CropArea): Promise<FileRef>;
 }
 
 /** Body of a failed upload, shaped like the RPC error details. */
@@ -57,12 +66,19 @@ export function uploadError(status: number, body: UploadErrorBody | null): Conne
 
 export function createUploadApi(fetchImpl: typeof fetch = fetch): UploadApi {
   return {
-    async upload(purpose, file, name) {
+    async upload(purpose, file, name, crop) {
       const form = new FormData();
       form.append('file', file, name);
+      const query = new URLSearchParams({ purpose });
+      if (crop) {
+        query.set(
+          'crop',
+          [crop.x, crop.y, crop.width, crop.height].map((n) => String(Math.round(n))).join(','),
+        );
+      }
       let res: Response;
       try {
-        res = await fetchImpl(`/api/uploads?purpose=${purpose}`, { method: 'POST', body: form });
+        res = await fetchImpl(`/api/uploads?${query.toString()}`, { method: 'POST', body: form });
       } catch (err) {
         throw new ConnectError('network error', Code.Unavailable, undefined, undefined, err);
       }

@@ -3,6 +3,7 @@ package fakes
 import (
 	"bytes"
 	"context"
+	"image"
 	"io"
 	"strings"
 	"sync"
@@ -103,7 +104,7 @@ func (blob) Close() error { return nil }
 // requested size.
 type Images struct{}
 
-func (Images) Square(r io.Reader, size int) (ports.Image, error) {
+func (Images) Square(r io.Reader, size int, _ image.Rectangle) (ports.Image, error) {
 	data, err := io.ReadAll(r)
 	if err != nil {
 		return ports.Image{}, err

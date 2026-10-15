@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"image"
 	"image/color"
+	"image/gif"
 	"image/png"
 	"io"
 	"mime/multipart"
@@ -220,15 +221,15 @@ func pngBytes(t *testing.T, w, h int) []byte {
 	return buf.Bytes()
 }
 
-// upload posts one file and returns the status and the response body.
-func (b *browser) upload(t *testing.T, purpose, origin string, data []byte) (int, []byte) {
+// upload posts one file with the query string and returns the status and the response body.
+func (b *browser) upload(t *testing.T, query, origin string, data []byte) (int, []byte) {
 	t.Helper()
 	var body bytes.Buffer
 	mw := multipart.NewWriter(&body)
 	part, _ := mw.CreateFormFile("file", "me.png")
 	_, _ = part.Write(data)
 	_ = mw.Close()
-	req, _ := http.NewRequestWithContext(t.Context(), http.MethodPost, b.base+"/api/uploads?purpose="+purpose, &body)
+	req, _ := http.NewRequestWithContext(t.Context(), http.MethodPost, b.base+"/api/uploads?"+query, &body)
 	req.Header.Set("Content-Type", mw.FormDataContentType())
 	if origin != "" {
 		req.Header.Set("Origin", origin)
@@ -251,7 +252,7 @@ func TestAvatarUploadAndDownload(t *testing.T) {
 	admin := r.browser(t)
 	completeSetup(t, admin)
 
-	status, raw := admin.upload(t, "avatar", "", pngBytes(t, 400, 300))
+	status, raw := admin.upload(t, "purpose=avatar", "", pngBytes(t, 400, 300))
 	if status != http.StatusCreated {
 		t.Fatalf("upload: %d %s", status, raw)
 	}
@@ -279,7 +280,7 @@ func TestAvatarUploadAndDownload(t *testing.T) {
 		t.Errorf("signed-out download: %d", code)
 	}
 
-	status, raw = admin.upload(t, "avatar", "", []byte("<svg onload=alert(1)>"))
+	status, raw = admin.upload(t, "purpose=avatar", "", []byte("<svg onload=alert(1)>"))
 	var body struct {
 		Code   string `json:"code"`
 		Fields []struct {
@@ -290,13 +291,41 @@ func TestAvatarUploadAndDownload(t *testing.T) {
 	if status != http.StatusBadRequest || len(body.Fields) != 1 || body.Fields[0].Reason != "unsupported_file" {
 		t.Errorf("svg upload: %d %+v", status, body)
 	}
-	if status, _ := admin.upload(t, "guild_icon", "https://evil.example", pngBytes(t, 8, 8)); status != http.StatusForbidden {
+	if status, _ := admin.upload(t, "purpose=guild_icon", "https://evil.example", pngBytes(t, 8, 8)); status != http.StatusForbidden {
 		t.Errorf("cross-site upload: %d", status)
 	}
-	if status, _ := r.browser(t).upload(t, "guild_icon", "", pngBytes(t, 8, 8)); status != http.StatusUnauthorized {
+	if status, _ := r.browser(t).upload(t, "purpose=guild_icon", "", pngBytes(t, 8, 8)); status != http.StatusUnauthorized {
 		t.Errorf("signed-out upload: %d", status)
 	}
-	if status, raw := admin.upload(t, "guild_icon", "", pngBytes(t, 8, 8)); status != http.StatusCreated {
+	if status, raw := admin.upload(t, "purpose=guild_icon", "", pngBytes(t, 8, 8)); status != http.StatusCreated {
 		t.Errorf("guild icon upload: %d %s", status, raw)
+	}
+}
+
+func TestAnimatedAvatarUpload(t *testing.T) {
+	r := start(t)
+	admin := r.browser(t)
+	completeSetup(t, admin)
+
+	var anim bytes.Buffer
+	frames := &gif.GIF{}
+	for _, c := range []color.Color{color.White, color.Black} {
+		m := image.NewPaletted(image.Rect(0, 0, 300, 200), color.Palette{c})
+		frames.Image = append(frames.Image, m)
+		frames.Delay = append(frames.Delay, 10)
+	}
+	if err := gif.EncodeAll(&anim, frames); err != nil {
+		t.Fatal(err)
+	}
+	status, raw := admin.upload(t, "purpose=avatar&crop=200,100,100,100", "", anim.Bytes())
+	ref := &dislacksov1.FileRef{}
+	if err := protojson.Unmarshal(raw, ref); status != http.StatusCreated || err != nil {
+		t.Fatalf("upload: %d %s", status, raw)
+	}
+	if ref.GetMime() != "image/gif" || ref.GetWidth() != 100 {
+		t.Errorf("file ref = %v", ref)
+	}
+	if status, raw := admin.upload(t, "purpose=avatar&crop=1,2,3", "", anim.Bytes()); status != http.StatusBadRequest || !strings.Contains(string(raw), "crop") {
+		t.Errorf("bad crop: %d %s", status, raw)
 	}
 }

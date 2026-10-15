@@ -566,6 +566,8 @@ export const ptBR: Messages = {
       incorrect: 'Incorreto.',
       invalid: 'Inválido ou expirado.',
       unsupported_file: 'Use uma imagem PNG, JPEG, GIF ou WebP.',
+      image_too_large:
+        'Essa imagem é grande demais para processar. Tente uma menor ou um GIF mais curto.',
     },
     rateLimited: 'Tentativas demais. Tente de novo em {{seconds}} s.',
     network: 'Não foi possível falar com o hub. Verifique sua conexão.',

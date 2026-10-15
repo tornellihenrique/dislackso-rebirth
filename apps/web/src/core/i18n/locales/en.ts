@@ -562,6 +562,7 @@ export const en = {
       incorrect: 'Incorrect.',
       invalid: 'Invalid or expired.',
       unsupported_file: 'Use a PNG, JPEG, GIF or WebP image.',
+      image_too_large: 'That image is too big to process. Try a smaller one or a shorter GIF.',
     },
     rateLimited: 'Too many attempts. Try again in {{seconds}} s.',
     network: "Can't reach the hub. Check your connection.",

@@ -21,6 +21,14 @@ describe('uploads', () => {
     expect(request?.body).toBeInstanceOf(FormData);
     expect(ref.id).toBe('9');
     expect(ref.width).toBe(256);
+
+    await api.upload('avatar', new Blob(['x']), 'me.gif', {
+      x: 10.4,
+      y: 0,
+      width: 99.6,
+      height: 100,
+    });
+    expect(request?.url).toBe('/api/uploads?purpose=avatar&crop=10%2C0%2C100%2C100');
   });
 
   it('turns hub errors into the same shape as RPC errors', async () => {

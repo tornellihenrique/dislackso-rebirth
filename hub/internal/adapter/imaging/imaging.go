@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"image"
 	"image/draw"
-	_ "image/gif" // registers the GIF decoder; the first frame is used
 	"image/jpeg"
 	"image/png"
 	"io"
@@ -31,39 +30,63 @@ func unsupported() error {
 	return domain.Invalid(domain.FieldViolation{Field: "file", Reason: domain.ReasonUnsupportedFile})
 }
 
-// Square center-crops the image to a square, scales it down to at most
-// size pixels and encodes it as JPEG, or PNG when it has transparency.
-func (Processor) Square(r io.Reader, size int) (ports.Image, error) {
+// Square crops the largest square centered in crop (the whole image when
+// crop is empty), scales it down to at most size pixels and encodes it as
+// JPEG, or PNG when it has transparency. Animated GIFs stay animated GIFs.
+func (Processor) Square(r io.Reader, size int, crop image.Rectangle) (ports.Image, error) {
 	data, err := io.ReadAll(r)
 	if err != nil {
 		return ports.Image{}, fmt.Errorf("read image: %w", err)
 	}
+	if isGIF(data) {
+		return squareGIF(data, size, crop)
+	}
 	cfg, _, err := image.DecodeConfig(bytes.NewReader(data))
-	if err != nil || cfg.Width <= 0 || cfg.Height <= 0 || cfg.Width*cfg.Height > MaxPixels {
+	if err != nil || !within(cfg.Width, cfg.Height, MaxPixels) {
 		return ports.Image{}, unsupported()
 	}
 	src, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
 		return ports.Image{}, unsupported()
 	}
+	return encodeStill(scaleSquare(src, squareIn(src.Bounds(), crop), size))
+}
 
-	b := src.Bounds()
-	side := min(b.Dx(), b.Dy())
-	crop := image.Rect(0, 0, side, side).Add(image.Pt(b.Min.X+(b.Dx()-side)/2, b.Min.Y+(b.Dy()-side)/2))
-	edge := min(side, size)
+func within(w, h, maxPixels int) bool {
+	return w > 0 && h > 0 && w*h <= maxPixels
+}
+
+// squareIn is the largest square centered in crop, or in bounds when crop is
+// empty or outside the image. crop is relative to the image's top-left corner.
+func squareIn(bounds, crop image.Rectangle) image.Rectangle {
+	r := crop.Add(bounds.Min).Intersect(bounds)
+	if r.Empty() {
+		r = bounds
+	}
+	side := min(r.Dx(), r.Dy())
+	return image.Rect(0, 0, side, side).Add(image.Pt(r.Min.X+(r.Dx()-side)/2, r.Min.Y+(r.Dy()-side)/2))
+}
+
+func scaleSquare(src image.Image, region image.Rectangle, size int) *image.RGBA {
+	edge := min(region.Dx(), size)
 	dst := image.NewRGBA(image.Rect(0, 0, edge, edge))
-	xdraw.CatmullRom.Scale(dst, dst.Bounds(), src, crop, draw.Src, nil)
+	xdraw.CatmullRom.Scale(dst, dst.Bounds(), src, region, draw.Src, nil)
+	return dst
+}
 
+func encodeStill(img *image.RGBA) (ports.Image, error) {
 	var out bytes.Buffer
 	mime := "image/jpeg"
-	if dst.Opaque() {
-		err = jpeg.Encode(&out, dst, &jpeg.Options{Quality: jpegQuality})
+	var err error
+	if img.Opaque() {
+		err = jpeg.Encode(&out, img, &jpeg.Options{Quality: jpegQuality})
 	} else {
 		mime = "image/png"
-		err = (&png.Encoder{CompressionLevel: png.BestCompression}).Encode(&out, dst)
+		err = (&png.Encoder{CompressionLevel: png.BestCompression}).Encode(&out, img)
 	}
 	if err != nil {
 		return ports.Image{}, fmt.Errorf("encode image: %w", err)
 	}
+	edge := img.Bounds().Dx()
 	return ports.Image{Data: out.Bytes(), Mime: mime, Width: edge, Height: edge}, nil
 }

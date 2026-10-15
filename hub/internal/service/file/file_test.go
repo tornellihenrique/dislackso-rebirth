@@ -35,7 +35,7 @@ func TestUploadAndOpen(t *testing.T) {
 	h := newHarness()
 	ctx := t.Context()
 
-	f, err := h.svc.Upload(ctx, ana, domain.FileAvatar, `C:\Users\ana\me.jpg`, strings.NewReader("img:face"))
+	f, err := h.svc.Upload(ctx, ana, Request{Purpose: domain.FileAvatar, Name: `C:\Users\ana\me.jpg`}, strings.NewReader("img:face"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestUploadAndOpen(t *testing.T) {
 		t.Errorf("file = %+v", f)
 	}
 	// The same picture uploaded twice is stored once.
-	if _, err := h.svc.Upload(ctx, ana, domain.FileAvatar, "again.png", strings.NewReader("img:face")); err != nil || h.blobs.Puts != 1 {
+	if _, err := h.svc.Upload(ctx, ana, Request{Purpose: domain.FileAvatar, Name: "again.png"}, strings.NewReader("img:face")); err != nil || h.blobs.Puts != 1 {
 		t.Errorf("second upload: puts = %d, err = %v", h.blobs.Puts, err)
 	}
 
@@ -78,14 +78,14 @@ func TestUploadRefusals(t *testing.T) {
 		{"unverified", domain.Actor{UserID: 1}, domain.FileAvatar, strings.NewReader("img:x"), domain.ErrFailedPrecondition, domain.ReasonEmailNotVerified},
 	}
 	for _, tt := range tests {
-		_, err := h.svc.Upload(ctx, tt.actor, tt.purpose, "x.png", tt.body)
+		_, err := h.svc.Upload(ctx, tt.actor, Request{Purpose: tt.purpose, Name: "x.png"}, tt.body)
 		de, ok := domain.AsError(err)
 		if !errors.Is(err, tt.kind) || !ok || (de.Reason != tt.reason && (len(de.Fields) == 0 || de.Fields[0].Reason != tt.reason)) {
 			t.Errorf("%s: %v", tt.name, err)
 		}
 	}
 	h.limiter.Deny = map[string]time.Duration{"upload:user:1": time.Second}
-	if _, err := h.svc.Upload(ctx, ana, domain.FileAvatar, "x.png", strings.NewReader("img:x")); !errors.Is(err, domain.ErrRateLimited) {
+	if _, err := h.svc.Upload(ctx, ana, Request{Purpose: domain.FileAvatar, Name: "x.png"}, strings.NewReader("img:x")); !errors.Is(err, domain.ErrRateLimited) {
 		t.Errorf("rate limit: %v", err)
 	}
 }
@@ -93,7 +93,7 @@ func TestUploadRefusals(t *testing.T) {
 func TestOpenInviteIcon(t *testing.T) {
 	h := newHarness()
 	ctx := t.Context()
-	icon, err := h.svc.Upload(ctx, ana, domain.FileGuildIcon, "icon.png", strings.NewReader("img:logo"))
+	icon, err := h.svc.Upload(ctx, ana, Request{Purpose: domain.FileGuildIcon, Name: "icon.png"}, strings.NewReader("img:logo"))
 	if err != nil {
 		t.Fatal(err)
 	}

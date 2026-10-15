@@ -1,9 +1,11 @@
-/** A rectangle in source image pixels, as react-easy-crop reports it. */
-export interface PixelArea {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+import type { CropArea } from '@/core/api/uploads';
+
+/**
+ * Whether the hub has to crop the file itself: drawing on a canvas keeps
+ * only the first frame of an animated GIF.
+ */
+export function cropsOnHub(file: Blob): boolean {
+  return file.type === 'image/gif';
 }
 
 /** Edge of the uploaded crop; the hub scales it down to its own size anyway. */
@@ -23,7 +25,7 @@ function load(src: string): Promise<HTMLImageElement> {
 }
 
 /** Draws `area` of the image at `src` into a square PNG. */
-export async function cropToBlob(src: string, area: PixelArea): Promise<Blob> {
+export async function cropToBlob(src: string, area: CropArea): Promise<Blob> {
   const img = await load(src);
   const canvas = document.createElement('canvas');
   const edge = Math.min(OUTPUT_EDGE, Math.round(area.width));

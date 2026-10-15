@@ -52,10 +52,10 @@ func TestSquare(t *testing.T) {
 		{"wide jpeg is cropped and scaled", jpegBuf.Bytes(), "image/jpeg", 256},
 		{"transparent png stays png", encodePNG(t, solid(300, 500, color.RGBA{0, 0, 0, 0})), "image/png", 256},
 		{"small image is not enlarged", encodePNG(t, solid(64, 80, color.White)), "image/jpeg", 64},
-		{"gif", gifBuf.Bytes(), "image/jpeg", 30},
+		{"still gif", gifBuf.Bytes(), "image/jpeg", 30},
 	}
 	for _, tt := range tests {
-		img, err := Processor{}.Square(bytes.NewReader(tt.in), 256)
+		img, err := Processor{}.Square(bytes.NewReader(tt.in), 256, image.Rectangle{})
 		if err != nil {
 			t.Fatalf("%s: %v", tt.name, err)
 		}
@@ -83,9 +83,43 @@ func TestSquareRefusesBadInput(t *testing.T) {
 		"empty": nil,
 		"huge":  huge,
 	} {
-		_, err := Processor{}.Square(bytes.NewReader(in), 256)
+		_, err := Processor{}.Square(bytes.NewReader(in), 256, image.Rectangle{})
 		if !errors.Is(err, domain.ErrInvalid) {
 			t.Errorf("%s: err = %v, want ErrInvalid", name, err)
+		}
+	}
+}
+
+func TestSquareCrop(t *testing.T) {
+	src := solid(200, 100, red)
+	for y := range 100 {
+		for x := 100; x < 200; x++ {
+			src.Set(x, y, blue)
+		}
+	}
+	tests := []struct {
+		name string
+		crop image.Rectangle
+		want color.RGBA
+	}{
+		{"right half", image.Rect(100, 0, 200, 100), blue},
+		{"left half", image.Rect(0, 0, 100, 100), red},
+		{"a crop outside the image falls back to the center", image.Rect(500, 500, 600, 600), red},
+	}
+	for _, tt := range tests {
+		img, err := Processor{}.Square(bytes.NewReader(encodePNG(t, src)), 256, tt.crop)
+		if err != nil {
+			t.Fatalf("%s: %v", tt.name, err)
+		}
+		if img.Width != 100 {
+			t.Errorf("%s: edge %d", tt.name, img.Width)
+		}
+		out, _, err := image.Decode(bytes.NewReader(img.Data))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := rgbaAt(out, 25, 50); !near(got, tt.want, 8) {
+			t.Errorf("%s: pixel = %v, want %v", tt.name, got, tt.want)
 		}
 	}
 }
