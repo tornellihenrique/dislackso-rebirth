@@ -1,0 +1,153 @@
+package web
+
+import (
+	"context"
+	"errors"
+	"io"
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"testing/fstest"
+
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/health"
+)
+
+type stubChecker struct{ report health.Report }
+
+func (s stubChecker) Check(context.Context) health.Report { return s.report }
+
+var builtClient = fstest.MapFS{
+	"index.html":         {Data: []byte("<!doctype html><title>app</title>")},
+	"favicon.svg":        {Data: []byte("<svg/>")},
+	"assets/app-abc.js":  {Data: []byte("console.log(1)")},
+	"assets/app-abc.css": {Data: []byte("body{}")},
+	".gitkeep":           {Data: nil},
+}
+
+func newMux(files fstest.MapFS, report health.Report) http.Handler {
+	mux := http.NewServeMux()
+	Register(mux, Options{Files: files, Health: stubChecker{report: report}})
+	return SecurityHeaders(mux)
+}
+
+func TestSPA(t *testing.T) {
+	tests := []struct {
+		name      string
+		method    string
+		path      string
+		files     fstest.MapFS
+		wantCode  int
+		wantBody  string
+		wantCache string
+		wantCSP   bool
+	}{
+		{name: "root serves index", path: "/", wantCode: http.StatusOK, wantBody: "<title>app</title>", wantCache: "no-cache", wantCSP: true},
+		{name: "index.html is not redirected", path: "/index.html", wantCode: http.StatusOK, wantBody: "<title>app</title>", wantCSP: true},
+		{name: "client route falls back to index", path: "/channels/123/456", wantCode: http.StatusOK, wantBody: "<title>app</title>", wantCSP: true},
+		{name: "fingerprinted asset is immutable", path: "/assets/app-abc.js", wantCode: http.StatusOK, wantBody: "console.log(1)", wantCache: "public, max-age=31536000, immutable"},
+		{name: "root file is revalidated", path: "/favicon.svg", wantCode: http.StatusOK, wantBody: "<svg/>", wantCache: "no-cache"},
+		{name: "missing asset is 404, not index", path: "/assets/missing.js", wantCode: http.StatusNotFound},
+		{name: "dotfiles are hidden", path: "/.gitkeep", wantCode: http.StatusNotFound},
+		{name: "directory is not listed", path: "/assets/", wantCode: http.StatusOK, wantBody: "<title>app</title>", wantCSP: true},
+		{name: "unknown rpc path is 404", path: "/rpc/dislackso.v1.Nope/Nope", wantCode: http.StatusNotFound},
+		{name: "unknown api path is 404", path: "/api/nope", wantCode: http.StatusNotFound},
+		{name: "gateway path is reserved", path: "/gateway", wantCode: http.StatusNotFound},
+		{name: "POST is not allowed", method: http.MethodPost, path: "/", wantCode: http.StatusMethodNotAllowed},
+		{name: "missing build explains itself", path: "/", files: fstest.MapFS{}, wantCode: http.StatusServiceUnavailable, wantBody: "web client not built"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			files := tt.files
+			if files == nil {
+				files = builtClient
+			}
+			method := tt.method
+			if method == "" {
+				method = http.MethodGet
+			}
+			rec := httptest.NewRecorder()
+			newMux(files, health.Report{Status: health.StatusServing}).ServeHTTP(rec, httptest.NewRequest(method, tt.path, http.NoBody))
+
+			if rec.Code != tt.wantCode {
+				t.Fatalf("status = %d, want %d", rec.Code, tt.wantCode)
+			}
+			if !strings.Contains(rec.Body.String(), tt.wantBody) {
+				t.Errorf("body = %q, want it to contain %q", rec.Body.String(), tt.wantBody)
+			}
+			if tt.wantCache != "" && rec.Header().Get("Cache-Control") != tt.wantCache {
+				t.Errorf("Cache-Control = %q, want %q", rec.Header().Get("Cache-Control"), tt.wantCache)
+			}
+			if got := rec.Header().Get("Content-Security-Policy") != ""; got != tt.wantCSP {
+				t.Errorf("CSP present = %v, want %v", got, tt.wantCSP)
+			}
+			if rec.Header().Get("X-Content-Type-Options") != "nosniff" {
+				t.Error("missing X-Content-Type-Options: nosniff")
+			}
+		})
+	}
+}
+
+func TestSPATraversalStaysInsideTheBuild(t *testing.T) {
+	for _, p := range []string{"/../../etc/passwd", "/assets/../../secret.txt", "/..%2f..%2fsecret.txt"} {
+		req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
+		req.URL.Path = p
+		rec := httptest.NewRecorder()
+		newSPAHandler(builtClient).ServeHTTP(rec, req)
+		if rec.Code == http.StatusOK && !strings.Contains(rec.Body.String(), "<title>app</title>") {
+			t.Errorf("%s served %q", p, rec.Body.String())
+		}
+	}
+}
+
+func TestHealthEndpoints(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		report   health.Report
+		wantCode int
+		wantBody string
+	}{
+		{name: "liveness", path: "/healthz", wantCode: http.StatusOK, wantBody: `{"status":"ok"}`},
+		{name: "liveness ignores probes", path: "/healthz", report: health.Report{Status: health.StatusDegraded}, wantCode: http.StatusOK, wantBody: `{"status":"ok"}`},
+		{name: "ready", path: "/readyz", report: health.Report{Status: health.StatusServing}, wantCode: http.StatusOK, wantBody: `{"status":"ready"}`},
+		{
+			name: "degraded hides probe errors",
+			path: "/readyz",
+			report: health.Report{
+				Status:   health.StatusDegraded,
+				Failures: []health.ProbeFailure{{Probe: "db", Err: errors.New(`open C:\secret\data.db: locked`)}},
+			},
+			wantCode: http.StatusServiceUnavailable,
+			wantBody: `{"status":"degraded","failing":["db"]}`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			newMux(builtClient, tt.report).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, tt.path, http.NoBody))
+			if rec.Code != tt.wantCode {
+				t.Errorf("status = %d, want %d", rec.Code, tt.wantCode)
+			}
+			if got := strings.TrimSpace(rec.Body.String()); got != tt.wantBody {
+				t.Errorf("body = %s, want %s", got, tt.wantBody)
+			}
+		})
+	}
+}
+
+func TestAccessLogKeepsResponseControllerFeatures(t *testing.T) {
+	logger := slog.New(slog.DiscardHandler)
+	h := AccessLog(logger)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, "chunk")
+		if err := http.NewResponseController(w).Flush(); err != nil {
+			t.Errorf("Flush through middleware: %v", err)
+		}
+	}))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", http.NoBody))
+	if !rec.Flushed {
+		t.Error("response was not flushed")
+	}
+}

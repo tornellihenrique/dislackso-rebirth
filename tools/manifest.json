@@ -1,0 +1,119 @@
+{
+  "tools": [
+    {
+      "name": "buf",
+      "version": "1.73.0",
+      "platforms": {
+        "darwin/amd64": {
+          "url": "https://github.com/bufbuild/buf/releases/download/v{version}/buf-Darwin-x86_64",
+          "sha256": "ff78d0ebf34180ebfa81d370275851ec630fcb088bf33e213fd723d0fd7444a6",
+          "archive": "raw"
+        },
+        "darwin/arm64": {
+          "url": "https://github.com/bufbuild/buf/releases/download/v{version}/buf-Darwin-arm64",
+          "sha256": "6e6df0fef4522e4e43dfe7c341873c3f2c29ceb45a9dfa5e0bad5580b8b2022f",
+          "archive": "raw"
+        },
+        "linux/amd64": {
+          "url": "https://github.com/bufbuild/buf/releases/download/v{version}/buf-Linux-x86_64",
+          "sha256": "8f2986298ad08f0cc1bf999b9797b7c383adf32d7edf0f73d6f1e1a701baeac1",
+          "archive": "raw"
+        },
+        "linux/arm64": {
+          "url": "https://github.com/bufbuild/buf/releases/download/v{version}/buf-Linux-aarch64",
+          "sha256": "902b75267db7f4391e99b7fa0756050e5354234cc0437ef50eee9c788950c7a3",
+          "archive": "raw"
+        },
+        "windows/amd64": {
+          "url": "https://github.com/bufbuild/buf/releases/download/v{version}/buf-Windows-x86_64.exe",
+          "sha256": "13542f2892c4f774150ddb525266d6421d457b3e741297056b64427853526e36",
+          "archive": "raw"
+        },
+        "windows/arm64": {
+          "url": "https://github.com/bufbuild/buf/releases/download/v{version}/buf-Windows-arm64.exe",
+          "sha256": "2250d5cba96a64f6ebc78d67221feab113622a24fbaf2909d43c87f8586d1bed",
+          "archive": "raw"
+        }
+      }
+    },
+    {
+      "name": "golangci-lint",
+      "version": "2.14.0",
+      "platforms": {
+        "darwin/amd64": {
+          "url": "https://github.com/golangci/golangci-lint/releases/download/v{version}/golangci-lint-{version}-darwin-amd64.tar.gz",
+          "sha256": "a5667c1c3536be1740133213e1e822bfb8f0d98ea12903174d6d5f635e4ed68d",
+          "archive": "tar.gz",
+          "path": "golangci-lint-{version}-darwin-amd64/golangci-lint"
+        },
+        "darwin/arm64": {
+          "url": "https://github.com/golangci/golangci-lint/releases/download/v{version}/golangci-lint-{version}-darwin-arm64.tar.gz",
+          "sha256": "5ef5f36a7147e91dc58ef9ef4d11bb7bad5ead0c76eb6c01327a73c641d1dcc3",
+          "archive": "tar.gz",
+          "path": "golangci-lint-{version}-darwin-arm64/golangci-lint"
+        },
+        "linux/amd64": {
+          "url": "https://github.com/golangci/golangci-lint/releases/download/v{version}/golangci-lint-{version}-linux-amd64.tar.gz",
+          "sha256": "ab90aeb7b066f92a33415b638a50fe5344bbb75a0d32ad30cc248d88f81032ab",
+          "archive": "tar.gz",
+          "path": "golangci-lint-{version}-linux-amd64/golangci-lint"
+        },
+        "linux/arm64": {
+          "url": "https://github.com/golangci/golangci-lint/releases/download/v{version}/golangci-lint-{version}-linux-arm64.tar.gz",
+          "sha256": "ee7ec5f3453d15ddf106fae5a4d6c71737712348a979d1fe9cd52ec7ea299bae",
+          "archive": "tar.gz",
+          "path": "golangci-lint-{version}-linux-arm64/golangci-lint"
+        },
+        "windows/amd64": {
+          "url": "https://github.com/golangci/golangci-lint/releases/download/v{version}/golangci-lint-{version}-windows-amd64.zip",
+          "sha256": "b15f903d1649283a2ab6e8d2f0c317eaf1f9f6b3763950e7e8b7e72a43dd724f",
+          "archive": "zip",
+          "path": "golangci-lint-{version}-windows-amd64/golangci-lint.exe"
+        },
+        "windows/arm64": {
+          "url": "https://github.com/golangci/golangci-lint/releases/download/v{version}/golangci-lint-{version}-windows-arm64.zip",
+          "sha256": "6399496aef883e5d2f77ea93e6e54fdd05bc2695f64071d8de0b0579cad92274",
+          "archive": "zip",
+          "path": "golangci-lint-{version}-windows-arm64/golangci-lint.exe"
+        }
+      }
+    },
+    {
+      "name": "livekit-server",
+      "version": "1.13.9",
+      "platforms": {
+        "linux/amd64": {
+          "url": "https://github.com/livekit/livekit/releases/download/v{version}/livekit_{version}_linux_amd64.tar.gz",
+          "sha256": "0b7fa208b662d09cfdeae8c06cf4c481aead0556086558b48250501e2e2d6e20",
+          "archive": "tar.gz",
+          "path": "livekit-server"
+        },
+        "linux/arm64": {
+          "url": "https://github.com/livekit/livekit/releases/download/v{version}/livekit_{version}_linux_arm64.tar.gz",
+          "sha256": "c5e4e5a6d6cf0a449651aa3178532ecc7a2bf2502538396ebe6e51ff13424056",
+          "archive": "tar.gz",
+          "path": "livekit-server"
+        },
+        "windows/amd64": {
+          "url": "https://github.com/livekit/livekit/releases/download/v{version}/livekit_{version}_windows_amd64.zip",
+          "sha256": "d5b5e44c197f613fdd6bdb2ae53e9d086d848156d43f614c688c6b595cd3f25e",
+          "archive": "zip",
+          "path": "livekit-server.exe"
+        },
+        "windows/arm64": {
+          "url": "https://github.com/livekit/livekit/releases/download/v{version}/livekit_{version}_windows_arm64.zip",
+          "sha256": "bc34c226ea047299d0bc08c9f6071b8d52c13f57be08dd5085f794c9095334a6",
+          "archive": "zip",
+          "path": "livekit-server.exe"
+        }
+      },
+      "source": {
+        "url": "https://github.com/livekit/livekit/archive/refs/tags/v{version}.tar.gz",
+        "sha256": "6e5977d4fa61b52257a576257e2da1fe5e710eaf0b66d94233f4653d4f760920",
+        "archive": "go-source",
+        "path": "livekit-{version}",
+        "package": "./cmd/server"
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.zip binary
+*.gz binary
+
+hub/gen/** linguist-generated=true
+packages/contracts/src/gen/** linguist-generated=true
+pnpm-lock.yaml linguist-generated=true

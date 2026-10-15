@@ -1,0 +1,49 @@
+/* Raw theme values. Components use the Tailwind tokens from tokens.css, never these directly. */
+
+:root,
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg-rail: #1e1f22;
+  --bg-sidebar: #2b2d31;
+  --bg-main: #313338;
+  --bg-floating: #111214;
+  --bg-input: #383a40;
+  --bg-hover: #3a3c42;
+  --border: #3f4147;
+  --text-normal: #dbdee1;
+  --text-muted: #949ba4;
+}
+
+[data-theme='onyx'] {
+  color-scheme: dark;
+  --bg-rail: #070708;
+  --bg-sidebar: #111113;
+  --bg-main: #18181b;
+  --bg-floating: #000000;
+  --bg-input: #222226;
+  --bg-hover: #26262b;
+  --border: #2a2a2e;
+  --text-normal: #e3e3e6;
+  --text-muted: #8e8e96;
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+  --bg-rail: #e3e5e8;
+  --bg-sidebar: #f2f3f5;
+  --bg-main: #ffffff;
+  --bg-floating: #ffffff;
+  --bg-input: #ebedef;
+  --bg-hover: #e8e9ec;
+  --border: #e1e2e4;
+  --text-normal: #313338;
+  --text-muted: #5c5e66;
+}
+
+:root {
+  --accent: #5b6cf0;
+  --accent-fg: #ffffff;
+  --green: #23a55a;
+  --yellow: #f0b232;
+  --red: #f23f43;
+}

@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package dislackso.gateway.v1;
+
+// Every WebSocket message on /gateway is exactly one binary-encoded frame.
+
+// ClientFrame is sent from the client to the hub.
+message ClientFrame {}
+
+// ServerFrame is sent from the hub to the client.
+message ServerFrame {}
