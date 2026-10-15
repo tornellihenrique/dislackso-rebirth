@@ -23,9 +23,9 @@ func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
 
 const createUser = `-- name: CreateUser :exec
 INSERT INTO users (
-  id, username, email, email_verified_at, password_hash, display_name,
+  id, username, email, email_verified_at, password_hash, display_name, avatar_file_id,
   status_pref, custom_status, is_instance_admin, disabled_at, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type CreateUserParams struct {
@@ -35,6 +35,7 @@ type CreateUserParams struct {
 	EmailVerifiedAt sql.NullInt64
 	PasswordHash    string
 	DisplayName     string
+	AvatarFileID    sql.NullInt64
 	StatusPref      string
 	CustomStatus    string
 	IsInstanceAdmin int64
@@ -51,6 +52,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 		arg.EmailVerifiedAt,
 		arg.PasswordHash,
 		arg.DisplayName,
+		arg.AvatarFileID,
 		arg.StatusPref,
 		arg.CustomStatus,
 		arg.IsInstanceAdmin,
@@ -141,6 +143,51 @@ func (q *Queries) GetUserByLogin(ctx context.Context, login string) (User, error
 	return i, err
 }
 
+const listGuildUsers = `-- name: ListGuildUsers :many
+SELECT u.id, u.username, u.email, u.email_verified_at, u.password_hash, u.display_name, u.avatar_file_id, u.status_pref, u.custom_status, u.is_instance_admin, u.disabled_at, u.created_at, u.updated_at, u.deleted_at FROM users u
+JOIN guild_members m ON m.user_id = u.id
+WHERE m.guild_id = ? AND u.deleted_at IS NULL
+ORDER BY u.id
+`
+
+func (q *Queries) ListGuildUsers(ctx context.Context, guildID int64) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, listGuildUsers, guildID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []User{}
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.Email,
+			&i.EmailVerifiedAt,
+			&i.PasswordHash,
+			&i.DisplayName,
+			&i.AvatarFileID,
+			&i.StatusPref,
+			&i.CustomStatus,
+			&i.IsInstanceAdmin,
+			&i.DisabledAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUsers = `-- name: ListUsers :many
 SELECT id, username, email, email_verified_at, password_hash, display_name, avatar_file_id, status_pref, custom_status, is_instance_admin, disabled_at, created_at, updated_at, deleted_at FROM users WHERE deleted_at IS NULL ORDER BY id
 `
@@ -190,6 +237,7 @@ UPDATE users SET
   email_verified_at = ?,
   password_hash = ?,
   display_name = ?,
+  avatar_file_id = ?,
   status_pref = ?,
   custom_status = ?,
   is_instance_admin = ?,
@@ -204,6 +252,7 @@ type UpdateUserParams struct {
 	EmailVerifiedAt sql.NullInt64
 	PasswordHash    string
 	DisplayName     string
+	AvatarFileID    sql.NullInt64
 	StatusPref      string
 	CustomStatus    string
 	IsInstanceAdmin int64
@@ -219,6 +268,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (int64, 
 		arg.EmailVerifiedAt,
 		arg.PasswordHash,
 		arg.DisplayName,
+		arg.AvatarFileID,
 		arg.StatusPref,
 		arg.CustomStatus,
 		arg.IsInstanceAdmin,

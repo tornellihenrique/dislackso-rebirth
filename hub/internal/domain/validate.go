@@ -111,8 +111,10 @@ func Violations(results ...*FieldViolation) error {
 }
 
 func hasControl(s string) bool {
-	return strings.ContainsFunc(s, unicode.IsControl)
+	return strings.ContainsFunc(s, isControl)
 }
+
+func isControl(r rune) bool { return unicode.IsControl(r) }
 
 //go:embed common_passwords.txt
 var commonPasswordsFile string

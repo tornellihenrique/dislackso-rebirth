@@ -73,11 +73,16 @@ func start(t *testing.T) *running {
 
 // browser is an HTTP client with its own cookie jar, like one browser profile.
 type browser struct {
-	http     *http.Client
-	auth     dislacksov1connect.AuthServiceClient
-	account  dislacksov1connect.AccountServiceClient
-	instance dislacksov1connect.InstanceServiceClient
-	setup    dislacksov1connect.SetupServiceClient
+	base       string
+	http       *http.Client
+	auth       dislacksov1connect.AuthServiceClient
+	account    dislacksov1connect.AccountServiceClient
+	instance   dislacksov1connect.InstanceServiceClient
+	setup      dislacksov1connect.SetupServiceClient
+	guilds     dislacksov1connect.GuildServiceClient
+	channels   dislacksov1connect.ChannelServiceClient
+	invites    dislacksov1connect.InviteServiceClient
+	moderation dislacksov1connect.ModerationServiceClient
 }
 
 func (r *running) browser(t *testing.T) *browser {
@@ -94,11 +99,16 @@ func (r *running) browser(t *testing.T) *browser {
 	t.Cleanup(hc.CloseIdleConnections)
 	c := connect.NewClient(connecthttp.NewTransport(hc, r.base+rpc.PathPrefix))
 	return &browser{
-		http:     hc,
-		auth:     dislacksov1connect.NewAuthServiceClient(c),
-		account:  dislacksov1connect.NewAccountServiceClient(c),
-		instance: dislacksov1connect.NewInstanceServiceClient(c),
-		setup:    dislacksov1connect.NewSetupServiceClient(c),
+		base:       r.base,
+		http:       hc,
+		auth:       dislacksov1connect.NewAuthServiceClient(c),
+		account:    dislacksov1connect.NewAccountServiceClient(c),
+		instance:   dislacksov1connect.NewInstanceServiceClient(c),
+		setup:      dislacksov1connect.NewSetupServiceClient(c),
+		guilds:     dislacksov1connect.NewGuildServiceClient(c),
+		channels:   dislacksov1connect.NewChannelServiceClient(c),
+		invites:    dislacksov1connect.NewInviteServiceClient(c),
+		moderation: dislacksov1connect.NewModerationServiceClient(c),
 	}
 }
 

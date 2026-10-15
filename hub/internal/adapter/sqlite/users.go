@@ -16,6 +16,7 @@ func (db *DB) CreateUser(ctx context.Context, u domain.User) error {
 		EmailVerifiedAt: toNullMS(u.EmailVerifiedAt),
 		PasswordHash:    u.PasswordHash,
 		DisplayName:     u.DisplayName,
+		AvatarFileID:    toNullID(u.AvatarFileID),
 		StatusPref:      string(u.StatusPref),
 		CustomStatus:    u.CustomStatus,
 		IsInstanceAdmin: boolInt(u.IsInstanceAdmin),
@@ -60,6 +61,7 @@ func (db *DB) UpdateUser(ctx context.Context, u domain.User) error {
 		EmailVerifiedAt: toNullMS(u.EmailVerifiedAt),
 		PasswordHash:    u.PasswordHash,
 		DisplayName:     u.DisplayName,
+		AvatarFileID:    toNullID(u.AvatarFileID),
 		StatusPref:      string(u.StatusPref),
 		CustomStatus:    u.CustomStatus,
 		IsInstanceAdmin: boolInt(u.IsInstanceAdmin),
@@ -88,6 +90,18 @@ func (db *DB) ListUsers(ctx context.Context) ([]domain.User, error) {
 	return users, nil
 }
 
+func (db *DB) GuildUsers(ctx context.Context, guildID domain.ID) ([]domain.User, error) {
+	rows, err := db.reader(ctx).ListGuildUsers(ctx, int64(guildID))
+	if err != nil {
+		return nil, fmt.Errorf("list users of guild %d: %w", guildID, mapError(err))
+	}
+	users := make([]domain.User, len(rows))
+	for i, r := range rows {
+		users[i] = toUser(r)
+	}
+	return users, nil
+}
+
 func (db *DB) CountUsers(ctx context.Context) (int, error) {
 	n, err := db.reader(ctx).CountUsers(ctx)
 	if err != nil {
@@ -104,6 +118,7 @@ func toUser(r sqlcgen.User) domain.User {
 		EmailVerifiedAt: fromNullMS(r.EmailVerifiedAt),
 		PasswordHash:    r.PasswordHash,
 		DisplayName:     r.DisplayName,
+		AvatarFileID:    fromNullID(r.AvatarFileID),
 		StatusPref:      domain.StatusPref(r.StatusPref),
 		CustomStatus:    r.CustomStatus,
 		IsInstanceAdmin: r.IsInstanceAdmin != 0,

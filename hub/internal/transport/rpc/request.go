@@ -5,8 +5,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"net/url"
-	"strings"
 	"time"
 
 	"connectrpc.com/connect/v2"
@@ -15,10 +13,11 @@ import (
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/locale"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/auth"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/clientip"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/httpauth"
 )
 
 // SessionCookie holds the opaque session token.
-const SessionCookie = "dsx_session"
+const SessionCookie = httpauth.SessionCookie
 
 type Authenticator interface {
 	Authenticate(ctx context.Context, raw string) (auth.Principal, error)
@@ -58,7 +57,7 @@ func requireActor(ctx context.Context) (domain.Actor, error) {
 // who is calling, and resolves the session cookie.
 func middleware(next http.Handler, authn Authenticator, resolveIP clientip.Resolver, logger *slog.Logger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !sameOrigin(r) {
+		if !httpauth.SameOrigin(r) {
 			http.Error(w, "cross-origin request refused", http.StatusForbidden)
 			return
 		}
@@ -86,21 +85,6 @@ func middleware(next http.Handler, authn Authenticator, resolveIP clientip.Resol
 		}
 		next.ServeHTTP(w, r.WithContext(withRequest(r.Context(), info)))
 	})
-}
-
-// sameOrigin refuses requests whose Origin names another site. Browsers send
-// Origin on cross-site and state-changing requests; tools that send none
-// cannot ride the user's cookies anyway.
-func sameOrigin(r *http.Request) bool {
-	origin := r.Header.Get("Origin")
-	if origin == "" {
-		return true
-	}
-	u, err := url.Parse(origin)
-	if err != nil {
-		return false
-	}
-	return strings.EqualFold(u.Host, r.Host)
 }
 
 // Secure follows the request scheme so the hub also works over plain HTTP

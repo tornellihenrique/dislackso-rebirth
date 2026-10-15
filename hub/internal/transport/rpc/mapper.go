@@ -8,48 +8,8 @@ import (
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/domain"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/instance"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/invite"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/wire"
 )
-
-// toPublicUser is the only place a user becomes visible to other users;
-// any field added here becomes public.
-func toPublicUser(u domain.User) *dislacksov1.User {
-	return &dislacksov1.User{
-		Id:          u.ID.String(),
-		Username:    u.Username,
-		DisplayName: u.DisplayName,
-	}
-}
-
-func toMe(u domain.User) *dislacksov1.Me {
-	return &dislacksov1.Me{
-		User:          toPublicUser(u),
-		Email:         u.Email,
-		EmailVerified: u.EmailVerified(),
-		Status:        statusToProto(u.StatusPref),
-		CustomStatus:  u.CustomStatus,
-		InstanceAdmin: u.IsInstanceAdmin,
-		CreatedAt:     u.CreatedAt.UnixMilli(),
-	}
-}
-
-var statuses = map[domain.StatusPref]dislacksov1.StatusPreference{
-	domain.StatusOnline:    dislacksov1.StatusPreference_STATUS_PREFERENCE_ONLINE,
-	domain.StatusIdle:      dislacksov1.StatusPreference_STATUS_PREFERENCE_IDLE,
-	domain.StatusDND:       dislacksov1.StatusPreference_STATUS_PREFERENCE_DND,
-	domain.StatusInvisible: dislacksov1.StatusPreference_STATUS_PREFERENCE_INVISIBLE,
-}
-
-func statusToProto(s domain.StatusPref) dislacksov1.StatusPreference { return statuses[s] }
-
-// statusFromProto maps unknown values to an invalid preference the service rejects.
-func statusFromProto(s dislacksov1.StatusPreference) domain.StatusPref {
-	for k, v := range statuses {
-		if v == s {
-			return k
-		}
-	}
-	return ""
-}
 
 var registrationModes = map[domain.RegistrationMode]dislacksov1.RegistrationMode{
 	domain.RegistrationInviteOnly: dislacksov1.RegistrationMode_REGISTRATION_MODE_INVITE_ONLY,
@@ -117,23 +77,23 @@ func settingsToProto(v instance.SettingsView) *dislacksov1.InstanceSettings {
 		MembersCanInvite: s.MembersCanInvite,
 		Smtp:             smtpToProto(s.SMTP, v.SMTPPasswordSet),
 		Limits: &dislacksov1.InstanceLimits{
-			MaxGuildsOwnedPerUser: clampInt32(l.MaxGuildsOwnedPerUser),
-			MaxGuildMembers:       clampInt32(l.MaxGuildMembers),
-			MaxChannelsPerGuild:   clampInt32(l.MaxChannelsPerGuild),
-			DefaultVoiceUserLimit: clampInt32(l.DefaultVoiceUserLimit),
-			MaxSharesPerChannel:   clampInt32(l.MaxSharesPerChannel),
+			MaxGuildsOwnedPerUser: wire.ClampInt32(l.MaxGuildsOwnedPerUser),
+			MaxGuildMembers:       wire.ClampInt32(l.MaxGuildMembers),
+			MaxChannelsPerGuild:   wire.ClampInt32(l.MaxChannelsPerGuild),
+			DefaultVoiceUserLimit: wire.ClampInt32(l.DefaultVoiceUserLimit),
+			MaxSharesPerChannel:   wire.ClampInt32(l.MaxSharesPerChannel),
 			MaxSharePreset:        l.MaxSharePreset,
-			MaxUploadMb:           clampInt32(l.MaxUploadMB),
-			StrokeHoldMaxMs:       clampInt32(l.StrokeHoldMaxMS),
-			MicBitrateMaxKbps:     clampInt32(l.MicBitrateMaxKbps),
-			TurnMonthlyBudgetGb:   clampInt32(l.TURNMonthlyBudgetGB),
+			MaxUploadMb:           wire.ClampInt32(l.MaxUploadMB),
+			StrokeHoldMaxMs:       wire.ClampInt32(l.StrokeHoldMaxMS),
+			MicBitrateMaxKbps:     wire.ClampInt32(l.MicBitrateMaxKbps),
+			TurnMonthlyBudgetGb:   wire.ClampInt32(l.TURNMonthlyBudgetGB),
 		},
 	}
 }
 
 func instanceUserToProto(u domain.User) *dislacksov1.InstanceUser {
 	return &dislacksov1.InstanceUser{
-		User:          toPublicUser(u),
+		User:          wire.PublicUser(u),
 		Email:         u.Email,
 		EmailVerified: u.EmailVerified(),
 		InstanceAdmin: u.IsInstanceAdmin,
@@ -150,7 +110,7 @@ func inviteToProto(inv invite.InstanceInvite) *dislacksov1.InstanceInvite {
 		UsedAt:    unixMilliOrZero(inv.Token.UsedAt),
 	}
 	if inv.CreatedBy != nil {
-		out.CreatedBy = toPublicUser(*inv.CreatedBy)
+		out.CreatedBy = wire.PublicUser(*inv.CreatedBy)
 	}
 	return out
 }
@@ -173,17 +133,6 @@ func unixMilliOrZero(t *time.Time) int64 {
 	return t.UnixMilli()
 }
 
-func clampInt32(v int) int32 {
-	switch {
-	case v > math.MaxInt32:
-		return math.MaxInt32
-	case v < math.MinInt32:
-		return math.MinInt32
-	default:
-		return int32(v)
-	}
-}
-
 func clampUint32(v int) uint32 {
 	switch {
 	case v < 0:
@@ -193,4 +142,12 @@ func clampUint32(v int) uint32 {
 	default:
 		return uint32(v)
 	}
+}
+
+// optionalID parses an ID where empty means none.
+func optionalID(s, field string) (domain.ID, error) {
+	if s == "" {
+		return 0, nil
+	}
+	return domain.ParseID(s, field)
 }

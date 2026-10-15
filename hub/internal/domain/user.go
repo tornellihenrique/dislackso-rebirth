@@ -27,6 +27,7 @@ type User struct {
 	EmailVerifiedAt *time.Time
 	PasswordHash    string
 	DisplayName     string
+	AvatarFileID    ID
 	StatusPref      StatusPref
 	CustomStatus    string
 	IsInstanceAdmin bool

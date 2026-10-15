@@ -1,5 +1,6 @@
 // Package invite manages invites. Instance invites let one person register
-// while registration is invite-only; guild invites will join them.
+// while registration is invite-only; guild invites join a guild, and also
+// let a newcomer register.
 package invite
 
 import (
@@ -10,6 +11,7 @@ import (
 
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/domain"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/ports"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/internal/access"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/internal/emailtoken"
 )
 
@@ -23,22 +25,44 @@ type SettingsReader interface {
 }
 
 type Deps struct {
-	Tokens   ports.EmailTokenRepo
-	Users    ports.UserRepo
-	TokenGen ports.TokenGen
-	IDs      ports.IDGen
-	Clock    ports.Clock
-	Settings SettingsReader
+	Tokens       ports.EmailTokenRepo
+	Users        ports.UserRepo
+	Guilds       ports.GuildRepo
+	Members      ports.MemberRepo
+	Channels     ports.ChannelRepo
+	Invites      ports.InviteRepo
+	Bans         ports.BanRepo
+	Audit        ports.AuditRepo
+	Tx           ports.TxRunner
+	TokenGen     ports.TokenGen
+	Codes        ports.CodeGen
+	IDs          ports.IDGen
+	Clock        ports.Clock
+	Limiter      ports.RateLimiter
+	Events       ports.EventPublisher
+	Settings     SettingsReader
+	Presence     access.Presences
+	Verification access.Verification
 }
 
 type Service struct {
-	d      Deps
-	tokens emailtoken.Store
-	policy domain.Policy
+	d       Deps
+	tokens  emailtoken.Store
+	access  access.Guilds
+	auditor access.Auditor
+	policy  domain.Policy
 }
 
 func New(d Deps) *Service {
-	return &Service{d: d, tokens: emailtoken.Store{Repo: d.Tokens, Tokens: d.TokenGen, IDs: d.IDs, Clock: d.Clock}}
+	return &Service{
+		d:      d,
+		tokens: emailtoken.Store{Repo: d.Tokens, Tokens: d.TokenGen, IDs: d.IDs, Clock: d.Clock},
+		access: access.Guilds{
+			Guilds: d.Guilds, Members: d.Members, Channels: d.Channels, Users: d.Users,
+			Presence: d.Presence, Verification: d.Verification,
+		},
+		auditor: access.Auditor{Repo: d.Audit, IDs: d.IDs, Clock: d.Clock, Events: d.Events},
+	}
 }
 
 // InstanceInvite is an invite as shown to admins. The code itself is only
@@ -118,8 +142,12 @@ func (s *Service) RevokeInstanceInvite(ctx context.Context, actor domain.Actor, 
 	return err
 }
 
-// ClaimForRegistration redeems an instance invite for a new account.
+// ClaimForRegistration redeems an invite for a new account: an instance
+// invite, or a guild invite that the account then joins.
 func (s *Service) ClaimForRegistration(ctx context.Context, code string) (func(context.Context, domain.ID) error, error) {
+	if guildCode := domain.NormalizeInviteCode(code); domain.IsGuildInviteCode(guildCode) {
+		return s.claimGuildInvite(ctx, guildCode)
+	}
 	if _, err := s.tokens.Redeem(ctx, domain.TokenInstanceInvite, code); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			return nil, domain.Invalid(domain.FieldViolation{Field: "invite_code", Reason: domain.ReasonFieldInvalid})

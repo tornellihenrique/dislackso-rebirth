@@ -27,6 +27,10 @@ type Deps struct {
 	Instance      InstanceService
 	Invites       InviteService
 	Setup         SetupService
+	Guilds        GuildService
+	Channels      ChannelService
+	GuildInvites  GuildInviteService
+	Moderation    ModerationService
 	ClientIP      clientip.Resolver
 	Logger        *slog.Logger
 }
@@ -40,6 +44,10 @@ func Mount(mux *http.ServeMux, d Deps) {
 	dislacksov1connect.RegisterAccountServiceHandler(server, &accountHandler{errorMapper: errs, svc: d.Account})
 	dislacksov1connect.RegisterInstanceServiceHandler(server, &instanceHandler{errorMapper: errs, svc: d.Instance, invites: d.Invites})
 	dislacksov1connect.RegisterSetupServiceHandler(server, &setupHandler{errorMapper: errs, svc: d.Setup})
+	dislacksov1connect.RegisterGuildServiceHandler(server, &guildHandler{errorMapper: errs, svc: d.Guilds})
+	dislacksov1connect.RegisterChannelServiceHandler(server, &channelHandler{errorMapper: errs, svc: d.Channels})
+	dislacksov1connect.RegisterInviteServiceHandler(server, &inviteHandler{errorMapper: errs, svc: d.GuildInvites})
+	dislacksov1connect.RegisterModerationServiceHandler(server, &moderationHandler{errorMapper: errs, svc: d.Moderation})
 
 	api := http.NewServeMux()
 	connecthttp.Mount(api, server,

@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/domain"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/events"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/ports"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/internal/access"
 )
 
 var limitChangePassword = ports.Limit{Burst: 5, Every: time.Minute}
@@ -20,13 +22,22 @@ type Verification interface {
 	VerificationRequired(ctx context.Context) bool
 }
 
+// StatusSink applies a new status preference to the user's live presence.
+type StatusSink interface {
+	SetPreference(ctx context.Context, userID domain.ID, pref domain.StatusPref, custom string)
+}
+
 type Deps struct {
 	Users        ports.UserRepo
 	Sessions     ports.SessionRepo
+	Members      ports.MemberRepo
+	Files        ports.FileRepo
 	Tx           ports.TxRunner
 	Hasher       ports.PasswordHasher
 	Clock        ports.Clock
 	Limiter      ports.RateLimiter
+	Events       ports.EventPublisher
+	Presence     StatusSink
 	Verification Verification
 }
 
@@ -40,15 +51,38 @@ func (s *Service) Me(ctx context.Context, actor domain.Actor) (domain.User, erro
 	return s.d.Users.UserByID(ctx, actor.UserID)
 }
 
-func (s *Service) UpdateProfile(ctx context.Context, actor domain.Actor, displayName string) (domain.User, error) {
+// ProfilePatch changes the fields that are set; a zero AvatarFileID removes the avatar.
+type ProfilePatch struct {
+	DisplayName  *string
+	AvatarFileID *domain.ID
+}
+
+// UpdateProfile changes the public profile, which everyone sharing a guild
+// with the user sees change.
+func (s *Service) UpdateProfile(ctx context.Context, actor domain.Actor, p ProfilePatch) (domain.User, error) {
 	if err := s.requireVerified(ctx, actor); err != nil {
 		return domain.User{}, err
 	}
-	displayName = domain.NormalizeDisplayName(displayName)
-	if v := domain.ValidateDisplayName("display_name", displayName); v != nil {
-		return domain.User{}, domain.Invalid(*v)
+	var name string
+	if p.DisplayName != nil {
+		name = domain.NormalizeDisplayName(*p.DisplayName)
+		if v := domain.ValidateDisplayName("display_name", name); v != nil {
+			return domain.User{}, domain.Invalid(*v)
+		}
 	}
-	return s.update(ctx, actor, func(u *domain.User) { u.DisplayName = displayName })
+	if p.AvatarFileID != nil && *p.AvatarFileID != 0 {
+		if err := access.OwnFile(ctx, s.d.Files, actor, *p.AvatarFileID, domain.FileAvatar, "avatar_file_id"); err != nil {
+			return domain.User{}, err
+		}
+	}
+	return s.update(ctx, actor, true, func(u *domain.User) {
+		if p.DisplayName != nil {
+			u.DisplayName = name
+		}
+		if p.AvatarFileID != nil {
+			u.AvatarFileID = *p.AvatarFileID
+		}
+	})
 }
 
 func (s *Service) SetStatus(ctx context.Context, actor domain.Actor, pref domain.StatusPref, custom string) (domain.User, error) {
@@ -63,7 +97,12 @@ func (s *Service) SetStatus(ctx context.Context, actor domain.Actor, pref domain
 	if err := domain.Violations(checks...); err != nil {
 		return domain.User{}, err
 	}
-	return s.update(ctx, actor, func(u *domain.User) { u.StatusPref, u.CustomStatus = pref, custom })
+	u, err := s.update(ctx, actor, false, func(u *domain.User) { u.StatusPref, u.CustomStatus = pref, custom })
+	if err != nil {
+		return domain.User{}, err
+	}
+	s.d.Presence.SetPreference(ctx, u.ID, u.StatusPref, u.CustomStatus)
+	return u, nil
 }
 
 // ChangePassword verifies the current password, sets the new one and signs
@@ -120,7 +159,9 @@ func (s *Service) RevokeOtherSessions(ctx context.Context, actor domain.Actor) (
 	return s.d.Sessions.RevokeUserSessions(ctx, actor.UserID, actor.SessionID, s.d.Clock.Now())
 }
 
-func (s *Service) update(ctx context.Context, actor domain.Actor, change func(*domain.User)) (domain.User, error) {
+// update changes the user and tells their other sessions; public changes
+// also reach everyone sharing a guild with them.
+func (s *Service) update(ctx context.Context, actor domain.Actor, public bool, change func(*domain.User)) (domain.User, error) {
 	var user domain.User
 	err := s.d.Tx.InTx(ctx, func(ctx context.Context) error {
 		var err error
@@ -129,7 +170,19 @@ func (s *Service) update(ctx context.Context, actor domain.Actor, change func(*d
 		}
 		change(&user)
 		user.UpdatedAt = s.d.Clock.Now()
-		return s.d.Users.UpdateUser(ctx, user)
+		if err := s.d.Users.UpdateUser(ctx, user); err != nil {
+			return err
+		}
+		evs := []events.Event{{Topics: []events.Topic{events.UserTopic(user.ID)}, Payload: events.MeUpdated{User: user}}}
+		if public {
+			topics, err := access.GuildTopics(ctx, s.d.Members, user.ID)
+			if err != nil {
+				return err
+			}
+			evs = append(evs, events.Event{Topics: topics, Payload: events.UserUpdated{User: user}})
+		}
+		s.d.Events.Publish(ctx, evs...)
+		return nil
 	})
 	return user, err
 }
