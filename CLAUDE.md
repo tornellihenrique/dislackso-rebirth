@@ -20,6 +20,7 @@ Read before working:
 task tools      # install pinned dev tools (buf, sqlc, goose, livekit-server → .tools/)
 task dev        # hub (with dev LiveKit) + Vite dev server with proxy
 task gen        # protobuf (Go + TS) and sqlc
+task db:migration -- <name>   # new goose SQL migration in hub/internal/adapter/sqlite/migrations
 task check      # lint + typecheck + unit tests (Go + TS) + gen freshness
 task test:int   # Go integration tests with real livekit-server
 task e2e        # Playwright with fake media

@@ -246,7 +246,7 @@ Precedence: defaults < `config.yaml` < env (`DSX_*`) < flags. Only bootstrap set
 - Sessions: 32-byte random token; DB stores SHA-256; cookie `dsx_session` HttpOnly, Secure, SameSite=Lax, 30-day sliding expiry. Desktop uses the same cookie (same origin inside the shell partition).
 - CSRF: cookie auth + Connect requests require `Connect-Protocol-Version`/`Content-Type: application/proto|json` (forces preflight cross-origin) + `Origin` check on state-changing routes and on gateway upgrade (prevents cross-site WebSocket hijacking).
 - Rate limits (token bucket, per IP + per account): login, register, verify resend, reset request, invite accept, message send, uploads, gateway frames.
-- Validation: `protovalidate` annotations in `.proto`, enforced server-side (Go) and optionally client-side.
+- Validation: rules live in `domain` validators and reach clients as typed `FieldViolations` error details. `protovalidate` annotations are deferred (see STATUS, Phase 1 decisions).
 - Uploads: magic-byte sniffing, size caps, images re-encoded (metadata stripped), downloads with `X-Content-Type-Options: nosniff`, `Content-Security-Policy: sandbox`, `Content-Disposition: attachment` for non-media types.
 - Headers: strict CSP for the SPA, `Referrer-Policy: same-origin`, HSTS when HTTPS.
 - Link unfurling (chat phase): SSRF guard (deny private/loopback/link-local, re-check after DNS resolution, size/time limits).
