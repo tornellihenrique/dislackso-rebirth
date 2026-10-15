@@ -433,6 +433,11 @@ func (s *Service) tracks(e *entry, channelID domain.ID, p ports.MediaParticipant
 
 func (s *Service) track(ctx context.Context, channelID, userID domain.ID, ev ports.MediaEvent) {
 	published := ev.Kind == ports.MediaTrackPublished
+	share := ev.Source == domain.SourceScreenShare
+	maxShares := 0
+	if published && share {
+		maxShares = s.maxShares(ctx)
+	}
 	s.mu.Lock()
 	e := s.states[userID]
 	if e == nil || !s.tracks(e, channelID, ev.Participant) {
@@ -440,13 +445,58 @@ func (s *Service) track(ctx context.Context, channelID, userID domain.ID, ev por
 		return
 	}
 	mute, deaf := e.state.ServerMute, e.state.ServerDeaf
-	if ev.Source == domain.SourceScreenShare && e.state.Streaming != published {
+	// Shares are counted in the order the media server reports them, so of
+	// two that start together the later one is stopped.
+	overLimit := published && share && !e.state.Streaming && maxShares > 0 &&
+		s.streamers(channelID, userID) >= maxShares
+	if share && !overLimit && e.state.Streaming != published {
 		e.state.Streaming = published
 		s.publish(ctx, e.state)
 	}
 	s.mu.Unlock()
 	if published && ev.Source == domain.SourceMicrophone && mute {
 		s.enforce(ctx, channelID, userID, mute, deaf)
+	}
+	if overLimit {
+		s.stopShare(ctx, channelID, userID, mute, deaf)
+	}
+}
+
+func (s *Service) maxShares(ctx context.Context) int {
+	settings, err := s.d.Settings.Get(ctx)
+	if err != nil {
+		s.d.Logger.WarnContext(ctx, "read share limit", slog.Any("error", err))
+		return 0
+	}
+	return settings.Limits.MaxSharesPerChannel
+}
+
+// streamers counts who shares a screen in a channel, leaving out one user.
+// Callers hold mu.
+func (s *Service) streamers(channelID, except domain.ID) int {
+	n := 0
+	for id, e := range s.states {
+		if id != except && e.state.ChannelID == channelID && e.state.Streaming {
+			n++
+		}
+	}
+	return n
+}
+
+// stopShare ends a screen share past the channel's limit: the media server
+// drops a track whose source the participant may no longer publish. The
+// permission comes back right away, for a later share once there is room.
+func (s *Service) stopShare(ctx context.Context, channelID, userID domain.ID, mute, deaf bool) {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), mediaCallTimeout)
+	defer cancel()
+	room, identity := domain.VoiceRoom(channelID), userID.String()
+	allowed := domain.VoicePermissionsFor(mute, deaf)
+	err := s.d.Media.SetPermissions(ctx, room, identity, allowed.Without(domain.SourceScreenShare, domain.SourceScreenShareAudio))
+	if err == nil {
+		err = s.d.Media.SetPermissions(ctx, room, identity, allowed)
+	}
+	if err != nil {
+		s.d.Logger.WarnContext(ctx, "stop screen share over the limit", slog.String("room", room), slog.String("user_id", identity), slog.Any("error", err))
 	}
 }
 

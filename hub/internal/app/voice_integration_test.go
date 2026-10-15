@@ -162,16 +162,13 @@ func (v *voiceRig) signalURL(join *dislacksov1.JoinResponse) string {
 }
 
 // connect joins channelID as the member and connects through the hub's proxy.
-func (v *voiceRig) connect(ctx context.Context, t *testing.T, channelID string, cb *lksdk.RoomCallback) (*dislacksov1.JoinResponse, *lksdk.Room) {
+func (v *voiceRig) connect(ctx context.Context, t *testing.T, channelID string) (*dislacksov1.JoinResponse, *lksdk.Room) {
 	t.Helper()
 	join, err := v.member.voice.Join(ctx, &dislacksov1.JoinRequest{ChannelId: channelID})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cb == nil {
-		cb = &lksdk.RoomCallback{}
-	}
-	room, err := lksdk.ConnectToRoomWithToken(v.signalURL(join), join.GetToken(), cb, lksdk.WithAutoSubscribe(false))
+	room, err := lksdk.ConnectToRoomWithToken(v.signalURL(join), join.GetToken(), &lksdk.RoomCallback{}, lksdk.WithAutoSubscribe(false))
 	if err != nil {
 		t.Fatalf("connect: %v", err)
 	}
@@ -223,11 +220,59 @@ func publishMic(ctx context.Context, room *lksdk.Room) error {
 	return err
 }
 
+// publishScreen publishes a screen share track kept fed with frames; the
+// media server forwards them without decoding.
+func publishScreen(ctx context.Context, room *lksdk.Room) (*lksdk.LocalTrackPublication, error) {
+	track, err := lksdk.NewLocalSampleTrack(webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeVP8, ClockRate: 90000})
+	if err != nil {
+		return nil, err
+	}
+	go func() {
+		tick := time.NewTicker(33 * time.Millisecond)
+		defer tick.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-tick.C:
+				_ = track.WriteSample(media.Sample{Data: []byte{0x10, 0x02, 0x00, 0x9d, 0x01, 0x2a}, Duration: 33 * time.Millisecond}, nil)
+			}
+		}
+	}()
+	return room.LocalParticipant.PublishTrack(track, &lksdk.TrackPublicationOptions{
+		Name: "screen", Source: livekit.TrackSource_SCREEN_SHARE, VideoWidth: 1920, VideoHeight: 1080,
+	})
+}
+
+func (v *voiceRig) limitShares(ctx context.Context, t *testing.T, n int) {
+	t.Helper()
+	st, err := v.r.app.settings.Get(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st.Limits.MaxSharesPerChannel = n
+	if err := v.r.app.db.SaveSettings(ctx, st); err != nil {
+		t.Fatal(err)
+	}
+	v.r.app.settings.Invalidate()
+}
+
+func (v *voiceRig) streaming(userID domain.ID) func() bool {
+	return func() bool {
+		for _, s := range v.r.app.voice.GuildVoiceStates(v.guildID) {
+			if s.UserID == userID {
+				return s.Streaming
+			}
+		}
+		return false
+	}
+}
+
 func TestVoiceWithLiveKit(t *testing.T) {
 	v := newVoiceRig(t)
 	ctx := t.Context()
 
-	join, room := v.connect(ctx, t, v.lobby, nil)
+	join, room := v.connect(ctx, t, v.lobby)
 	took := eventually(t, 10*time.Second, "the join to be confirmed", v.connected(join.GetState().GetVoiceSessionId()))
 	t.Logf("join confirmed by webhook after %s", took)
 
@@ -263,7 +308,7 @@ func TestVoiceWithLiveKit(t *testing.T) {
 	})
 
 	t.Run("second device takes over", func(t *testing.T) {
-		join2, _ := v.connect(ctx, t, v.lobby, nil)
+		join2, _ := v.connect(ctx, t, v.lobby)
 		eventually(t, 10*time.Second, "the second device", v.connected(join2.GetState().GetVoiceSessionId()))
 		eventually(t, 10*time.Second, "the first device to be dropped", func() bool {
 			return room.ConnectionState() == lksdk.ConnectionStateDisconnected
@@ -280,13 +325,62 @@ func TestVoiceWithLiveKit(t *testing.T) {
 
 	t.Run("switching channels", func(t *testing.T) {
 		start := time.Now()
-		join3, _ := v.connect(ctx, t, v.focus, nil)
+		join3, _ := v.connect(ctx, t, v.focus)
 		eventually(t, 10*time.Second, "the switch", v.connected(join3.GetState().GetVoiceSessionId()))
 		t.Logf("switched channels in %s", time.Since(start))
 		if time.Since(start) > 3*time.Second {
 			t.Errorf("switch took %s", time.Since(start))
 		}
 		eventually(t, 5*time.Second, "leaving the old room", func() bool { return v.sources(ctx, t, v.lobby) == nil })
+	})
+
+	t.Run("screen shares count against the channel's limit", func(t *testing.T) {
+		v.limitShares(ctx, t, 1)
+		adminJoin, err := v.admin.voice.Join(ctx, &dislacksov1.JoinRequest{ChannelId: v.focus})
+		if err != nil {
+			t.Fatal(err)
+		}
+		adminID, _ := domain.ParseID(adminJoin.GetState().GetUserId(), "user")
+		adminRoom, err := lksdk.ConnectToRoomWithToken(v.signalURL(adminJoin), adminJoin.GetToken(), &lksdk.RoomCallback{}, lksdk.WithAutoSubscribe(false))
+		if err != nil {
+			t.Fatal(err)
+		}
+		v.rooms = append(v.rooms, adminRoom)
+		shareCtx, stopFeeding := context.WithCancel(ctx)
+		defer stopFeeding()
+		adminShare, err := publishScreen(shareCtx, adminRoom)
+		if err != nil {
+			t.Fatal(err)
+		}
+		eventually(t, 10*time.Second, "the first share to set the streaming flag", v.streaming(adminID))
+
+		join, room := v.connect(ctx, t, v.focus)
+		eventually(t, 10*time.Second, "the member to connect", v.connected(join.GetState().GetVoiceSessionId()))
+		if _, err := publishScreen(shareCtx, room); err != nil {
+			t.Fatal(err)
+		}
+		eventually(t, 5*time.Second, "the share over the limit to be removed", func() bool {
+			return !slices.Contains(v.sources(ctx, t, v.focus), domain.SourceScreenShare)
+		})
+		if v.streaming(v.userID)() {
+			t.Error("the share over the limit set the streaming flag")
+		}
+		eventually(t, 5*time.Second, "the permission to share to come back", func() bool {
+			return slices.Contains(room.LocalParticipant.Permissions().GetCanPublishSources(), livekit.TrackSource_SCREEN_SHARE)
+		})
+
+		if err := adminRoom.LocalParticipant.UnpublishTrack(adminShare.SID()); err != nil {
+			t.Fatal(err)
+		}
+		eventually(t, 10*time.Second, "the first share to end", func() bool { return !v.streaming(adminID)() })
+		if _, err := publishScreen(shareCtx, room); err != nil {
+			t.Fatal(err)
+		}
+		eventually(t, 10*time.Second, "a share within the limit", v.streaming(v.userID))
+		adminRoom.Disconnect()
+		eventually(t, 10*time.Second, "the admin to leave", func() bool {
+			return len(v.r.app.voice.GuildVoiceStates(v.guildID)) == 1
+		})
 	})
 
 	t.Run("a fresh hub rebuilds voice state from the media server", func(t *testing.T) {
