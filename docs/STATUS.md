@@ -13,9 +13,9 @@ setup.
 - [x] `task build` produces a single hub binary that serves the built web app. Verified by running
       `bin/hub` from an unrelated folder, and by the Playwright suite (`task e2e`), which runs against
       that binary.
-- [ ] CI green on a PR. The workflow is written, pins every action by SHA and passes `actionlint`;
-      each of its steps passes locally (Windows). It has not run on GitHub because nothing has been
-      pushed yet.
+- [x] CI green on a PR. [PR #1](https://github.com/tornellihenrique/dislackso-rebirth/pull/1): all
+      five jobs passed on the first run (lint + gen freshness, Go tests on ubuntu and windows, web
+      typecheck + tests, build + Playwright smoke).
 
 ## Done
 
