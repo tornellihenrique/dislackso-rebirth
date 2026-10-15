@@ -1,0 +1,13 @@
+{{.Greeting}}
+
+{{.Intro}}
+{{- if .Link}}
+
+{{.Action}}: {{.Link}}
+{{- end}}
+{{- if .Outro}}
+
+{{.Outro}}
+{{- end}}
+
+— {{.Instance}}

@@ -114,6 +114,84 @@
         "path": "livekit-{version}",
         "package": "./cmd/server"
       }
+    },
+    {
+      "name": "sqlc",
+      "version": "1.31.1",
+      "platforms": {
+        "darwin/amd64": {
+          "url": "https://github.com/sqlc-dev/sqlc/releases/download/v{version}/sqlc_{version}_darwin_amd64.tar.gz",
+          "sha256": "c5af76772e3785d21663a62697056b383f07629979b1bd25b93872e73dbd519b",
+          "archive": "tar.gz",
+          "path": "sqlc"
+        },
+        "darwin/arm64": {
+          "url": "https://github.com/sqlc-dev/sqlc/releases/download/v{version}/sqlc_{version}_darwin_arm64.tar.gz",
+          "sha256": "21602158c99eb1f2bae197a66abfb1941d1e9e50b23125bb193349c6b1acc71e",
+          "archive": "tar.gz",
+          "path": "sqlc"
+        },
+        "linux/amd64": {
+          "url": "https://github.com/sqlc-dev/sqlc/releases/download/v{version}/sqlc_{version}_linux_amd64.tar.gz",
+          "sha256": "497ae4fcdfa64c5b0c311ffe4c2bd991e43991e82e5367792ed78bc2dca27354",
+          "archive": "tar.gz",
+          "path": "sqlc"
+        },
+        "linux/arm64": {
+          "url": "https://github.com/sqlc-dev/sqlc/releases/download/v{version}/sqlc_{version}_linux_arm64.tar.gz",
+          "sha256": "b7cae247740d0c51a1e657479e5b2d21e6fef428f596682a01bc55bf4ab8a23d",
+          "archive": "tar.gz",
+          "path": "sqlc"
+        },
+        "windows/amd64": {
+          "url": "https://github.com/sqlc-dev/sqlc/releases/download/v{version}/sqlc_{version}_windows_amd64.zip",
+          "sha256": "352711fa7dcb05dcdfefca0ad71b2c9a74fd090f8d7fc609419de4cbc725429f",
+          "archive": "zip",
+          "path": "sqlc.exe"
+        },
+        "windows/arm64": {
+          "url": "https://github.com/sqlc-dev/sqlc/releases/download/v{version}/sqlc_{version}_windows_arm64.zip",
+          "sha256": "b3d7a016c177923cb426f0d544d3ffbe2ff97306137bb77f668af709b5613692",
+          "archive": "zip",
+          "path": "sqlc.exe"
+        }
+      }
+    },
+    {
+      "name": "goose",
+      "version": "3.29.0",
+      "platforms": {
+        "darwin/amd64": {
+          "url": "https://github.com/pressly/goose/releases/download/v{version}/goose_darwin_x86_64",
+          "sha256": "5770899121697b69a7c05fe9483f9bd4c6447e92fb3373b0933d1909e0449b62",
+          "archive": "raw"
+        },
+        "darwin/arm64": {
+          "url": "https://github.com/pressly/goose/releases/download/v{version}/goose_darwin_arm64",
+          "sha256": "c5bdc393d32052d59aa2df313a897770218dbecffa96da871a40c386e4124624",
+          "archive": "raw"
+        },
+        "linux/amd64": {
+          "url": "https://github.com/pressly/goose/releases/download/v{version}/goose_linux_x86_64",
+          "sha256": "cc56e2f75532a4dd52f5ef2d31db0121e91079a9c2617bc0ad4e04e2d41c228b",
+          "archive": "raw"
+        },
+        "linux/arm64": {
+          "url": "https://github.com/pressly/goose/releases/download/v{version}/goose_linux_arm64",
+          "sha256": "efdb8f97176df746cf3970ed40810816a51927da0600b152ac4359ae2b7c0e12",
+          "archive": "raw"
+        },
+        "windows/amd64": {
+          "url": "https://github.com/pressly/goose/releases/download/v{version}/goose_windows_x86_64.exe",
+          "sha256": "94310bf51677404bdb424895e60b24b1b9b8bebac77d88c58d7273be49f77a4b",
+          "archive": "raw"
+        },
+        "windows/arm64": {
+          "url": "https://github.com/pressly/goose/releases/download/v{version}/goose_windows_arm64.exe",
+          "sha256": "d0491bd5f901a1fa1d3b7b7e5670ea2d3804c0c1c3eb993a2b58d7c8dc14801c",
+          "archive": "raw"
+        }
+      }
     }
   ]
 }

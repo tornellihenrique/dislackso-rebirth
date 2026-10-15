@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package dislackso.v1;
+
+import "dislackso/v1/common.proto";
+
+// AuthService handles signing in and out and the account lifecycle before a
+// user is signed in. Successful Register and Login set the session cookie.
+service AuthService {
+  rpc GetSetupState(GetSetupStateRequest) returns (GetSetupStateResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+  rpc VerifyEmail(VerifyEmailRequest) returns (VerifyEmailResponse);
+  rpc ResendVerification(ResendVerificationRequest) returns (ResendVerificationResponse);
+  // Always succeeds, whether or not an account exists for the email.
+  rpc RequestPasswordReset(RequestPasswordResetRequest) returns (RequestPasswordResetResponse);
+  // Signs out every session of the account.
+  rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse);
+}
+
+message GetSetupStateRequest {}
+
+message GetSetupStateResponse {
+  bool setup_complete = 1;
+  string instance_name = 2;
+  RegistrationMode registration_mode = 3;
+  // Whether new accounts must confirm their email before using the app.
+  bool email_verification = 4;
+  // True while setup is pending and the request comes from the host machine.
+  bool setup_available_here = 5;
+}
+
+message RegisterRequest {
+  string username = 1;
+  string email = 2;
+  string password = 3;
+  // Required when registration is invite-only.
+  string invite_code = 4;
+}
+
+message RegisterResponse {
+  Me me = 1;
+}
+
+message LoginRequest {
+  // Username or email.
+  string login = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  Me me = 1;
+}
+
+message LogoutRequest {}
+
+message LogoutResponse {}
+
+message VerifyEmailRequest {
+  string token = 1;
+}
+
+message VerifyEmailResponse {}
+
+message ResendVerificationRequest {}
+
+message ResendVerificationResponse {}
+
+message RequestPasswordResetRequest {
+  string email = 1;
+}
+
+message RequestPasswordResetResponse {}
+
+message ResetPasswordRequest {
+  string token = 1;
+  string new_password = 2;
+}
+
+message ResetPasswordResponse {}

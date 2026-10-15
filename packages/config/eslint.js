@@ -31,6 +31,11 @@ export function typescript({ tsconfigRootDir }) {
           { checksVoidReturn: { attributes: false } },
         ],
         '@typescript-eslint/switch-exhaustiveness-check': 'error',
+        // TanStack Router guards throw redirect() results by design.
+        '@typescript-eslint/only-throw-error': [
+          'error',
+          { allow: [{ from: 'package', package: '@tanstack/router-core', name: 'Redirect' }] },
+        ],
         'no-restricted-syntax': [
           'error',
           { selector: 'ExportDefaultDeclaration', message: 'Use named exports.' },
@@ -60,6 +65,7 @@ export function react({ files }) {
     { ...reactHooks.configs.flat['recommended-latest'], files },
     { ...reactRefresh.configs.vite, files },
     { files, languageOptions: { globals: globals.browser } },
+    { files: TEST_FILES, rules: { 'react-refresh/only-export-components': 'off' } },
   ];
 }
 

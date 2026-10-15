@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package dislackso.v1;
+
+// User is the public profile shown to anyone who shares a guild with the user.
+message User {
+  string id = 1;
+  string username = 2;
+  string display_name = 3;
+}
+
+enum StatusPreference {
+  STATUS_PREFERENCE_UNSPECIFIED = 0;
+  STATUS_PREFERENCE_ONLINE = 1;
+  STATUS_PREFERENCE_IDLE = 2;
+  STATUS_PREFERENCE_DND = 3;
+  // Shown as offline to everyone else.
+  STATUS_PREFERENCE_INVISIBLE = 4;
+}
+
+// Me is the signed-in user's own account, including private fields.
+message Me {
+  User user = 1;
+  string email = 2;
+  bool email_verified = 3;
+  StatusPreference status = 4;
+  string custom_status = 5;
+  bool instance_admin = 6;
+  // Unix ms.
+  int64 created_at = 7;
+}
+
+enum RegistrationMode {
+  REGISTRATION_MODE_UNSPECIFIED = 0;
+  // A valid invite is required to register.
+  REGISTRATION_MODE_INVITE_ONLY = 1;
+  REGISTRATION_MODE_OPEN = 2;
+  REGISTRATION_MODE_CLOSED = 3;
+}
+
+// ErrorReason is attached to errors whose code alone does not tell the client
+// what happened, such as "invalid_credentials" or "registration_closed".
+message ErrorReason {
+  string reason = 1;
+}
+
+// FieldViolations is attached to InvalidArgument and AlreadyExists errors.
+message FieldViolations {
+  repeated FieldViolation violations = 1;
+}
+
+message FieldViolation {
+  // Request field name in lower_snake_case.
+  string field = 1;
+  // Stable, machine-readable reason such as "too_short" or "taken"; clients
+  // map it to a localized message.
+  string reason = 2;
+}
+
+// RateLimited is attached to ResourceExhausted errors.
+message RateLimited {
+  int64 retry_after_ms = 1;
+}

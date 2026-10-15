@@ -8,6 +8,10 @@ vars:
   TOOLS_BIN: '{{.ROOT}}/.tools/bin'
   BUF: '{{.TOOLS_BIN}}/buf{{exeExt}}'
   GOLANGCI_LINT: '{{.TOOLS_BIN}}/golangci-lint{{exeExt}}'
+  SQLC: '{{.TOOLS_BIN}}/sqlc{{exeExt}}'
+  GOOSE: '{{.TOOLS_BIN}}/goose{{exeExt}}'
+  MIGRATIONS_DIR: hub/internal/adapter/sqlite/migrations
+  DEV_SETUP_TOKEN: dev-setup-token
   HUB_BIN: '{{.ROOT}}/bin/hub{{exeExt}}'
   DEV_DIR: '{{.ROOT}}/.dev'
   GO_MODULES: hub tools
@@ -31,10 +35,10 @@ tasks:
       - go -C tools run ./cmd/fetchtools -manifest "{{.ROOT}}/tools/manifest.json" -bin "{{.TOOLS_BIN}}" {{.CLI_ARGS}}
 
   gen:
-    desc: Generate protobuf code (Go + TS)
-    dir: proto
+    desc: Generate protobuf code (Go + TS) and sqlc queries
     cmds:
-      - '"{{.BUF}}" generate'
+      - cd proto && "{{.BUF}}" generate
+      - cd hub && "{{.SQLC}}" generate
 
   gen:check:
     desc: Fail if generated code differs from what the generators produce now
@@ -43,16 +47,24 @@ tasks:
         go -C tools run ./cmd/gencheck -root "{{.ROOT}}" -dir proto
         {{range $d := splitList " " .GEN_DIRS}}-path {{$d}} {{end}}
         -- "{{.BUF}}" generate --output "{out}"
+      - cd hub && "{{.SQLC}}" diff
+
+  db:migration:
+    desc: 'Create a SQL migration (task db:migration -- add_guilds)'
+    cmds:
+      - '"{{.GOOSE}}" -dir "{{.ROOT}}/{{.MIGRATIONS_DIR}}" -s create {{.CLI_ARGS}} sql'
 
   dev:
-    desc: Run the hub and the Vite dev server (open http://localhost:5173)
+    desc: 'Run the hub and the Vite dev server (first run: http://localhost:5173/setup?token=dev-setup-token)'
     deps: [dev:hub, dev:web]
 
   dev:hub:
-    desc: Run the hub against a throwaway data dir in .dev/
+    desc: Run the hub against a throwaway data dir in .dev/, logging emails instead of sending them
     cmds:
       - go -C hub build -o "{{.DEV_DIR}}/hub{{exeExt}}" ./cmd/hub
-      - '"{{.DEV_DIR}}/hub{{exeExt}}" run --data-dir "{{.DEV_DIR}}/data" --log-level debug'
+      - >-
+        "{{.DEV_DIR}}/hub{{exeExt}}" run --data-dir "{{.DEV_DIR}}/data" --log-level debug
+        --mail-dev-log=true --setup-token {{.DEV_SETUP_TOKEN}}
 
   dev:web:
     desc: Run the Vite dev server, proxying API routes to the hub

@@ -10,16 +10,23 @@ import (
 	"net/http"
 
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/health"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/clientip"
 )
 
 type HealthChecker interface {
 	Check(ctx context.Context) health.Report
 }
 
+type SetupStatus interface {
+	Pending(ctx context.Context) (bool, error)
+}
+
 type Options struct {
 	// Files is the built web client, rooted at index.html.
-	Files  fs.FS
-	Health HealthChecker
+	Files    fs.FS
+	Health   HealthChecker
+	Setup    SetupStatus
+	ClientIP clientip.Resolver
 }
 
 // Register adds the routes to mux. The SPA catch-all is registered last on
@@ -27,7 +34,30 @@ type Options struct {
 func Register(mux *http.ServeMux, o Options) {
 	mux.HandleFunc("GET /healthz", liveness)
 	mux.Handle("GET /readyz", readiness(o.Health))
-	mux.Handle("/", newSPAHandler(o.Files))
+	spa := newSPAHandler(o.Files)
+	mux.Handle("GET /setup", setupPage(spa, o.Setup, o.ClientIP))
+	mux.Handle("/", spa)
+}
+
+// setupPage serves the wizard only to the host machine and only until setup
+// completes; the setup RPCs enforce the same rules.
+func setupPage(spa http.Handler, setup SetupStatus, resolveIP clientip.Resolver) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !resolveIP(r).IsLoopback() {
+			http.NotFound(w, r)
+			return
+		}
+		pending, err := setup.Pending(r.Context())
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+		if !pending {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
+		}
+		spa.ServeHTTP(w, r)
+	})
 }
 
 // liveness answers as long as the process serves HTTP.

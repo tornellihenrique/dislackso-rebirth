@@ -3,6 +3,8 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { createI18n, detectLanguage } from '@/core/i18n/i18n';
+import { loadSession } from '@/features/auth/session-actions';
+import { dispatchSession, sessionStore } from '@/stores/session';
 
 import { App } from './App';
 import { createAppRouter } from './router';
@@ -13,9 +15,25 @@ export async function startApp(container: HTMLElement): Promise<void> {
   document.documentElement.lang = language;
 
   const i18n = await createI18n(language);
+  const services = createServices(() => {
+    dispatchSession({ type: 'signedOut' });
+  });
+  try {
+    await loadSession(services.hub);
+  } catch {
+    // The hub is unreachable; RootLayout shows a retry screen.
+  }
+
   const queryClient = new QueryClient();
   const router = createAppRouter();
-  const services = createServices();
+  sessionStore.subscribe((next, prev) => {
+    if (prev.status === 'signedIn' && next.status !== 'signedIn') {
+      // Nothing cached for the previous account may leak into the next one.
+      queryClient.clear();
+      // Re-run the route guards, which send a signed-out user to the login page.
+      void router.invalidate();
+    }
+  });
 
   createRoot(container).render(
     <StrictMode>

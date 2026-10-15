@@ -23,7 +23,8 @@
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "react-i18next": "catalog:"
+    "react-i18next": "catalog:",
+    "zustand": "catalog:"
   },
   "devDependencies": {
     "@dislackso/config": "workspace:*",

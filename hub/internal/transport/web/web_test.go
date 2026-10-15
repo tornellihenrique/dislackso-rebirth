@@ -12,6 +12,7 @@ import (
 	"testing/fstest"
 
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/health"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/clientip"
 )
 
 type stubChecker struct{ report health.Report }
@@ -26,10 +27,43 @@ var builtClient = fstest.MapFS{
 	".gitkeep":           {Data: nil},
 }
 
+type stubSetup struct{ pending bool }
+
+func (s stubSetup) Pending(context.Context) (bool, error) { return s.pending, nil }
+
 func newMux(files fstest.MapFS, report health.Report) http.Handler {
+	return newMuxWithSetup(files, report, false)
+}
+
+func newMuxWithSetup(files fstest.MapFS, report health.Report, pending bool) http.Handler {
 	mux := http.NewServeMux()
-	Register(mux, Options{Files: files, Health: stubChecker{report: report}})
+	Register(mux, Options{Files: files, Health: stubChecker{report: report}, Setup: stubSetup{pending: pending}, ClientIP: clientip.RemoteAddr})
 	return SecurityHeaders(mux)
+}
+
+func TestSetupPage(t *testing.T) {
+	tests := []struct {
+		name     string
+		remote   string
+		pending  bool
+		wantCode int
+	}{
+		{"local while pending", "127.0.0.1:5000", true, http.StatusOK},
+		{"ipv6 loopback while pending", "[::1]:5000", true, http.StatusOK},
+		{"remote while pending", "203.0.113.9:5000", true, http.StatusNotFound},
+		{"local after setup", "127.0.0.1:5000", false, http.StatusSeeOther},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/setup?token=x", http.NoBody)
+			req.RemoteAddr = tt.remote
+			rec := httptest.NewRecorder()
+			newMuxWithSetup(builtClient, health.Report{}, tt.pending).ServeHTTP(rec, req)
+			if rec.Code != tt.wantCode {
+				t.Errorf("status = %d, want %d", rec.Code, tt.wantCode)
+			}
+		})
+	}
 }
 
 func TestSPA(t *testing.T) {

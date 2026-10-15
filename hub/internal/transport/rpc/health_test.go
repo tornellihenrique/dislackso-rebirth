@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -16,6 +17,7 @@ import (
 	dislacksov1 "github.com/tornellihenrique/dislackso-rebirth/hub/gen/dislackso/v1"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/gen/dislackso/v1/dislacksov1connect"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/health"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/clientip"
 )
 
 type stubChecker struct{ report health.Report }
@@ -25,7 +27,11 @@ func (s stubChecker) Check(context.Context) health.Report { return s.report }
 func newTestServer(t *testing.T, report health.Report) *httptest.Server {
 	t.Helper()
 	mux := http.NewServeMux()
-	Mount(mux, Services{Health: NewHealthHandler(stubChecker{report: report})})
+	Mount(mux, Deps{
+		Health:   stubChecker{report: report},
+		ClientIP: clientip.RemoteAddr,
+		Logger:   slog.New(slog.DiscardHandler),
+	})
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 	return srv

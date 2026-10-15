@@ -11,12 +11,28 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/clock"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/mail"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/password"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/ratelimit"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/secrets"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/snowflake"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/sqlite"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/token"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/buildinfo"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/config"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/account"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/auth"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/health"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/instance"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/invite"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/notify"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/settings"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/setup"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/clientip"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/rpc"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/web"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/webdist"
@@ -26,28 +42,102 @@ const (
 	readHeaderTimeout = 10 * time.Second
 	idleTimeout       = 2 * time.Minute
 	shutdownTimeout   = 10 * time.Second
+	// Each concurrent password hash holds 64 MiB.
+	maxConcurrentHashes = 4
 )
 
 type App struct {
 	cfg      config.Config
 	logger   *slog.Logger
+	db       *sqlite.DB
+	settings *settings.Service
+	setup    *setup.Service
 	server   *http.Server
 	listener net.Listener
+	devMail  bool
 }
 
-func New(cfg config.Config, logger *slog.Logger) (*App, error) {
+func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*App, error) {
 	files, err := webFiles(cfg.Web)
 	if err != nil {
 		return nil, err
 	}
+	if err := os.MkdirAll(cfg.DataDir, 0o700); err != nil {
+		return nil, fmt.Errorf("create data dir: %w", err)
+	}
+	db, err := sqlite.Open(ctx, filepath.Join(cfg.DataDir, "data.db"))
+	if err != nil {
+		return nil, err
+	}
+	a, err := wire(cfg, logger, db, files)
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	return a, nil
+}
 
-	healthSvc := health.NewService(clock.System{}, buildinfo.Version())
+func wire(cfg config.Config, logger *slog.Logger, db *sqlite.DB, files fs.FS) (*App, error) {
+	secretStore, err := secrets.OpenFile(filepath.Join(cfg.DataDir, "secrets.yaml"))
+	if err != nil {
+		return nil, err
+	}
+	clk := clock.System{}
+	ids, err := snowflake.New(clk, 0)
+	if err != nil {
+		return nil, err
+	}
+	tokens := token.Random{}
+	limiter := ratelimit.NewMemory(clk)
+	hasher := password.NewArgon2id(password.DefaultParams, maxConcurrentHashes)
+
+	settingsSvc := settings.New(db, secretStore, clk)
+	mailer := &mail.Router{Config: settingsSvc, SMTP: mail.SMTP{}}
+	if cfg.Mail.DevLog {
+		mailer.DevLog = &mail.Log{Logger: logger}
+	}
+	notifier := &notify.Notifier{Mailer: mailer, Settings: settingsSvc}
+
+	invites := invite.New(invite.Deps{
+		Tokens: db, Users: db, TokenGen: tokens, IDs: ids, Clock: clk, Settings: settingsSvc,
+	})
+	authSvc := auth.New(auth.Deps{
+		Users: db, Sessions: db, Tokens: db, Tx: db,
+		Hasher: hasher, TokenGen: tokens, IDs: ids, Clock: clk, Limiter: limiter,
+		Mail: mailer, Settings: settingsSvc, Emails: notifier, Invites: invites, Logger: logger,
+	})
+	accountSvc := account.New(account.Deps{
+		Users: db, Sessions: db, Tx: db, Hasher: hasher, Clock: clk, Limiter: limiter, Verification: authSvc,
+	})
+	instanceSvc := instance.New(instance.Deps{
+		Users: db, Sessions: db, Tx: db, Clock: clk,
+		Settings: settingsSvc, ResetLinks: authSvc, Emails: notifier,
+	})
+	setupToken := cfg.Setup.Token
+	if setupToken == "" {
+		if setupToken, err = tokens.NewToken(); err != nil {
+			return nil, err
+		}
+	}
+	setupSvc := setup.New(setup.Deps{
+		Users: db, Tx: db, Hasher: hasher, IDs: ids, Clock: clk, Limiter: limiter,
+		Settings: settingsSvc, Sessions: authSvc, Mail: mail.SMTP{}, Token: setupToken,
+	})
+	healthSvc := health.NewService(clk, buildinfo.Version(), db)
 
 	mux := http.NewServeMux()
-	rpc.Mount(mux, rpc.Services{
-		Health: rpc.NewHealthHandler(healthSvc),
+	rpc.Mount(mux, rpc.Deps{
+		Health:        healthSvc,
+		Auth:          authSvc,
+		Authenticator: authSvc,
+		Account:       accountSvc,
+		Instance:      instanceSvc,
+		Invites:       invites,
+		Setup:         setupSvc,
+		ClientIP:      clientip.RemoteAddr,
+		Logger:        logger,
 	})
-	web.Register(mux, web.Options{Files: files, Health: healthSvc})
+	web.Register(mux, web.Options{Files: files, Health: healthSvc, Setup: setupSvc, ClientIP: clientip.RemoteAddr})
 
 	server := &http.Server{
 		Handler:           web.AccessLog(logger)(web.SecurityHeaders(mux)),
@@ -55,7 +145,10 @@ func New(cfg config.Config, logger *slog.Logger) (*App, error) {
 		IdleTimeout:       idleTimeout,
 		ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelWarn),
 	}
-	return &App{cfg: cfg, logger: logger, server: server}, nil
+	return &App{
+		cfg: cfg, logger: logger, db: db, settings: settingsSvc, setup: setupSvc,
+		server: server, devMail: cfg.Mail.DevLog,
+	}, nil
 }
 
 func webFiles(cfg config.Web) (fs.FS, error) {
@@ -121,5 +214,36 @@ func (a *App) Run(ctx context.Context) error {
 		slog.String("version", buildinfo.Version()),
 		slog.String("data_dir", a.cfg.DataDir),
 	)
+	if err := a.announce(ctx, addr); err != nil {
+		return err
+	}
 	return a.Serve(ctx)
 }
+
+// announce tells the host what to do next: open the setup wizard, or
+// configure email.
+func (a *App) announce(ctx context.Context, addr net.Addr) error {
+	pending, err := a.setup.Pending(ctx)
+	if err != nil {
+		return err
+	}
+	if pending {
+		port := 0
+		if tcp, ok := addr.(*net.TCPAddr); ok {
+			port = tcp.Port
+		}
+		a.logger.WarnContext(ctx, "setup required: open the setup wizard on this machine",
+			slog.String("url", fmt.Sprintf("http://localhost:%d/setup?token=%s", port, a.setup.Token())))
+		return nil
+	}
+	st, err := a.settings.Get(ctx)
+	if err != nil {
+		return err
+	}
+	if !st.SMTP.Enabled && !a.devMail {
+		a.logger.WarnContext(ctx, "email is not configured: verification is off and password resets need an admin link")
+	}
+	return nil
+}
+
+func (a *App) Close() error { return a.db.Close() }
