@@ -24,6 +24,7 @@ type Deps struct {
 	Auth          AuthService
 	Authenticator Authenticator
 	Account       AccountService
+	EmailChanges  EmailChanger
 	Instance      InstanceService
 	Invites       InviteService
 	Setup         SetupService
@@ -43,7 +44,7 @@ func Mount(mux *http.ServeMux, d Deps) {
 	server := connect.NewServer()
 	dislacksov1connect.RegisterHealthServiceHandler(server, NewHealthHandler(d.Health))
 	dislacksov1connect.RegisterAuthServiceHandler(server, &authHandler{errorMapper: errs, svc: d.Auth})
-	dislacksov1connect.RegisterAccountServiceHandler(server, &accountHandler{errorMapper: errs, svc: d.Account})
+	dislacksov1connect.RegisterAccountServiceHandler(server, &accountHandler{errorMapper: errs, svc: d.Account, emails: d.EmailChanges})
 	dislacksov1connect.RegisterInstanceServiceHandler(server, &instanceHandler{errorMapper: errs, svc: d.Instance, invites: d.Invites})
 	dislacksov1connect.RegisterSetupServiceHandler(server, &setupHandler{errorMapper: errs, svc: d.Setup})
 	dislacksov1connect.RegisterGuildServiceHandler(server, &guildHandler{errorMapper: errs, svc: d.Guilds})

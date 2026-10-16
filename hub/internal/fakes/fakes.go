@@ -171,6 +171,10 @@ func (e *Emails) PasswordReset(_ context.Context, to, name, loc, link string) er
 	return e.record("reset", to, name, loc, link)
 }
 
+func (e *Emails) ConfirmEmailChange(_ context.Context, to, name, loc, link string) error {
+	return e.record("change_email", to, name, loc, link)
+}
+
 func (e *Emails) Test(_ context.Context, to, loc string) error {
 	return e.record("test", to, "", loc, "")
 }

@@ -18,6 +18,8 @@ type UserRepo interface {
 	UserByLogin(ctx context.Context, login string) (domain.User, error)
 	// UpdateUser writes every mutable field of u.
 	UpdateUser(ctx context.Context, u domain.User) error
+	// DeleteUser anonymizes the account and hides it from every lookup.
+	DeleteUser(ctx context.Context, id domain.ID, at time.Time) error
 	ListUsers(ctx context.Context) ([]domain.User, error)
 	// GuildUsers returns the users who are members of the guild.
 	GuildUsers(ctx context.Context, guildID domain.ID) ([]domain.User, error)

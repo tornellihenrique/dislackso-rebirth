@@ -41,6 +41,7 @@ type harness struct {
 	limiter  *fakes.Limiter
 	settings *stubSettings
 	invites  *stubInvites
+	events   *fakes.Events
 }
 
 func newHarness(t *testing.T) *harness {
@@ -61,6 +62,7 @@ func newHarness(t *testing.T) *harness {
 		settings: &stubSettings{s: st},
 		invites:  &stubInvites{},
 	}
+	h.events = fakes.NewEvents(h.store)
 	h.svc = New(Deps{
 		Users:    h.store,
 		Sessions: h.store,
@@ -75,6 +77,7 @@ func newHarness(t *testing.T) *harness {
 		Settings: h.settings,
 		Emails:   h.emails,
 		Invites:  h.invites,
+		Events:   h.events,
 		Logger:   slog.New(slog.DiscardHandler),
 	})
 	return h

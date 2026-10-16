@@ -26,6 +26,13 @@ var catalog = map[string]map[Kind]message{
 			Action:   "Choose a new password",
 			Outro:    "The link works once and expires in 30 minutes. If you did not ask for this, ignore this email and your password stays the same.",
 		},
+		KindChangeEmail: {
+			Subject:  "Confirm your new email for {instance}",
+			Greeting: "Hi {name},",
+			Intro:    "Confirm this address to make it the email of your account on {instance}.",
+			Action:   "Confirm new email",
+			Outro:    "The link expires in 24 hours. Until then your account keeps its current email. If you did not ask for this, ignore this email.",
+		},
 		KindTest: {
 			Subject:  "Test email from {instance}",
 			Greeting: "Hello,",
@@ -46,6 +53,13 @@ var catalog = map[string]map[Kind]message{
 			Intro:    "Alguém pediu para redefinir a senha da sua conta no {instance}.",
 			Action:   "Escolher uma nova senha",
 			Outro:    "O link funciona uma vez e expira em 30 minutos. Se você não pediu isso, ignore este email e sua senha continua a mesma.",
+		},
+		KindChangeEmail: {
+			Subject:  "Confirme seu novo email no {instance}",
+			Greeting: "Olá, {name},",
+			Intro:    "Confirme este endereço para que ele passe a ser o email da sua conta no {instance}.",
+			Action:   "Confirmar novo email",
+			Outro:    "O link expira em 24 horas. Até lá, sua conta continua com o email atual. Se você não pediu isso, ignore este email.",
 		},
 		KindTest: {
 			Subject:  "Email de teste do {instance}",

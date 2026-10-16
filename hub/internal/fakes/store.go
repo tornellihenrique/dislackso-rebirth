@@ -144,6 +144,16 @@ func (s *Store) UpdateUser(_ context.Context, u domain.User) error {
 	return nil
 }
 
+func (s *Store) DeleteUser(_ context.Context, id domain.ID, _ time.Time) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.users[id]; !ok {
+		return domain.ErrNotFound
+	}
+	delete(s.users, id)
+	return nil
+}
+
 func (s *Store) ListUsers(context.Context) ([]domain.User, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

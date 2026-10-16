@@ -158,10 +158,10 @@ func wire(ctx context.Context, cfg config.Config, logger *slog.Logger, db *sqlit
 	authSvc = auth.New(auth.Deps{
 		Users: db, Sessions: db, Tokens: db, Tx: db,
 		Hasher: hasher, TokenGen: tokens, IDs: ids, Clock: clk, Limiter: limiter,
-		Mail: mailer, Settings: settingsSvc, Emails: notifier, Invites: invites, Logger: logger,
+		Mail: mailer, Settings: settingsSvc, Emails: notifier, Invites: invites, Events: publisher, Logger: logger,
 	})
 	accountSvc := account.New(account.Deps{
-		Users: db, Sessions: db, Members: db, Files: db, Tx: db, Hasher: hasher, Clock: clk, Limiter: limiter,
+		Users: db, Sessions: db, Members: db, Guilds: db, Files: db, Tx: db, Hasher: hasher, Clock: clk, Limiter: limiter,
 		Events: publisher, Presence: tracker, Verification: authSvc,
 	})
 	guildSvc := guild.New(guild.Deps{
@@ -220,6 +220,7 @@ func wire(ctx context.Context, cfg config.Config, logger *slog.Logger, db *sqlit
 		Auth:          authSvc,
 		Authenticator: authSvc,
 		Account:       accountSvc,
+		EmailChanges:  authSvc,
 		Instance:      instanceSvc,
 		Invites:       invites,
 		Setup:         setupSvc,

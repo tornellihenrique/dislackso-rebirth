@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/sqlite/sqlcgen"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/domain"
@@ -74,6 +75,17 @@ func (db *DB) UpdateUser(ctx context.Context, u domain.User) error {
 	}
 	if n == 0 {
 		return fmt.Errorf("update user %d: %w", u.ID, domain.ErrNotFound)
+	}
+	return nil
+}
+
+func (db *DB) DeleteUser(ctx context.Context, id domain.ID, at time.Time) error {
+	n, err := db.writer(ctx).DeleteUser(ctx, sqlcgen.DeleteUserParams{At: toMS(at), ID: int64(id)})
+	if err != nil {
+		return fmt.Errorf("delete user %d: %w", id, mapError(err))
+	}
+	if n == 0 {
+		return fmt.Errorf("delete user %d: %w", id, domain.ErrNotFound)
 	}
 	return nil
 }

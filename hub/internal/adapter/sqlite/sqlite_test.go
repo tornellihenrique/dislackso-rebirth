@@ -137,6 +137,36 @@ func TestUsers(t *testing.T) {
 	}
 }
 
+func TestDeleteUser(t *testing.T) {
+	ctx := t.Context()
+	db := openTestDB(t)
+	if err := db.CreateUser(ctx, newUser(1, "alice", "alice@example.com")); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.DeleteUser(ctx, 1, t0.Add(time.Hour)); err != nil {
+		t.Fatalf("DeleteUser: %v", err)
+	}
+	for name, lookup := range map[string]func() error{
+		"by id":    func() error { _, err := db.UserByID(ctx, 1); return err },
+		"by email": func() error { _, err := db.UserByEmail(ctx, "alice@example.com"); return err },
+		"by login": func() error { _, err := db.UserByLogin(ctx, "alice"); return err },
+	} {
+		if err := lookup(); !errors.Is(err, domain.ErrNotFound) {
+			t.Errorf("lookup %s err = %v, want not found", name, err)
+		}
+	}
+	if n, _ := db.CountUsers(ctx); n != 0 {
+		t.Errorf("CountUsers = %d, want 0", n)
+	}
+	// The username and email are free for a new account.
+	if err := db.CreateUser(ctx, newUser(2, "alice", "alice@example.com")); err != nil {
+		t.Errorf("reuse username and email: %v", err)
+	}
+	if err := db.DeleteUser(ctx, 1, t0); !errors.Is(err, domain.ErrNotFound) {
+		t.Errorf("second delete err = %v, want not found", err)
+	}
+}
+
 func TestSessions(t *testing.T) {
 	ctx := t.Context()
 	db := openTestDB(t)

@@ -1,5 +1,5 @@
 // Package account manages the signed-in user's own account: profile,
-// password, status preference and sessions.
+// password, status preference, sessions and deletion.
 package account
 
 import (
@@ -12,6 +12,7 @@ import (
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/domain"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/events"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/ports"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/guild"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/internal/access"
 )
 
@@ -31,6 +32,7 @@ type Deps struct {
 	Users        ports.UserRepo
 	Sessions     ports.SessionRepo
 	Members      ports.MemberRepo
+	Guilds       ports.GuildRepo
 	Files        ports.FileRepo
 	Tx           ports.TxRunner
 	Hasher       ports.PasswordHasher
@@ -121,12 +123,8 @@ func (s *Service) ChangePassword(ctx context.Context, actor domain.Actor, curren
 	if err != nil {
 		return err
 	}
-	ok, err := s.d.Hasher.Verify(user.PasswordHash, current)
-	if err != nil {
-		return fmt.Errorf("verify password of user %d: %w", user.ID, err)
-	}
-	if !ok {
-		return domain.Invalid(domain.FieldViolation{Field: "current_password", Reason: domain.ReasonFieldIncorrect})
+	if err := s.checkPassword(user, current, "current_password"); err != nil {
+		return err
 	}
 	hash, err := s.d.Hasher.Hash(next)
 	if err != nil {
@@ -190,6 +188,76 @@ func (s *Service) update(ctx context.Context, actor domain.Actor, public bool, c
 func (s *Service) requireVerified(ctx context.Context, actor domain.Actor) error {
 	if !actor.EmailVerified && s.d.Verification.VerificationRequired(ctx) {
 		return domain.Precondition(domain.ReasonEmailNotVerified)
+	}
+	return nil
+}
+
+// DeleteAccount turns the account into an anonymous "Deleted User": it
+// leaves every server, its sessions end and its username and email become
+// free. Servers it owns must be handed over or deleted first, and the last
+// instance admin cannot leave the instance without one.
+func (s *Service) DeleteAccount(ctx context.Context, actor domain.Actor, password string) error {
+	if ok, retry := s.d.Limiter.Allow("password:user:"+actor.UserID.String(), limitChangePassword); !ok {
+		return domain.RateLimited(retry)
+	}
+	user, err := s.d.Users.UserByID(ctx, actor.UserID)
+	if err != nil {
+		return err
+	}
+	if err := s.checkPassword(user, password, "password"); err != nil {
+		return err
+	}
+	owned, err := s.d.Guilds.CountGuildsOwnedBy(ctx, user.ID)
+	if err != nil {
+		return err
+	}
+	if owned > 0 {
+		return domain.Precondition(domain.ReasonOwnsGuilds)
+	}
+	if user.IsInstanceAdmin {
+		if err := s.otherAdminExists(ctx, user.ID); err != nil {
+			return err
+		}
+	}
+	return s.d.Tx.InTx(ctx, func(ctx context.Context) error {
+		memberships, err := s.d.Members.UserMemberships(ctx, user.ID)
+		if err != nil {
+			return err
+		}
+		for _, m := range memberships {
+			if err := s.d.Members.RemoveMember(ctx, m.GuildID, user.ID); err != nil {
+				return err
+			}
+			guild.RemovedMember(ctx, s.d.Events, m.GuildID, user.ID, events.ReasonLeft)
+		}
+		now := s.d.Clock.Now()
+		if _, err := s.d.Sessions.RevokeUserSessions(ctx, user.ID, 0, now); err != nil {
+			return err
+		}
+		return s.d.Users.DeleteUser(ctx, user.ID, now)
+	})
+}
+
+func (s *Service) otherAdminExists(ctx context.Context, self domain.ID) error {
+	users, err := s.d.Users.ListUsers(ctx)
+	if err != nil {
+		return err
+	}
+	for _, u := range users {
+		if u.IsInstanceAdmin && u.ID != self && !u.Disabled() {
+			return nil
+		}
+	}
+	return domain.Precondition(domain.ReasonLastInstanceAdmin)
+}
+
+func (s *Service) checkPassword(user domain.User, password, field string) error {
+	ok, err := s.d.Hasher.Verify(user.PasswordHash, password)
+	if err != nil {
+		return fmt.Errorf("verify password of user %d: %w", user.ID, err)
+	}
+	if !ok {
+		return domain.Invalid(domain.FieldViolation{Field: field, Reason: domain.ReasonFieldIncorrect})
 	}
 	return nil
 }
