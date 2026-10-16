@@ -944,6 +944,7 @@ export const ptBR: Messages = {
       sessions_other: '{{relayed}} de {{count}} conexões de voz passam pela retransmissão agora.',
       overBudget:
         'O orçamento acabou: a retransmissão fica desligada até o mês que vem ou até você aumentar o orçamento.',
+      nearBudget: 'O uso da retransmissão passou de 90 % do orçamento deste mês.',
       test: 'Testar a retransmissão',
       testBody:
         'Verifica, a partir deste navegador, se uma chamada consegue se conectar só pela retransmissão.',

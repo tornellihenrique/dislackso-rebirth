@@ -131,6 +131,12 @@ export function turnSettingsFrom(f: RelayForm): MessageInitShape<typeof TurnSett
 }
 
 const GB = 1e9;
+/** From this share of the budget on, admins are warned (ARCHITECTURE §4.4). */
+const WARN_SHARE = 0.9;
+
+export function nearBudget(u: { monthBytes: bigint; budgetGb: number }): boolean {
+  return u.budgetGb > 0 && Number(u.monthBytes) >= WARN_SHARE * u.budgetGb * GB;
+}
 
 /** Bytes as gigabytes with one decimal, the unit relay budgets use. */
 export function gigabytes(bytes: bigint): number {

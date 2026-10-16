@@ -17,6 +17,7 @@ import { CheckboxField, SelectField, TextAreaField, TextField } from '@/ui/Field
 
 import {
   gigabytes,
+  nearBudget,
   RELAY_CHOICES,
   relayFormFrom,
   turnSettingsFrom,
@@ -237,6 +238,9 @@ function Usage({ usage }: { usage: TurnUsage }) {
         </p>
       )}
       {usage.overBudget && <Alert tone="error">{t('connectivity.relay.overBudget')}</Alert>}
+      {!usage.overBudget && nearBudget(usage) && (
+        <Alert tone="info">{t('connectivity.relay.nearBudget')}</Alert>
+      )}
     </div>
   );
 }

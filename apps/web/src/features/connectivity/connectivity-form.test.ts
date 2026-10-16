@@ -11,6 +11,7 @@ import {
   exposureFormFrom,
   exposureSettingsFrom,
   gigabytes,
+  nearBudget,
   relayFormFrom,
   turnSettingsFrom,
 } from './connectivity-form';
@@ -69,6 +70,14 @@ describe('relay form', () => {
     expect(
       turnSettingsFrom({ ...relayFormFrom(undefined), budgetGb: 'lots' }).monthlyBudgetGb,
     ).toBe(-1);
+  });
+});
+
+describe('nearBudget', () => {
+  it('warns from 90 % of a budget, and never without one', () => {
+    expect(nearBudget({ monthBytes: 899_000_000_000n, budgetGb: 1000 })).toBe(false);
+    expect(nearBudget({ monthBytes: 900_000_000_000n, budgetGb: 1000 })).toBe(true);
+    expect(nearBudget({ monthBytes: 5_000_000_000_000n, budgetGb: 0 })).toBe(false);
   });
 });
 

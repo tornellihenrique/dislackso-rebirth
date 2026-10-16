@@ -933,6 +933,7 @@ export const en = {
       sessions_other: '{{relayed}} of {{count}} voice connections go through the relay now.',
       overBudget:
         'The budget is spent: the relay is off until next month, or until you raise the budget.',
+      nearBudget: "Relay use is above 90 % of this month's budget.",
       test: 'Test the relay',
       testBody: 'Checks from this browser that a call can connect through the relay alone.',
       testPassed: 'The relay works: this browser connected through it.',
