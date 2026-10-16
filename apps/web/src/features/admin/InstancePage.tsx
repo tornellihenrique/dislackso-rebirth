@@ -1,4 +1,5 @@
 import { RegistrationMode } from '@dislackso/contracts/gen/dislackso/v1/common_pb';
+import { ExposureState } from '@dislackso/contracts/gen/dislackso/v1/connectivity_pb';
 import type { InstanceSettings } from '@dislackso/contracts/gen/dislackso/v1/instance_pb';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -16,9 +17,8 @@ import { Button } from '@/ui/Button';
 import { SelectField, TextField } from '@/ui/Fields';
 
 import { InvitesSection } from './InvitesSection';
+import { connectivityQuery, INSTANCE_SETTINGS_KEY } from './queries';
 import { UsersSection } from './UsersSection';
-
-const SETTINGS_KEY = ['instance', 'settings'] as const;
 
 const MODE_OPTIONS = [
   RegistrationMode.INVITE_ONLY,
@@ -30,7 +30,7 @@ export function InstancePage() {
   const { t } = useTranslation();
   const { hub } = useServices();
   const settings = useQuery({
-    queryKey: SETTINGS_KEY,
+    queryKey: INSTANCE_SETTINGS_KEY,
     queryFn: async () => (await hub.instance.getSettings({})).settings,
   });
   const errors = useApiErrors(settings.error);
@@ -62,10 +62,18 @@ function GeneralForm({ settings }: SettingsFormProps) {
   const [name, setName] = useState(settings.name);
   const [publicUrl, setPublicUrl] = useState(settings.publicUrl);
   const [mode, setMode] = useState(settings.registrationMode);
+  // A running exposure provider owns the public URL and keeps it current.
+  const exposure = useQuery({ ...connectivityQuery(hub), select: (c) => c?.status }).data;
+  const managed = exposure?.state === ExposureState.RUNNING && exposure.url !== '';
   const mutation = useMutation({
-    mutationFn: () => hub.instance.updateSettings({ name, publicUrl, registrationMode: mode }),
+    mutationFn: () =>
+      hub.instance.updateSettings({
+        name,
+        registrationMode: mode,
+        ...(managed ? {} : { publicUrl }),
+      }),
     onSuccess: async (res) => {
-      queryClient.setQueryData(SETTINGS_KEY, res.settings);
+      queryClient.setQueryData(INSTANCE_SETTINGS_KEY, res.settings);
       await loadInstance(hub);
     },
   });
@@ -93,9 +101,10 @@ function GeneralForm({ settings }: SettingsFormProps) {
         />
         <TextField
           label={t('setup.instance.publicUrl')}
-          hint={t('setup.instance.publicUrlHint')}
+          hint={managed ? t('admin.general.publicUrlManaged') : t('setup.instance.publicUrlHint')}
           type="url"
-          value={publicUrl}
+          readOnly={managed}
+          value={managed ? exposure.url : publicUrl}
           error={errors.field('public_url')}
           onChange={(e) => {
             setPublicUrl(e.target.value);
@@ -131,7 +140,7 @@ function EmailForm({ settings }: SettingsFormProps) {
   const save = useMutation({
     mutationFn: () => hub.instance.updateSettings({ smtp: smtpSettingsFromForm(smtp) }),
     onSuccess: async (res) => {
-      queryClient.setQueryData(SETTINGS_KEY, res.settings);
+      queryClient.setQueryData(INSTANCE_SETTINGS_KEY, res.settings);
       setSmtp((f) => ({ ...f, password: '' }));
       await loadInstance(hub);
     },

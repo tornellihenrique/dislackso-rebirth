@@ -231,3 +231,27 @@ export function readConnection(report: StatsReport): ConnectionStats {
     codec: audio ? codecName(report, audio) : '',
   };
 }
+
+/** What one peer connection carried, and over which path. */
+export interface TransportReading {
+  readonly path: PathStats;
+  readonly bytesSent: number;
+  readonly bytesReceived: number;
+}
+
+/**
+ * The bytes a peer connection moved so far: from its transport, or from the
+ * selected candidate pair where the browser has no transport stats (Firefox).
+ */
+export function readTransport(report: StatsReport): TransportReading | undefined {
+  const all = stats(report);
+  const counted =
+    all.find((s) => s.type === 'transport' && num(s, 'bytesSent') !== undefined) ??
+    all.find((s) => s.type === 'candidate-pair' && s.nominated === true && s.state === 'succeeded');
+  if (!counted) return undefined;
+  return {
+    path: readPath(report),
+    bytesSent: num(counted, 'bytesSent') ?? 0,
+    bytesReceived: num(counted, 'bytesReceived') ?? 0,
+  };
+}

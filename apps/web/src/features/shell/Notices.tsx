@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import { X } from 'lucide-react';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -5,6 +6,17 @@ import { useTranslation } from 'react-i18next';
 import { dispatchNotices, useNotices, type Notice } from '@/stores/notices';
 
 const DISMISS_AFTER_MS = 6000;
+
+function noticeText(t: TFunction, notice: Notice): string {
+  switch (notice.kind) {
+    case 'guildLost':
+      return t(`notices.${notice.reason}`, { name: notice.guildName });
+    case 'exposure':
+      return t(`notices.exposure.${notice.state}`, { url: notice.url });
+    case 'message':
+      return notice.text;
+  }
+}
 
 function NoticeItem({ notice }: { notice: Notice }) {
   const { t } = useTranslation();
@@ -16,10 +28,7 @@ function NoticeItem({ notice }: { notice: Notice }) {
       clearTimeout(id);
     };
   }, [notice.id]);
-  const text =
-    notice.kind === 'guildLost'
-      ? t(`notices.${notice.reason}`, { name: notice.guildName })
-      : notice.text;
+  const text = noticeText(t, notice);
   return (
     <li className="flex items-start gap-3 rounded-md bg-floating px-4 py-3 text-sm shadow-xl">
       <p className="flex-1">{text}</p>

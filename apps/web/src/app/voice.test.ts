@@ -1,5 +1,6 @@
 import { create } from '@bufbuild/protobuf';
 import {
+  CandidateType,
   InstanceInfoSchema,
   VoiceForcedAction,
   VoiceForcedSchema,
@@ -88,6 +89,10 @@ class FakeSession {
     this.calls.push('stopShare');
     return Promise.resolve();
   }
+  readings = new Map<string, unknown>();
+  transportReadings() {
+    return Promise.resolve(this.readings);
+  }
 }
 
 vi.mock('@/core/media/voice-session', () => ({ VoiceSession: FakeSession }));
@@ -116,7 +121,7 @@ function setup() {
   const leave = vi.fn(() => Promise.resolve({}));
   const hub = { voice: { join, leave } } as unknown as HubClients;
   const played: string[] = [];
-  const gateway = { setVoiceSelf: vi.fn() };
+  const gateway = { setVoiceSelf: vi.fn(), sendTelemetry: vi.fn() };
   const t = ((key: string) => key) as unknown as TFunction;
   const host = document.createElement('div');
   const voice = new VoiceController({ hub, sounds: { play: (k) => played.push(k) }, t, host });
@@ -157,6 +162,31 @@ describe('VoiceController', () => {
     });
     expect(gateway.setVoiceSelf).toHaveBeenCalledWith('s1', false, false);
     expect(played).toEqual(['join']);
+  });
+
+  it('reports what the call carried every 30 s, and stops when it ends', async () => {
+    vi.useFakeTimers();
+    try {
+      const { voice, gateway, session } = setup();
+      await voice.join('g', 'c1');
+      const path = (candidate: string) => ({ candidate, protocol: 'udp', rttMs: 30 });
+      const readings = session()?.readings;
+      readings?.set('publisher', { path: path('host'), bytesSent: 1000, bytesReceived: 10 });
+      readings?.set('subscriber', { path: path('relay'), bytesSent: 20, bytesReceived: 5000 });
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(gateway.sendTelemetry).toHaveBeenCalledWith({
+        voiceSessionId: 's1',
+        candidate: CandidateType.RELAY,
+        bytesSent: 1020n,
+        bytesReceived: 5010n,
+        rttMs: 30,
+      });
+      await voice.leave();
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(gateway.sendTelemetry).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('deafens in a call and tells the hub', async () => {

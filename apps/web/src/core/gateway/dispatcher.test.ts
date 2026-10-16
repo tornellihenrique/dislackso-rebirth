@@ -20,6 +20,7 @@ function setup() {
     ready: vi.fn(),
     listChanged: vi.fn(),
     guildLost: vi.fn(),
+    exposureChanged: vi.fn(),
   } satisfies DispatchTargets;
   const dispatch = createGatewayDispatcher(t);
   const event = (e: MessageInitShape<typeof ServerFrameSchema>) => {
@@ -66,6 +67,12 @@ describe('createGatewayDispatcher', () => {
     dispatchOf({
       kind: { case: 'presenceUpdate', value: { userId: '7', status: PresenceStatus.IDLE } },
     });
+    dispatchOf({
+      kind: { case: 'exposureChanged', value: { url: 'https://team.example.ts.net' } },
+    });
+    expect(t.exposureChanged).toHaveBeenCalledWith(
+      expect.objectContaining({ url: 'https://team.example.ts.net' }),
+    );
     expect(t.entities.mock.calls.map((c) => (c[0] as { type: string }).type)).toEqual([
       'channelRemoved',
       'guildRemoved',

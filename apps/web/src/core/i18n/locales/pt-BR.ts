@@ -48,6 +48,11 @@ export const ptBR: Messages = {
     banned: 'Você foi banido de {{name}}.',
     deleted: '{{name}} foi excluído.',
     dismiss: 'Dispensar',
+    exposure: {
+      running: 'O hub está acessível em {{url}}.',
+      needsLogin: 'Conecte o hub ao Tailscale em Configurações → Conectividade.',
+      failed: 'O hub não está mais acessível de fora. Veja Configurações → Conectividade.',
+    },
   },
   userPanel: {
     setStatus: 'Definir status',
@@ -515,6 +520,13 @@ export const ptBR: Messages = {
       failed: 'Não foi possível confirmar',
       continue: 'Continuar',
     },
+    confirmEmail: {
+      checking: 'Confirmando seu novo email…',
+      done: 'Email alterado',
+      doneBody: 'Sua conta agora usa este endereço.',
+      failed: 'Não foi possível confirmar',
+      taken: 'Outra conta já usa esse endereço.',
+    },
     forgot: {
       title: 'Redefinir sua senha',
       body: 'Informe o email da sua conta e enviaremos um link para redefinir a senha.',
@@ -564,8 +576,8 @@ export const ptBR: Messages = {
     },
     connectivity: {
       title: 'Conectividade',
-      body: 'Deixar o hub acessível pela internet (Tailscale Funnel, Cloudflare Tunnel) e os servidores de retransmissão de voz chegam em uma versão futura.',
-      reachable: 'Por enquanto, quem estiver na mesma rede acessa esta instância em {{url}}.',
+      body: 'Depois da configuração, escolha como seus colegas chegam ao hub. O Tailscale Funnel dá um endereço https gratuito e fixo; um túnel rápido do Cloudflare nem precisa de conta.',
+      next: 'Ao concluir, a página de Conectividade abre. Até lá, só esta máquina consegue abrir o hub.',
     },
   },
   email: {
@@ -598,6 +610,7 @@ export const ptBR: Messages = {
       appearance: 'Aparência',
       sessions: 'Sessões',
       instance: 'Instância',
+      connectivity: 'Conectividade',
     },
     voice: {
       title: 'Voz e áudio',
@@ -672,6 +685,22 @@ export const ptBR: Messages = {
       changePassword: 'Alterar senha',
       currentPassword: 'Senha atual',
       passwordChanged: 'Senha alterada. Suas outras sessões foram encerradas.',
+      changeEmail: 'Alterar email',
+      changeEmailBody:
+        'Enviamos um link para o novo endereço; a alteração vale quando você o abrir.',
+      newEmail: 'Novo email',
+      changeEmailSubmit: 'Alterar email',
+      emailSent:
+        'Verifique {{email}} e abra o link para concluir. Até lá, seu email continua o mesmo.',
+      emailChanged: 'Email alterado.',
+      delete: {
+        title: 'Excluir conta',
+        body: 'Sai de todos os servidores e remove seu perfil de vez. Os servidores que você é dono precisam ser transferidos ou excluídos antes.',
+        open: 'Excluir conta',
+        confirmTitle: 'Excluir sua conta?',
+        confirmBody: 'Isso não pode ser desfeito. Digite sua senha para confirmar.',
+        confirm: 'Excluir conta',
+      },
     },
     profile: {
       title: 'Perfil',
@@ -724,6 +753,8 @@ export const ptBR: Messages = {
       inviteOnly: 'Somente com convite',
       open: 'Aberto para quem tiver o link',
       closed: 'Fechado',
+      publicUrlManaged:
+        'Definida em Configurações → Conectividade enquanto o endereço público funciona.',
     },
     email: {
       title: 'Email',
@@ -753,6 +784,203 @@ export const ptBR: Messages = {
       resetLink: 'Link de redefinição de senha',
       resetLinkCreated: 'Envie este link para {{name}}. Ele funciona uma vez e expira {{when}}.',
       you: 'Você',
+    },
+  },
+  connectivity: {
+    title: 'Conectividade',
+    body: 'Como as pessoas chegam a este hub e quão bem as chamadas se conectam.',
+    secretKeep: 'Deixe em branco para manter o que está salvo',
+    exposure: {
+      title: 'Endereço público',
+      body: 'Seus colegas abrem este endereço no navegador. O áudio e o vídeo das chamadas não passam por ele.',
+      how: 'Como as pessoas chegam ao hub',
+      apply: 'Salvar e reiniciar',
+      applied: 'Salvo. O endereço reinicia com as novas configurações.',
+      address: 'Endereço',
+      login: 'Entrar no Tailscale',
+      loginBody:
+        'Abra o link e entre na sua conta do Tailscale para conectar o hub. Esta página atualiza quando terminar.',
+      tailscaleHostname: 'Nome da máquina',
+      tailscaleHostnameHint: 'O endereço fica https://<nome>.<sua tailnet>.ts.net.',
+      tunnelUrl: 'URL pública',
+      tunnelUrlHint: 'O hostname público que você apontou para este túnel no Cloudflare.',
+      tunnelToken: 'Token do túnel',
+      tunnelTokenHint:
+        'No painel do Cloudflare: Zero Trust → Networks → Tunnels → seu túnel → o valor longo depois de --token no comando de instalação.',
+      directDomain: 'Domínio',
+      directEmail: 'Email de contato (opcional)',
+      directEmailHint: "O Let's Encrypt escreve para cá antes de um certificado expirar.",
+      listenAddr: 'Endereço de escuta',
+      directAddrHint: 'A porta 443 precisa chegar a esta máquina pela internet.',
+      lanAddrHint:
+        'Normalmente 0.0.0.0:7443; os outros dispositivos abrem https://<IP desta máquina>:7443.',
+      states: {
+        off: 'Só esta máquina consegue abrir o hub.',
+        starting: 'Iniciando {{provider}}…',
+        needsLogin: '{{provider}} precisa que você entre na sua conta.',
+        running: 'Acessível pelo {{provider}}.',
+        failed: '{{provider}} não está funcionando.',
+      },
+      choices: {
+        tailscale: {
+          label: 'Tailscale Funnel (recomendado)',
+          hint: 'Um endereço https://….ts.net gratuito e fixo. Precisa de uma conta gratuita do Tailscale; nada para instalar.',
+        },
+        quick: {
+          label: 'Túnel rápido do Cloudflare',
+          hint: 'Um endereço aleatório https://….trycloudflare.com, sem conta. Ele muda sempre que o hub inicia e os links param de funcionar, então serve para um primeiro teste.',
+        },
+        tunnel: {
+          label: 'Cloudflare Tunnel (domínio próprio)',
+          hint: 'Seu próprio domínio no Cloudflare (plano gratuito). Crie um túnel no painel do Cloudflare e aponte o hostname público para http://localhost:7301.',
+        },
+        direct: {
+          label: 'Endereço público com domínio',
+          hint: "Esta máquina tem um IP público e seu domínio aponta para ela. O hub obtém sozinho um certificado do Let's Encrypt.",
+        },
+        lan: {
+          label: 'Só esta rede',
+          hint: 'Os dispositivos da sua rede abrem o hub com um certificado autoassinado; os navegadores avisam sobre ele uma vez.',
+        },
+        local: {
+          label: 'Só esta máquina',
+          hint: 'Ninguém mais consegue acessar o hub.',
+        },
+      },
+    },
+    problems: {
+      tailscale_https_disabled:
+        'Ative os certificados HTTPS da sua tailnet: console de administração do Tailscale → DNS → HTTPS Certificates → Enable. O hub tenta de novo sozinho.',
+      tailscale_funnel_not_allowed:
+        'Sua tailnet ainda não permite o Funnel para esta máquina. No console de administração do Tailscale, abra Access controls e permita o Funnel (o console oferece isso), depois espere um minuto.',
+      tailscale_login: 'Conecte o hub ao Tailscale com o botão acima.',
+      cloudflared_download_failed:
+        'Não foi possível baixar o cloudflared do GitHub. Verifique a conexão com a internet; o hub tenta de novo.',
+      cloudflared_exited:
+        'O cloudflared parou. O log dele fica na pasta de dados, em logs/cloudflared.log.',
+      tunnel_token_missing: 'Cole o token do túnel do painel do Cloudflare.',
+      address_in_use: 'Outro programa usa essa porta. Feche-o ou escolha outro endereço.',
+      certificate_failed:
+        'Não foi possível obter um certificado. Verifique se o domínio aponta para esta máquina e se a porta 443 chega até ela.',
+      exposure_failed: 'Algo deu errado; o hub tenta de novo. Os detalhes abaixo podem ajudar.',
+    },
+    selfTest: {
+      title: 'Alcance da voz',
+      body: 'Quão bem pessoas de fora da sua rede conseguem entrar nas chamadas deste hub.',
+      notRun: 'O teste ainda não rodou.',
+      run: 'Rodar o teste',
+      runAgain: 'Rodar de novo',
+      yes: 'Sim',
+      no: 'Não',
+      media: 'Servidor de mídia',
+      mediaUp: 'Funcionando',
+      mediaDown: 'Parado',
+      nat: 'Roteador',
+      publicIpv4: 'IPv4 público',
+      ipv6: 'IPv6',
+      portForwarding: 'Redirecionamento de portas',
+      forwarded: '{{protocol}}: {{external}}',
+      notForwarded: 'Indisponível',
+      relay: 'Retransmissão (TURN)',
+      checked: 'Verificado',
+      ratings: {
+        excellent: {
+          label: 'Excelente',
+          body: 'Pessoas de qualquer lugar se conectam direto a esta máquina.',
+        },
+        good: {
+          label: 'Bom',
+          body: 'A maioria das pessoas se conecta direto a esta máquina; algumas redes restritas podem precisar de retransmissão.',
+        },
+        relayDependent: {
+          label: 'Precisa de retransmissão',
+          body: 'Pessoas de fora da sua rede só se conectam por um servidor de retransmissão (TURN).',
+        },
+        offline: {
+          label: 'Sem internet',
+          body: 'Esta máquina está sem internet, então só a sua rede local consegue entrar nas chamadas.',
+        },
+      },
+      nats: {
+        noInternet: 'Sem conexão com a internet',
+        open: 'Nenhum no caminho (endereço público)',
+        portPreserving: 'Mantém as portas, as chamadas costumam conectar direto',
+        endpointIndependent: 'NAT comum',
+        symmetric: 'NAT restrito, as chamadas precisam de retransmissão',
+      },
+    },
+    advice: {
+      offline_host: 'Conecte esta máquina à internet e reinicie o hub.',
+      media_down:
+        'O servidor de mídia não está rodando, então as chamadas não funcionam. Veja o console do hub ou logs/livekit.log.',
+      enable_upnp:
+        'Ative UPnP ou NAT-PMP nas configurações do roteador, ou redirecione a porta UDP 7882 e a porta TCP 7881 para esta máquina, e rode o teste de novo.',
+      relay_needed:
+        'Configure uma retransmissão abaixo para que todos consigam entrar nas chamadas; o plano gratuito do Cloudflare atende uma equipe pequena.',
+      relay_quota:
+        'As chamadas de fora passam pela retransmissão e contam no orçamento mensal dela.',
+      exposure_off:
+        'Escolha acima como as pessoas chegam ao hub; por enquanto só esta máquina consegue abri-lo.',
+      exposure_down: 'O endereço público do hub não está funcionando agora; veja acima.',
+    },
+    relay: {
+      title: 'Retransmissão de voz (TURN)',
+      body: 'Uma retransmissão leva as chamadas de quem está em uma rede que bloqueia conexões diretas. Só essas chamadas a usam.',
+      provider: 'Retransmissão',
+      keyId: 'ID da chave TURN',
+      apiToken: 'Token da API',
+      urls: 'URLs TURN',
+      urlsHint: 'Uma por linha, como turn:turn.example.com:3478.',
+      username: 'Usuário',
+      password: 'Senha',
+      sharedSecret: 'Segredo compartilhado',
+      budget: 'Orçamento mensal (GB)',
+      budgetHint:
+        'O hub para de liberar a retransmissão quando o mês chega a este valor; 0 significa sem limite.',
+      override: 'Manter a retransmissão ligada além do orçamento',
+      usage: '{{used}} GB de {{budget}} GB usados neste mês, no ritmo de {{projected}} GB.',
+      usageNoBudget: '{{used}} GB usados neste mês, no ritmo de {{projected}} GB.',
+      sessions_one: '{{relayed}} de {{count}} conexão de voz passa pela retransmissão agora.',
+      sessions_other: '{{relayed}} de {{count}} conexões de voz passam pela retransmissão agora.',
+      overBudget:
+        'O orçamento acabou: a retransmissão fica desligada até o mês que vem ou até você aumentar o orçamento.',
+      test: 'Testar a retransmissão',
+      testBody:
+        'Verifica, a partir deste navegador, se uma chamada consegue se conectar só pela retransmissão.',
+      testPassed: 'A retransmissão funciona: este navegador se conectou por ela.',
+      testFailed:
+        'Este navegador não conseguiu se conectar pela retransmissão. Verifique as configurações dela.',
+      choices: {
+        none: {
+          label: 'Nenhuma',
+          hint: 'Quem estiver em redes restritas pode não conseguir entrar nas chamadas.',
+        },
+        cloudflare: {
+          label: 'Cloudflare Realtime TURN',
+          hint: 'Gratuito nos primeiros 1.000 GB por mês. Crie uma chave TURN no painel do Cloudflare (Realtime → TURN Server) e cole o ID e o token da API.',
+        },
+        static: {
+          label: 'Servidor TURN com usuário',
+          hint: 'Qualquer servidor TURN com usuário e senha fixos.',
+        },
+        coturn: {
+          label: 'coturn com segredo compartilhado',
+          hint: 'Um servidor coturn configurado com use-auth-secret; o hub cria senhas de curta duração.',
+        },
+      },
+    },
+    host: {
+      title: 'Este computador',
+      body: 'Configurações da máquina que roda o hub.',
+      remote: 'Abra esta página na máquina que roda o hub para mudar estas opções.',
+      keepAwake: 'Manter este computador acordado enquanto o hub roda',
+      keepAwakeHint: 'A tela ainda pode desligar; o computador não entra em suspensão.',
+      runAtLogin: 'Iniciar o hub quando eu entrar neste computador',
+      runAtLoginHint: 'Ele inicia do mesmo jeito que você o iniciou desta vez.',
+      firewall: 'Liberar a voz no Firewall do Windows',
+      firewallBody:
+        'Se as chamadas de fora falham, o Firewall do Windows pode estar bloqueando o servidor de mídia.',
+      firewallAsked: 'O Windows pede para você confirmar. Depois disso, rode o teste de novo.',
     },
   },
   errors: {
@@ -795,6 +1023,11 @@ export const ptBR: Messages = {
       not_voice_channel: 'Esse não é um canal de voz.',
       not_in_voice: 'Essa pessoa não está na voz.',
       voice_unavailable: 'A voz não está disponível nesta instância agora.',
+      owns_guilds: 'Transfira ou exclua antes os servidores dos quais você é dono.',
+      last_instance_admin:
+        'Torne outra pessoa administradora da instância antes, para que ela continue tendo uma.',
+      relay_not_configured: 'Configure uma retransmissão antes.',
+      unsupported: 'Este computador não oferece isso.',
     },
     fields: {
       required: 'Obrigatório.',
@@ -804,6 +1037,7 @@ export const ptBR: Messages = {
       taken: 'Já está em uso.',
       too_common: 'Fácil demais de adivinhar. Escolha algo menos comum.',
       incorrect: 'Incorreto.',
+      unchanged: 'Igual ao atual.',
       invalid: 'Inválido ou expirado.',
       unsupported_file: 'Use uma imagem PNG, JPEG, GIF ou WebP.',
       image_too_large:
