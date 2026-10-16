@@ -18,6 +18,7 @@ export default defineConfig([
     files: [
       '**/vite.config.ts',
       '**/playwright.config.ts',
+      '**/playwright.bench.config.ts',
       'prettier.config.js',
       'eslint.config.js',
     ],

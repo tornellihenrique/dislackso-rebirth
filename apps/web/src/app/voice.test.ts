@@ -1,8 +1,10 @@
 import { create } from '@bufbuild/protobuf';
 import {
+  InstanceInfoSchema,
   VoiceForcedAction,
   VoiceForcedSchema,
 } from '@dislackso/contracts/gen/dislackso/gateway/v1/gateway_pb';
+import { ChannelSchema } from '@dislackso/contracts/gen/dislackso/v1/channel_pb';
 import {
   MeSchema,
   StatusPreference,
@@ -14,9 +16,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { HubClients } from '@/core/api/clients';
 import type { VoiceSessionListener } from '@/core/media/voice-session';
 import { callStore, idleCall } from '@/stores/call';
+import { entitiesStore } from '@/stores/entities';
 import { noticesStore } from '@/stores/notices';
+import { dispatchRealtime } from '@/stores/realtime';
 import { dispatchSession, initialSessionState, sessionStore } from '@/stores/session';
+import { defaultShareSettings, shareSettingsStore } from '@/stores/share-settings';
 import { defaultVoiceSettings, voiceSettingsStore } from '@/stores/voice-settings';
+import { dispatchVoiceStates, voiceStatesStore } from '@/stores/voice-states';
 
 import { VoiceController } from './voice';
 
@@ -66,6 +72,20 @@ class FakeSession {
     return Promise.resolve();
   }
   startAudio() {
+    return Promise.resolve();
+  }
+  setDeafenStreams() {
+    return undefined;
+  }
+  setStreamVolume(identity: string, volume: number) {
+    this.calls.push(`streamVolume ${identity}=${String(volume)}`);
+  }
+  startShare(req: { preset: string }) {
+    this.calls.push(`startShare ${req.preset}`);
+    return Promise.resolve({ codec: 'vp9', audio: false, ownAudioWarning: false });
+  }
+  stopShare() {
+    this.calls.push('stopShare');
     return Promise.resolve();
   }
 }
@@ -118,6 +138,9 @@ afterEach(() => {
   callStore.setState(idleCall, true);
   noticesStore.setState({ items: [], nextId: 1 }, true);
   sessionStore.setState(initialSessionState, true);
+  voiceStatesStore.setState({}, true);
+  shareSettingsStore.setState(defaultShareSettings, true);
+  dispatchRealtime({ type: 'cleared' });
   FakeSession.last = undefined;
 });
 
@@ -207,5 +230,58 @@ describe('VoiceController', () => {
     expect(callStore.getState().status).toBe('idle');
     expect(notices()).toEqual(['voice.notices.connectionLost']);
     expect(leave).toHaveBeenCalledWith({ voiceSessionId: 's9' });
+  });
+
+  it('shares with the saved settings, capped by the instance and the channel', async () => {
+    const { voice, played, session } = setup();
+    dispatchRealtime({
+      type: 'ready',
+      instance: create(InstanceInfoSchema, { maxSharePreset: '1440p30', maxSharesPerChannel: 2 }),
+    });
+    entitiesStore.setState((s) => ({
+      ...s,
+      channels: {
+        ...s.channels,
+        c1: create(ChannelSchema, { id: 'c1', guildId: 'g', maxShareQuality: '1080p60' }),
+      },
+    }));
+    shareSettingsStore.setState({ ...defaultShareSettings, preset: '1440p60' }, true);
+    await voice.join('g', 'c1');
+    await voice.startShare();
+    expect(session()?.calls.at(-1)).toBe('startShare 1080p60');
+    expect(callStore.getState().localShare).toMatchObject({ status: 'live', preset: '1080p60' });
+    expect(played.at(-1)).toBe('streamStart');
+
+    // Stopped with the browser's own button: no message, just the sound.
+    session()?.listener.onShareEnded?.('ended');
+    expect(callStore.getState().localShare).toBeNull();
+    expect(played.at(-1)).toBe('streamStop');
+  });
+
+  it('keeps to the share limit and says why the media server stopped a share', async () => {
+    const { voice, notices, session } = setup();
+    dispatchRealtime({
+      type: 'ready',
+      instance: create(InstanceInfoSchema, { maxSharesPerChannel: 1 }),
+    });
+    await voice.join('g', 'c1');
+    const other = (id: string, session: string, channelId: string, streaming: boolean) => {
+      dispatchVoiceStates({
+        type: 'updated',
+        state: state(session, channelId, { userId: id, streaming }),
+      });
+    };
+    other('2', 'o2', 'c1', true);
+    await voice.startShare();
+    expect(session()?.calls.some((c) => c.startsWith('startShare'))).toBe(false);
+    expect(notices()).toEqual(['stage.notices.shareLimit']);
+
+    other('2', 'o2', '', false);
+    await voice.startShare();
+    expect(callStore.getState().localShare?.status).toBe('live');
+    other('3', 'o3', 'c1', true);
+    session()?.listener.onShareEnded?.('removed');
+    expect(callStore.getState().localShare).toBeNull();
+    expect(notices().at(-1)).toBe('stage.notices.shareLimit');
   });
 });

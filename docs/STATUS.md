@@ -2,9 +2,33 @@
 
 ## Current phase
 
-**Phase 3 — Voice: implemented, waiting for review.** Next: Phase 4 — Screen share & stage.
-Phase 2 is in review too ([PR #3](https://github.com/tornellihenrique/dislackso-rebirth/pull/3));
-the Phase 3 branch builds on it.
+**Phase 4 — Screen share & stage: implemented, waiting for review.** Next: Phase 5 — Hosting &
+connectivity, the milestone where people on other networks can join.
+
+### Phase 4 acceptance
+
+- [x] 1440p60 Text share of a code editor is crisp in Focus on a second machine (stats show
+      2560×1440 and ~60 fps on a healthy LAN); Motion mode on a UE5 viewport keeps ≥ 55 fps.
+      Measured with `task bench:share` on one PC (sharer and viewer in separate browsers): a
+      synthetic code editor captured at ~50 fps reached the viewer's focused tile at 2560×1440 and
+      48 fps with the default codec (AV1), whether typing or scrolling every frame; a synthetic
+      3D viewport kept 49 of 51 fps with VP9. The test browser could not draw the synthetic screen
+      faster than ~50 fps, so a true 60 fps source, a real editor, a real UE5 viewport and a second
+      machine are steps 3 and 7 of the manual script.
+- [x] With 3 simultaneous shares and 5 viewers in Grid, viewers receive low layers (stats) and the
+      sharer's dynacast pauses unused layers. `task bench:share`: eight people in one call, three
+      sharing 1080p30; every viewer received all three shares at 960×540 (the low layer), and
+      every sharer's 1920×1080 layer was paused at 0 kbps. When one viewer focused a share in a
+      large window, that sharer's full layer resumed for that viewer only.
+- [x] Focus/unfocus/fullscreen/grid transitions never show a black or frozen tile; share ending
+      moves focus correctly. Each share has one `<video>` that moves between tiles instead of
+      being recreated. The Playwright suite tags the element, goes grid → focus → fullscreen →
+      back, and checks it is the same element and still advancing each time; ending a share with
+      the browser's stop button returns the viewer's stage to the grid. The focus fallback (next
+      share, then the grid) is unit-tested.
+- [x] Decision on default codec per mode recorded in an ADR with measured CPU/bitrate numbers:
+      [ADR 0002](adr/0002-screen-share-codecs.md). Automatic uses AV1 for text and VP9 for motion,
+      every codec in two simulcast layers with a VP8 backup.
 
 ### Phase 3 acceptance
 
@@ -97,6 +121,54 @@ the Phase 3 branch builds on it.
       typecheck + tests, build + Playwright smoke).
 
 ## Done
+
+### Phase 4 — Screen share & stage
+
+- **Hub.** The instance's share limits (`max_shares_per_channel`, `max_share_preset`) reach
+  clients in `Ready.instance`. A share the media server reports past the channel's limit is
+  stopped: the hub takes the screen share sources out of the participant's permissions for a
+  moment, which makes LiveKit unpublish it, and gives them back for a later share. The streaming
+  flag still comes only from LiveKit's track webhooks. Unit tests, and the integration test against
+  a real LiveKit (a second share is removed, the permission comes back, a share within the limit
+  stays).
+- **Sharing.** `core/media/screen-share.ts` captures with `getDisplayMedia` (the preset's size
+  as ideal, frame rate capped, constraints applied again after capture, system and tab audio with
+  `restrictOwnAudio` where the browser has it) and publishes the video in two simulcast layers
+  with the preset's bitrate, the content hint and degradation preference of the chosen
+  optimization, and a VP8 backup codec; the audio as a stereo 128 kbps track of its own. Presets,
+  caps and encodings are a pure module (`share-presets.ts`) with tests. The browser's own "Stop
+  sharing" ends the share; a share the server stops shows why.
+- **Watching.** `VoiceSession` reports everyone's shares as LiveKit delivers them, plays share
+  audio with a volume per sharer (0–200 %, kept on the device) apart from their voice, and stops
+  or resumes receiving a share. Deafening leaves share audio alone unless "Deafening also mutes
+  the audio of screen shares" is on.
+- **Stage.** Grid (the §10.3 algorithm, a pure function with tests), Focus with a collapsible
+  filmstrip, Fullscreen on the stage with controls and cursor hiding after 3 s, keyboard (G, F,
+  ←/→, Ctrl+Shift+S), auto-focus of the first share someone else starts and fallback when the
+  focused share ends (a reducer with tests), "show only screens", and the floating control bar
+  (mic, deafen, share split button with quality, optimization and audio, fullscreen,
+  disconnect). Share tiles: LIVE badge, name, hover toolbar (focus, fullscreen, stats, mute
+  stream, stop watching or stop sharing), context menu with the stream volume; user tiles: avatar
+  on the user's color, voice icons, speaking ring, connection quality on hover.
+- **No black tiles.** Each share has one `<video>` owned by the voice controller
+  (`ShareViews`); tiles mount it through a callback ref, so a tile moving between grid, focus,
+  filmstrip and fullscreen keeps its picture.
+- **Stats.** A stats overlay per share tile (resolution and layer, fps, codec and decoder,
+  bitrate, loss, jitter, round trip, path), and on the sharer's own preview each sent layer and
+  whether dynacast paused it. The voice panel's quality icon opens connection details (ping,
+  loss, direct or relayed path, codec).
+- **Settings → Screen share.** Quality (capped by the instance), optimization, share audio,
+  auto-focus, own preview, deafen-mutes-streams, stats overlay, and the codec (Automatic, VP9,
+  VP8, H.264, AV1).
+- **Measurements.** `task bench:share` runs a hub and synthetic screens (a code editor and a
+  3D-viewport-like scene) in Chromium, and writes the codec and layer tables of
+  [ADR 0002](adr/0002-screen-share-codecs.md).
+- **Tests.** Go: share limit (service and real LiveKit). Web: presets and caps, stats parsing,
+  share views, grid layout, tiles, stage reducer, the controller's share flow (caps, limit,
+  stop reasons). Playwright (`share.spec.ts`, Chromium's fake capture): the share shows LIVE to
+  everyone and takes the viewer's stage, the same video keeps playing through grid, focus and
+  fullscreen, the stats overlay, stop and resume watching, and the browser's stop button ending
+  the share with focus returning to the grid (21 tests in all).
 
 ### Phase 3 — Voice
 
@@ -435,6 +507,30 @@ the Phase 3 branch builds on it.
 - **New dependencies:** github.com/livekit/protocol v1.52.1 (hub), github.com/livekit/server-sdk-go
   v2.19.0 (integration tests only), livekit-client 2.22.4, @sapphi-red/web-noise-suppressor 0.4.1.
 
+### Phase 4
+
+- No ledger decision was changed.
+- **Codecs and layers:** see [ADR 0002](adr/0002-screen-share-codecs.md). Every codec is sent as
+  two simulcast layers (full and half size), not single-stream SVC: LiveKit's client sends VP9
+  screen shares as one spatial layer when asked for SVC, and dynacast cannot pause SVC layers.
+  ARCHITECTURE §9.5 updated.
+- **The share limit is the hub's to enforce; the quality caps are the client's.** LiveKit can
+  refuse a track but cannot cap a publisher's resolution or bitrate.
+- **The default preset is 1080p60, optimized for text.** 1440p60 is one click away in the share
+  menu; 1080p60 keeps a sharer's upload and the host's egress at about 4 Mbps per viewer.
+- **Quality, optimization and audio apply to the next share.** The share menu disables them
+  while sharing, rather than restarting the capture behind the user's back.
+- **People keep their place in the grid when they speak,** instead of moving after the shares
+  (§10.2 said "then speaking users"): tiles jumping around broke the no-layout-shift rule (§15.5).
+  ARCHITECTURE §10.2 updated.
+- **Fullscreen is the stage element** (§10.2), so tiles never move into a portal; menus and
+  tooltips render inside the stage while it is fullscreen. Together with `ShareViews` this keeps
+  the CLAUDE.md rule about fullscreen tiles: the video element is never recreated.
+- **This device's own share is never focused by itself;** auto-focus is for others' shares.
+- **Share and stage preferences are per device** (`localStorage` `dsx.share`), like the voice
+  preferences.
+- **No new dependencies.**
+
 ## Known issues
 
 - **Client IP is the TCP peer.** That is correct for direct connections. A tunnel or reverse proxy
@@ -450,14 +546,14 @@ the Phase 3 branch builds on it.
 - The dev-build frame inspector (§8.1) is not built yet.
 - Rail badges (unread, mentions) wait for text chat.
 - No `LICENSE` file yet: the license is the owner's choice.
-- The web bundle is ~930 kB minified (283 kB gzip) plus a 526 kB LiveKit chunk loaded with the
+- The web bundle is ~977 kB minified (296 kB gzip) plus a 535 kB LiveKit chunk loaded with the
   first join, so Vite prints its 500 kB chunk warning on build. Route-level code splitting
   (settings, server settings) is the next easy win.
 - Go's `Server.Shutdown` waits up to 5 s for connections a client opened but never used (for
   example a browser preconnect), so stopping the hub can take a few seconds.
-- **Browsers allow the microphone only on HTTPS or localhost.** Until Phase 5 gives the instance
-  an HTTPS address, people on other machines cannot talk (they can still open the app over the
-  LAN with `http.addr` on a LAN address, but not use the mic).
+- **Browsers allow the microphone and screen sharing only on HTTPS or localhost.** Until Phase 5
+  gives the instance an HTTPS address, people on other machines cannot talk or share (they can
+  still open the app over the LAN with `http.addr` on a LAN address, and watch).
 - A client that dies without leaving stays in voice for ~20 s, until LiveKit gives up on it.
 - The sidecar stops with the hub, so restarting the hub also empties LiveKit's rooms. Clients
   reconnect on their own within LiveKit's retry window (~40 s) and the hub adopts them; after a
@@ -468,10 +564,52 @@ the Phase 3 branch builds on it.
   and the supervisor keeps restarting it (the log says why). The Phase 5 doctor will detect this.
 - livekit-client logs some of its own races and data channel closings as console errors; the
   e2e error tracker ignores lines tagged with a LiveKit room.
-- The voice channel page is a plain tile grid; the stage with focus, fullscreen and the grid
-  algorithm comes with screen sharing in Phase 4.
+- **The codec numbers come from one PC** (Core Ultra 9, RTX 5070 laptop) with synthetic screens
+  and software encoders: Chromium for testing exposes no hardware encoder, so H.264 ran on
+  OpenH264. Real machines, real content and hardware H.264 are steps of the manual script; the
+  defaults may change after the team uses them (Phase 5).
+- Draw and Snapshot on share tiles come with drawing in Phase 6; pop-out (Picture-in-Picture) in
+  Phase 11.
+- Without `restrictOwnAudio` (older Chromium, other browsers) shared system audio can carry the
+  call's voices back; the sharer gets a warning.
+- The stage shortcuts (G, F, arrows, Ctrl+Shift+S) are fixed until the Keybinds page.
 
 ## Manual test script
+
+### Phase 4
+
+Prerequisites: `task setup`. As in Phase 3, a "second person" is a second browser profile on the
+same PC, or a second PC whose Chrome treats your LAN address as secure (Phase 3, step 4).
+
+1. `task check` is green, `task e2e` passes 21 Playwright tests, and `task test:int` passes.
+   Optional: `task bench:share` (about 10 minutes) writes a fresh table to `e2e/bench-results/`.
+2. `task dev`; profiles A and B join the same voice channel.
+3. **Share.** In A, open the arrow next to the share button in the bottom bar, pick 1440p · 60 fps
+   and Text and detail, then press the share button and pick a window with code. B: the sidebar
+   shows LIVE next to A, and B's stage switches to A's screen by itself. Text is sharp; scroll
+   in the editor and it stays smooth. Press Ctrl+Shift+S in B: Resolution shows 2560×1440 (on a
+   1440p or larger screen), the codec AV1, and the frame rate stays near 60 while the editor
+   moves.
+4. **Layouts.** In B: G for the grid (A's screen gets small and the stats say "low layer"), double
+   click it for focus, F for fullscreen (controls and cursor hide after 3 s, Esc leaves), ← and →
+   to move the focus, the arrow above the filmstrip to hide it. The picture never goes black or
+   freezes while switching.
+5. **Stop watching.** Hover A's screen in B and press the eye: a "You stopped watching" panel;
+   Watch brings it back.
+6. **Audio.** A shares a browser tab playing sound with "Share tab audio" ticked. B hears it;
+   right-click the screen for Stream volume; deafening B keeps the stream audio unless Settings →
+   Screen share → "Deafening also mutes…" is on.
+7. **Motion.** A picks Motion (games, 3D) and shares a game or a 3D viewport: the stats stay at
+   55–60 fps.
+8. **Codec.** Settings → Screen share → Video codec: H.264, share again; the stats show H264 (and
+   on a machine with a hardware encoder, an encoder name other than OpenH264).
+9. **Stop.** A ends the share with Chrome's own "Stop sharing" bar: the share ends for both, B's
+   stage goes back to the grid, and the stream sound plays.
+10. **Limits.** Server settings → Channels → the voice channel → Highest screen share quality:
+   720p · 30 fps. A's share menu then offers only 720p.
+11. **Connection.** Click the signal icon in the voice panel: ping, packet loss, Direct (local
+   network) · udp, OPUS.
+12. **Language.** In pt-BR every stage control, menu, stats label and setting is in Portuguese.
 
 ### Phase 3
 

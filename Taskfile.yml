@@ -163,3 +163,10 @@ tasks:
     cmds:
       - pnpm --filter @dislackso/e2e exec playwright install chromium
       - pnpm --filter @dislackso/e2e e2e
+
+  bench:share:
+    desc: Measure screen share codecs and layers (writes e2e/bench-results/); takes ~10 minutes
+    deps: [build]
+    cmds:
+      - pnpm --filter @dislackso/e2e exec playwright install chromium
+      - pnpm --filter @dislackso/e2e exec playwright test -c playwright.bench.config.ts

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -37,12 +38,13 @@ type settings struct{ st domain.InstanceSettings }
 func (s *settings) Get(context.Context) (domain.InstanceSettings, error) { return s.st, nil }
 
 type harness struct {
-	svc     *Service
-	store   *fakes.Store
-	events  *fakes.Events
-	media   *fakes.Media
-	clock   *fakes.Clock
-	limiter *fakes.Limiter
+	svc      *Service
+	store    *fakes.Store
+	events   *fakes.Events
+	media    *fakes.Media
+	clock    *fakes.Clock
+	limiter  *fakes.Limiter
+	settings *settings
 }
 
 // Guild 100: owner 1, admin 2, members 4 and 5, voice channels 10 and 11 and
@@ -50,14 +52,17 @@ type harness struct {
 func newHarness(t *testing.T) *harness {
 	t.Helper()
 	ctx := t.Context()
-	h := &harness{store: fakes.NewStore(), media: &fakes.Media{}, clock: fakes.NewClock(), limiter: &fakes.Limiter{}}
+	h := &harness{
+		store: fakes.NewStore(), media: &fakes.Media{}, clock: fakes.NewClock(), limiter: &fakes.Limiter{},
+		settings: &settings{st: domain.DefaultInstanceSettings()},
+	}
 	h.events = fakes.NewEvents(h.store)
 	h.svc = New(Deps{
 		Guilds: h.store, Members: h.store, Channels: h.store, Users: h.store, Audit: h.store, Tx: h.store,
 		IDs: &fakes.IDs{}, Tokens: &fakes.Tokens{}, Clock: h.clock, Limiter: h.limiter, Events: h.events,
 		Bus: events.NewBus(), Media: h.media,
 		ICE:      fakes.ICE{Servers: []ports.IceServer{{URLs: []string{"turn:turn.example:3478"}, Username: "u", Credential: "c"}}},
-		Settings: &settings{st: domain.DefaultInstanceSettings()}, Presence: &fakes.Presence{},
+		Settings: h.settings, Presence: &fakes.Presence{},
 		Verification: fakes.Verification(false), Logger: slog.New(slog.DiscardHandler),
 	})
 	for _, g := range []domain.Guild{{ID: guildID, Name: "Team", OwnerID: 1}, {ID: otherID, Name: "Other", OwnerID: 6}} {
@@ -437,6 +442,59 @@ func TestStreaming(t *testing.T) {
 	track(ports.MediaTrackUnpublished, "sid-token-1")
 	if st, _ := h.state(4); st.Streaming {
 		t.Error("still streaming after the share was unpublished")
+	}
+}
+
+func TestShareLimit(t *testing.T) {
+	h := newHarness(t)
+	h.settings.st.Limits.MaxSharesPerChannel = 2
+	share := func(actor domain.Actor, session string, kind ports.MediaEventKind) {
+		h.svc.HandleMediaEvent(t.Context(), ports.MediaEvent{
+			Kind: kind, Room: "vc_10", Source: domain.SourceScreenShare,
+			Participant: ports.MediaParticipant{SID: "sid-" + session, Identity: actor.UserID.String()},
+		})
+	}
+	sessions := map[domain.ID]string{}
+	for _, a := range []domain.Actor{owner, admin, member, other} {
+		sessions[a.UserID] = h.join(t, a, lobby).State.SessionID
+		h.joined(a, lobby, sessions[a.UserID])
+	}
+	if _, err := h.svc.SetServerMute(t.Context(), admin, guildID, 5, true); err != nil {
+		t.Fatal(err)
+	}
+	share(owner, sessions[1], ports.MediaTrackPublished)
+	share(admin, sessions[2], ports.MediaTrackPublished)
+	h.media.TakeCalls()
+
+	share(member, sessions[4], ports.MediaTrackPublished)
+	if st, _ := h.state(4); st.Streaming {
+		t.Error("a third share counted in a channel that allows two")
+	}
+	allowed := domain.VoicePermissionsFor(false, false)
+	want := []fakes.MediaCall{
+		{Op: "permissions", Room: "vc_10", Identity: "4", Permissions: domain.VoicePermissions{
+			Publish: []domain.MediaSource{domain.SourceMicrophone}, Subscribe: true,
+		}},
+		{Op: "permissions", Room: "vc_10", Identity: "4", Permissions: allowed},
+	}
+	if diff := cmp.Diff(want, h.media.TakeCalls()); diff != "" {
+		t.Errorf("calls (-want +got):\n%s", diff)
+	}
+
+	// Stopping the share leaves the server mute of the one stopped in place.
+	share(other, sessions[5], ports.MediaTrackPublished)
+	calls := h.media.TakeCalls()
+	if len(calls) != 2 || slices.Contains(calls[1].Permissions.Publish, domain.SourceMicrophone) {
+		t.Errorf("calls for a server-muted sharer = %+v", calls)
+	}
+
+	share(owner, sessions[1], ports.MediaTrackUnpublished)
+	share(member, sessions[4], ports.MediaTrackPublished)
+	if st, _ := h.state(4); !st.Streaming {
+		t.Error("a share was refused although another one ended")
+	}
+	if calls := h.media.TakeCalls(); len(calls) != 0 {
+		t.Errorf("a share within the limit was stopped: %+v", calls)
 	}
 }
 

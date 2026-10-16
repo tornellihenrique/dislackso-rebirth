@@ -3,11 +3,14 @@ import { PhoneOff, Signal, SignalHigh, SignalLow, SignalMedium, Volume2 } from '
 import { useTranslation } from 'react-i18next';
 
 import { useServices } from '@/app/services';
+import { ShareButton } from '@/features/stage/ShareButton';
 import type { Quality } from '@/core/media/voice-session';
 import { useCall } from '@/stores/call';
 import { useEntities } from '@/stores/entities';
 import { IconButton } from '@/ui/IconButton';
 import { Tooltip } from '@/ui/Tooltip';
+
+import { ConnectionDetails } from './ConnectionDetails';
 
 const qualityIcons: Record<Quality, typeof Signal> = {
   excellent: Signal,
@@ -49,15 +52,18 @@ export function VoicePanel() {
       className="flex flex-col gap-1 border-b border-border/40 bg-rail/60 px-2 py-2"
     >
       <div className="flex items-center gap-2">
-        <Tooltip label={qualityLabel}>
-          <span
-            role="img"
-            aria-label={qualityLabel}
-            className={connected ? qualityTones[call.quality] : 'text-warning'}
-          >
-            <QualityIcon aria-hidden className="size-5" />
-          </span>
-        </Tooltip>
+        <ConnectionDetails
+          trigger={
+            <button
+              type="button"
+              aria-label={qualityLabel}
+              title={qualityLabel}
+              className={`rounded-sm p-0.5 hover:bg-hover ${connected ? qualityTones[call.quality] : 'text-warning'}`}
+            >
+              <QualityIcon aria-hidden className="size-5" />
+            </button>
+          }
+        />
         <span className="min-w-0 flex-1 leading-tight">
           <span
             className={`block text-sm font-semibold ${connected ? 'text-success' : 'text-warning'}`}
@@ -76,6 +82,7 @@ export function VoicePanel() {
             </Link>
           )}
         </span>
+        <ShareButton channelId={call.channelId} />
         <Tooltip label={t('voice.panel.disconnect')}>
           <IconButton
             label={t('voice.panel.disconnect')}

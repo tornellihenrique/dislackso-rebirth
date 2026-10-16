@@ -7,6 +7,7 @@ import {
   RoomEvent,
   Track,
   type LocalAudioTrack,
+  type LocalTrackPublication,
   type Participant,
   type RemoteParticipant,
   type RemoteTrack,
@@ -17,11 +18,51 @@ import {
 import { DEFAULT_DEVICE } from './devices';
 import { MicProcessor, type MicLevel, type MicSettings } from './mic-processor';
 import { RemoteAudio } from './remote-audio';
+import { startShare, stopShare, type LocalShare, type ShareRequest } from './screen-share';
+import { ShareError } from './share-error';
+import type { ShareCodec } from './share-presets';
+import { SELF_SHARE, type ShareViews } from './share-views';
+import {
+  readConnection,
+  readInboundVideo,
+  readOutboundVideo,
+  type ConnectionStats,
+  type Counter,
+  type InboundVideoStats,
+  type OutboundVideoStats,
+} from './stats';
 
 /** Why a call ended without the user leaving. */
 export type CallEnd = 'replaced' | 'removed' | 'closed' | 'failed';
 export type MicFailure = 'denied' | 'not_found' | 'in_use' | 'other';
 export type Quality = 'excellent' | 'good' | 'poor' | 'lost' | 'unknown';
+/** Why this device's share ended without stopShare: the browser's control, or the media server. */
+export type ShareEnd = 'ended' | 'removed';
+
+/** Someone else's screen share in the call. */
+export interface RemoteShare {
+  readonly identity: string;
+  readonly trackSid: string;
+  /** Video is arriving; false while subscribing and after stopping watching. */
+  readonly hasVideo: boolean;
+  readonly hasAudio: boolean;
+  readonly watching: boolean;
+  /** The size the sharer publishes. */
+  readonly width: number;
+  readonly height: number;
+}
+
+export interface LocalShareInfo {
+  readonly codec: ShareCodec;
+  readonly audio: boolean;
+  readonly ownAudioWarning: boolean;
+}
+
+export interface RemoteShareStats extends InboundVideoStats {
+  /** What the sharer publishes; smaller stats mean a lower layer. */
+  readonly publishedWidth: number;
+  readonly publishedHeight: number;
+}
 
 export interface VoiceSessionListener {
   onConnection(state: 'connected' | 'reconnecting'): void;
@@ -29,10 +70,13 @@ export interface VoiceSessionListener {
   /** Identities the media server reports as speaking, the local user included. */
   onSpeaking(identities: readonly string[]): void;
   onQuality(quality: Quality): void;
+  onPeerQuality?(identity: string, quality: Quality): void;
   /** The browser blocked playback until the user interacts with the page. */
   onAudioBlocked(blocked: boolean): void;
   onMicError(failure: MicFailure): void;
   onMicLevel?(level: MicLevel): void;
+  onShares?(shares: readonly RemoteShare[]): void;
+  onShareEnded?(reason: ShareEnd): void;
 }
 
 export interface CallTarget {
@@ -96,8 +140,9 @@ function deviceConstraint(id: string): ConstrainDOMString | undefined {
 
 /**
  * One voice connection: a LiveKit room, the local microphone with its
- * processing chain, and remote audio playback. It knows nothing about the
- * hub; the caller joins through the hub and hands over the token.
+ * processing chain, remote audio playback, this device's screen share and
+ * everyone else's. It knows nothing about the hub; the caller joins through
+ * the hub and hands over the token.
  */
 export class VoiceSession {
   private room: Room | undefined;
@@ -109,10 +154,22 @@ export class VoiceSession {
   private bitrateKbps = 48;
   private pttPressed = false;
   private publishing = false;
+  private share: LocalShare | undefined;
+  /** Identities whose share has a view. */
+  private shareOwners = new Set<string>();
+  /** Shares the user stopped watching, by track. */
+  private readonly unwatched = new Set<string>();
+  private readonly inCounters = new Map<string, Counter>();
+  private outCounters = new Map<string, Counter>();
 
+  /**
+   * views show the shares' video; the caller owns them, so tiles can mount
+   * before the session exists.
+   */
   constructor(
     private readonly listener: VoiceSessionListener,
     host: HTMLElement,
+    private readonly views: ShareViews,
     private readonly createRoom: (o: RoomOptions) => Room = (o) => new Room(o),
   ) {
     this.remote = new RemoteAudio(host);
@@ -147,6 +204,7 @@ export class VoiceSession {
     );
     if (this.room !== room) return;
     this.listener.onAudioBlocked(!room.canPlaybackAudio);
+    this.emitShares(room);
     await this.publishMic(room);
   }
 
@@ -155,11 +213,9 @@ export class VoiceSession {
     const room = this.room;
     if (!room) return;
     this.room = undefined;
-    this.mic = undefined;
-    this.processor = undefined;
     room.removeAllListeners();
+    this.dropMedia();
     await room.disconnect();
-    this.remote.clear();
   }
 
   setMuted(muted: boolean): void {
@@ -178,6 +234,11 @@ export class VoiceSession {
     }
   }
 
+  /** Whether deafening also silences the audio of screen shares. */
+  setDeafenStreams(on: boolean): void {
+    this.remote.setDeafened(this.local.deafened, on);
+  }
+
   setMicAllowed(allowed: boolean): void {
     const was = this.local.micAllowed;
     this.local = { ...this.local, micAllowed: allowed };
@@ -186,6 +247,10 @@ export class VoiceSession {
 
   setUserVolume(identity: string, volume: number): void {
     this.remote.setVolume(identity, volume);
+  }
+
+  setStreamVolume(identity: string, volume: number): void {
+    this.remote.setVolume(identity, volume, 'stream');
   }
 
   setUserMuted(identity: string, muted: boolean): void {
@@ -231,6 +296,85 @@ export class VoiceSession {
     await this.room?.startAudio();
     await this.remote.resume();
     if (this.room) this.listener.onAudioBlocked(!this.room.canPlaybackAudio);
+  }
+
+  /** Asks what to share and publishes it, replacing a share already on. Throws ShareError. */
+  async startShare(req: ShareRequest): Promise<LocalShareInfo> {
+    const room = this.room;
+    if (!room) throw new ShareError('failed');
+    await this.stopShare();
+    const share = await startShare(room, req);
+    if (this.room !== room) {
+      share.video.stop();
+      share.audio?.stop();
+      throw new ShareError('failed');
+    }
+    this.share = share;
+    this.outCounters = new Map();
+    this.views.setTrack(SELF_SHARE, share.video);
+    return {
+      codec: share.codec,
+      audio: share.audio !== undefined,
+      ownAudioWarning: share.ownAudioWarning,
+    };
+  }
+
+  async stopShare(): Promise<void> {
+    const share = this.share;
+    if (!share) return;
+    this.share = undefined;
+    this.views.setTrack(SELF_SHARE, undefined);
+    if (this.room) await stopShare(this.room, share);
+  }
+
+  /** Stops or resumes receiving someone's share, video and audio. */
+  setWatching(identity: string, watching: boolean): void {
+    const room = this.room;
+    const p = room?.remoteParticipants.get(identity);
+    const video = p?.getTrackPublication(Track.Source.ScreenShare);
+    if (!room || !p || !video) return;
+    if (watching) this.unwatched.delete(video.trackSid);
+    else this.unwatched.add(video.trackSid);
+    video.setSubscribed(watching);
+    p.getTrackPublication(Track.Source.ScreenShareAudio)?.setSubscribed(watching);
+    this.emitShares(room);
+  }
+
+  async shareStats(identity: string): Promise<RemoteShareStats | undefined> {
+    const pub = this.room?.remoteParticipants
+      .get(identity)
+      ?.getTrackPublication(Track.Source.ScreenShare);
+    const report = await pub?.videoTrack?.getRTCStatsReport();
+    if (!pub || !report) return undefined;
+    const read = readInboundVideo(report, this.inCounters.get(pub.trackSid));
+    if (!read) return undefined;
+    this.inCounters.set(pub.trackSid, read.counter);
+    return {
+      ...read.stats,
+      publishedWidth: pub.dimensions?.width ?? 0,
+      publishedHeight: pub.dimensions?.height ?? 0,
+    };
+  }
+
+  async selfShareStats(): Promise<OutboundVideoStats | undefined> {
+    const report = await this.share?.video.getRTCStatsReport();
+    if (!report) return undefined;
+    const read = readOutboundVideo(report, this.outCounters);
+    if (!read) return undefined;
+    this.outCounters = read.counters;
+    return read.stats;
+  }
+
+  async connectionStats(): Promise<ConnectionStats | undefined> {
+    let report = await this.mic?.getRTCStatsReport();
+    if (!report) {
+      for (const p of this.room?.remoteParticipants.values() ?? []) {
+        const track = [...p.trackPublications.values()].find((pub) => pub.track)?.track;
+        report = await track?.getRTCStatsReport();
+        if (report) break;
+      }
+    }
+    return report ? readConnection(report) : undefined;
   }
 
   private captureOptions(prefs: AudioPrefs) {
@@ -281,8 +425,66 @@ export class VoiceSession {
     }
   }
 
+  /** Forgets the call's media: microphone, share, remote audio and video. */
+  private dropMedia(): void {
+    this.mic = undefined;
+    this.processor = undefined;
+    const share = this.share;
+    this.share = undefined;
+    share?.video.stop();
+    share?.audio?.stop();
+    this.remote.clear();
+    this.views.detachAll();
+    this.shareOwners = new Set();
+    this.unwatched.clear();
+    this.inCounters.clear();
+    this.listener.onShares?.([]);
+  }
+
+  /** Reports everyone's screen shares and gives each its video. */
+  private emitShares(room: Room): void {
+    const shares: RemoteShare[] = [];
+    const owners = new Set<string>();
+    for (const p of room.remoteParticipants.values()) {
+      const video = p.getTrackPublication(Track.Source.ScreenShare);
+      if (!video) continue;
+      owners.add(p.identity);
+      this.views.setTrack(p.identity, video.videoTrack);
+      shares.push({
+        identity: p.identity,
+        trackSid: video.trackSid,
+        hasVideo: video.videoTrack !== undefined && !video.isMuted,
+        hasAudio: p.getTrackPublication(Track.Source.ScreenShareAudio) !== undefined,
+        watching: !this.unwatched.has(video.trackSid),
+        width: video.dimensions?.width ?? 0,
+        height: video.dimensions?.height ?? 0,
+      });
+    }
+    for (const id of this.shareOwners) if (!owners.has(id)) this.views.setTrack(id, undefined);
+    this.shareOwners = owners;
+    this.listener.onShares?.(shares);
+  }
+
+  private localUnpublished(room: Room, pub: LocalTrackPublication): void {
+    if (pub.source === Track.Source.Microphone) {
+      // The media server dropped the mic (server mute).
+      this.mic = undefined;
+      this.processor = undefined;
+      return;
+    }
+    const share = this.share;
+    if (pub.source !== Track.Source.ScreenShare || !share || pub.track !== share.video) return;
+    this.share = undefined;
+    this.views.setTrack(SELF_SHARE, undefined);
+    void stopShare(room, share);
+    this.listener.onShareEnded?.(share.stoppedInBrowser() ? 'ended' : 'removed');
+  }
+
   private listen(room: Room): void {
     const l = this.listener;
+    const shares = () => {
+      if (this.room === room) this.emitShares(room);
+    };
     room
       .on(RoomEvent.Reconnecting, () => {
         l.onConnection('reconnecting');
@@ -299,9 +501,7 @@ export class VoiceSession {
       .on(RoomEvent.Disconnected, (reason?: DisconnectReason) => {
         if (this.room !== room) return;
         this.room = undefined;
-        this.mic = undefined;
-        this.processor = undefined;
-        this.remote.clear();
+        this.dropMedia();
         l.onEnded(endReason(reason));
       })
       .on(RoomEvent.ActiveSpeakersChanged, (speakers: Participant[]) => {
@@ -309,6 +509,7 @@ export class VoiceSession {
       })
       .on(RoomEvent.ConnectionQualityChanged, (q: ConnectionQuality, p: Participant) => {
         if (p.isLocal) l.onQuality(qualities[q]);
+        else l.onPeerQuality?.(p.identity, qualities[q]);
       })
       .on(RoomEvent.AudioPlaybackStatusChanged, () => {
         l.onAudioBlocked(!room.canPlaybackAudio);
@@ -317,23 +518,29 @@ export class VoiceSession {
         l.onMicError(micFailure(err));
       })
       .on(RoomEvent.LocalTrackUnpublished, (pub) => {
-        // The media server dropped the mic (server mute).
-        if (pub.source === Track.Source.Microphone) {
-          this.mic = undefined;
-          this.processor = undefined;
-        }
+        this.localUnpublished(room, pub);
       })
+      .on(RoomEvent.TrackPublished, shares)
+      .on(RoomEvent.TrackUnpublished, shares)
+      .on(RoomEvent.TrackMuted, shares)
+      .on(RoomEvent.TrackUnmuted, shares)
+      .on(RoomEvent.ParticipantDisconnected, shares)
       .on(
         RoomEvent.TrackSubscribed,
         (track: RemoteTrack, pub: RemoteTrackPublication, p: RemoteParticipant) => {
-          if (track.kind !== Track.Kind.Audio) return;
-          if (pub.source === Track.Source.Microphone && this.local.deafened) pub.setEnabled(false);
-          this.remote.add(track as Parameters<RemoteAudio['add']>[0], p.identity);
+          if (track.kind === Track.Kind.Audio) {
+            if (pub.source === Track.Source.Microphone && this.local.deafened)
+              pub.setEnabled(false);
+            const kind = pub.source === Track.Source.ScreenShareAudio ? 'stream' : 'voice';
+            this.remote.add(track as Parameters<RemoteAudio['add']>[0], p.identity, kind);
+          }
+          shares();
         },
       )
       .on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
         if (track.kind === Track.Kind.Audio)
           this.remote.remove(track as Parameters<RemoteAudio['remove']>[0]);
+        shares();
       });
   }
 }

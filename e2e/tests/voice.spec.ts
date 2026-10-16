@@ -29,6 +29,8 @@ async function open(
 const channels = (page: Page) => page.getByRole('navigation', { name: 'Channels' });
 const servers = (page: Page) => page.getByRole('navigation', { name: 'Servers' });
 const panel = (page: Page) => page.getByTestId('voice-panel');
+// The stage has the same toggles; these tests use the ones under the user's name.
+const userPanel = (page: Page) => page.getByTestId('user-panel');
 const occupant = (page: Page, name: string) =>
   page.getByTestId('voice-occupant').filter({ hasText: name });
 
@@ -104,10 +106,10 @@ test('people in voice show in every member sidebar, and switching is fast', asyn
 
 test('mute and deafen show live, and undeafening restores the mute from before', async () => {
   const row = () => occupant(admin.page, MEMBER.username);
-  await ana.page.getByRole('button', { name: 'Mute', exact: true }).click();
+  await userPanel(ana.page).getByRole('button', { name: 'Mute', exact: true }).click();
   await expect(row().getByRole('img', { name: 'Muted' })).toBeVisible(LIVE);
 
-  await ana.page.getByRole('button', { name: 'Deafen', exact: true }).click();
+  await userPanel(ana.page).getByRole('button', { name: 'Deafen', exact: true }).click();
   await expect(row().getByRole('img', { name: 'Deafened' })).toBeVisible(LIVE);
   await expect(row().getByRole('img', { name: 'Muted' })).toBeHidden();
   // Deafened, the admin's microphone is no longer played.
@@ -117,19 +119,18 @@ test('mute and deafen show live, and undeafening restores the mute from before',
     )
     .toBe(true);
 
-  await ana.page.getByRole('button', { name: 'Undeafen', exact: true }).click();
+  await userPanel(ana.page).getByRole('button', { name: 'Undeafen', exact: true }).click();
   await expect(row().getByRole('img', { name: 'Muted' })).toBeVisible(LIVE);
   await expect(row().getByRole('img', { name: 'Deafened' })).toBeHidden();
 
   // The state outlives a reload and applies when joining again.
   await ana.page.reload();
-  await expect(ana.page.getByRole('button', { name: 'Unmute', exact: true })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
+  await expect(
+    userPanel(ana.page).getByRole('button', { name: 'Unmute', exact: true }),
+  ).toHaveAttribute('aria-pressed', 'true');
   await joinVoice(ana.page, 'General');
   await expect(row().getByRole('img', { name: 'Muted' })).toBeVisible(LIVE);
-  await ana.page.getByRole('button', { name: 'Unmute', exact: true }).click();
+  await userPanel(ana.page).getByRole('button', { name: 'Unmute', exact: true }).click();
   await expect(row().getByRole('img', { name: 'Muted' })).toBeHidden(LIVE);
 });
 
@@ -139,7 +140,9 @@ test('server mute is shown to everyone and holds across a rejoin', async () => {
   await expect(
     occupant(ana.page, MEMBER.username).getByRole('img', { name: 'Server muted' }),
   ).toBeVisible(LIVE);
-  await expect(ana.page.getByRole('button', { name: 'Muted by a moderator' })).toBeVisible();
+  await expect(
+    userPanel(ana.page).getByRole('button', { name: 'Muted by a moderator' }),
+  ).toBeVisible();
 
   await panel(ana.page).getByRole('button', { name: 'Disconnect' }).click();
   await expect(occupant(admin.page, MEMBER.username)).toBeHidden(LIVE);

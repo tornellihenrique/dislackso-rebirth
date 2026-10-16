@@ -32,3 +32,4 @@ e2e/blob-report/
 Thumbs.db
 .idea/
 *.log
+e2e/bench-results/

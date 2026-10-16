@@ -11,26 +11,39 @@ import { toApiError } from '@/core/api/errors';
 import { errorText } from '@/core/i18n/error-text';
 import { listAudioDevices, resolveDevice, watchDevices } from '@/core/media/devices';
 import { startPushToTalk, type PushToTalk } from '@/core/media/push-to-talk';
+import { ShareError } from '@/core/media/share-error';
+import { capPreset } from '@/core/media/share-presets';
+import { SELF_SHARE, ShareViews } from '@/core/media/share-views';
 import type { SoundKind, SoundPlayer } from '@/core/media/sounds';
 import { SpeakingTracker } from '@/core/media/speaking';
+import type { ConnectionStats, OutboundVideoStats } from '@/core/media/stats';
 import type {
   AudioPrefs,
   CallEnd,
   MicFailure,
+  RemoteShareStats,
+  ShareEnd,
   VoiceSession,
   VoiceSessionListener,
 } from '@/core/media/voice-session';
 import { callStore, dispatchCall } from '@/stores/call';
 import { entitiesStore } from '@/stores/entities';
 import { pushNotice } from '@/stores/notices';
+import { realtimeStore } from '@/stores/realtime';
 import { sessionStore } from '@/stores/session';
+import {
+  dispatchShareSettings,
+  shareSettingsStore,
+  type ShareSettings,
+} from '@/stores/share-settings';
+import { dispatchStage } from '@/stores/stage';
 import {
   dispatchVoiceSettings,
   voiceSettingsStore,
   type VoicePrefs,
   type VoiceSettings,
 } from '@/stores/voice-settings';
-import { dispatchVoiceStates } from '@/stores/voice-states';
+import { channelOccupants, dispatchVoiceStates, voiceStatesStore } from '@/stores/voice-states';
 
 /** What features can do with voice. */
 export interface VoiceActions {
@@ -43,6 +56,19 @@ export interface VoiceActions {
   setPrefs(prefs: Partial<VoicePrefs>): void;
   /** Resumes playback the browser blocked; call from a click. */
   startAudio(): Promise<void>;
+  /** Asks what to share and shares it with the channel, with the saved settings. */
+  startShare(): Promise<void>;
+  stopShare(): Promise<void>;
+  /** Stops or resumes receiving someone's share. */
+  setWatching(userId: string, watching: boolean): void;
+  setStreamVolume(userId: string, volume: number): void;
+  setShareSettings(settings: Partial<Omit<ShareSettings, 'streamVolumes'>>): void;
+  /** Shows someone's share in el; returns the function that takes it out. */
+  mountShare(userId: string, el: HTMLElement): () => void;
+  mountSelfShare(el: HTMLElement): () => void;
+  shareStats(userId: string): Promise<RemoteShareStats | undefined>;
+  selfShareStats(): Promise<OutboundVideoStats | undefined>;
+  connectionStats(): Promise<ConnectionStats | undefined>;
 }
 
 /** What the gateway tells the controller. */
@@ -114,6 +140,10 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks {
   private inputDevice = '';
   private ptt: PushToTalk | undefined;
   private readonly stops: (() => void)[] = [];
+  /** Who shared in the call at the last voice state change. */
+  private streamers = new Set<string>();
+  /** The shares' video, here so tiles can show them before the media engine loads. */
+  private readonly views = new ShareViews();
 
   constructor(private readonly d: VoiceDeps) {
     this.listener = {
@@ -136,6 +166,15 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks {
         dispatchCall({ type: 'micError', failure });
         this.notice(this.d.t(micNotices[failure]));
       },
+      onPeerQuality: (userId, quality) => {
+        dispatchCall({ type: 'peerQuality', userId, quality });
+      },
+      onShares: (shares) => {
+        dispatchCall({ type: 'shares', shares });
+      },
+      onShareEnded: (reason) => {
+        this.shareEnded(reason);
+      },
     };
   }
 
@@ -143,8 +182,9 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks {
     if (this.session) return this.session;
     const { VoiceSession } = await import('@/core/media/voice-session');
     // Another call may have loaded it while this one waited.
-    this.session ??= new VoiceSession(this.listener, this.d.host);
+    this.session ??= new VoiceSession(this.listener, this.d.host, this.views);
     this.session.setPushToTalk(this.pttPressed);
+    this.session.setDeafenStreams(voiceSettingsStore.getState().deafenStreams);
     return this.session;
   }
 
@@ -153,6 +193,16 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks {
     this.stops.push(
       voiceSettingsStore.subscribe((next, prev) => {
         this.settingsChanged(next, prev);
+      }),
+    );
+    this.stops.push(
+      shareSettingsStore.subscribe((next, prev) => {
+        if (next.streamVolumes !== prev.streamVolumes) this.applyStreamVolumes(next);
+      }),
+    );
+    this.stops.push(
+      voiceStatesStore.subscribe(() => {
+        this.streamersChanged();
       }),
     );
     this.stops.push(
@@ -168,6 +218,10 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks {
       } else if (e.code === 'KeyD') {
         e.preventDefault();
         this.toggleDeafen();
+      } else if (e.code === 'KeyS') {
+        e.preventDefault();
+        const on = shareSettingsStore.getState().statsOverlay;
+        dispatchShareSettings({ type: 'changed', settings: { statsOverlay: !on } });
       }
     };
     window.addEventListener('keydown', onKey);
@@ -227,6 +281,8 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks {
       if (gen !== this.generation) return;
       this.joining = false;
       this.applyVolumes(current);
+      this.applyStreamVolumes(shareSettingsStore.getState());
+      this.streamers = this.channelStreamers();
       dispatchCall({ type: 'connection', state: 'connected' });
       this.play('join');
     } catch (err) {
@@ -285,6 +341,100 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks {
 
   async startAudio(): Promise<void> {
     await this.session?.startAudio();
+  }
+
+  async startShare(): Promise<void> {
+    const call = callStore.getState();
+    const session = this.session;
+    if ((call.status !== 'connected' && call.status !== 'reconnecting') || !session) return;
+    if (call.localShare?.status === 'starting') return;
+    const instance = realtimeStore.getState().instance;
+    const max = instance?.maxSharesPerChannel ?? 0;
+    if (max > 0 && this.othersSharing() >= max) {
+      this.notice(this.d.t('stage.notices.shareLimit', { count: max }));
+      return;
+    }
+    const s = shareSettingsStore.getState();
+    const channel = entitiesStore.getState().channels[call.channelId];
+    const preset = capPreset(
+      s.preset,
+      instance?.maxSharePreset ?? '',
+      channel?.maxShareQuality ?? '',
+    );
+    const gen = this.generation;
+    dispatchCall({ type: 'localShare', share: { status: 'starting' } });
+    try {
+      const info = await session.startShare({
+        preset,
+        optimize: s.optimize,
+        codec: s.codec,
+        audio: s.audio,
+      });
+      if (gen !== this.generation) return;
+      dispatchCall({
+        type: 'localShare',
+        share: {
+          status: 'live',
+          preset,
+          optimize: s.optimize,
+          codec: info.codec,
+          audio: info.audio,
+        },
+      });
+      this.play('streamStart');
+      if (info.ownAudioWarning) this.notice(this.d.t('stage.notices.ownAudio'));
+    } catch (err) {
+      if (gen !== this.generation) return;
+      dispatchCall({ type: 'localShare', share: null });
+      const failure = err instanceof ShareError ? err.failure : 'failed';
+      if (failure === 'cancelled') return;
+      this.notice(
+        this.d.t(
+          failure === 'unsupported'
+            ? 'stage.notices.shareUnsupported'
+            : 'stage.notices.shareFailed',
+        ),
+      );
+    }
+  }
+
+  async stopShare(): Promise<void> {
+    if (!callStore.getState().localShare) return;
+    dispatchCall({ type: 'localShare', share: null });
+    await this.session?.stopShare();
+    this.play('streamStop');
+  }
+
+  setWatching(userId: string, watching: boolean): void {
+    this.session?.setWatching(userId, watching);
+  }
+
+  setStreamVolume(userId: string, volume: number): void {
+    dispatchShareSettings({ type: 'streamVolumeSet', userId, volume });
+  }
+
+  setShareSettings(settings: Partial<Omit<ShareSettings, 'streamVolumes'>>): void {
+    dispatchShareSettings({ type: 'changed', settings });
+  }
+
+  mountShare(userId: string, el: HTMLElement): () => void {
+    return this.views.mount(userId, el);
+  }
+
+  mountSelfShare(el: HTMLElement): () => void {
+    return this.views.mount(SELF_SHARE, el);
+  }
+
+  async shareStats(userId: string): Promise<RemoteShareStats | undefined> {
+    return this.session?.shareStats(userId);
+  }
+
+  async selfShareStats(): Promise<OutboundVideoStats | undefined> {
+    return this.session?.selfShareStats();
+  }
+
+  async connectionStats(): Promise<ConnectionStats | undefined> {
+    return this.session?.connectionStats();
   }
 
   voiceUpdated(state: VoiceState): void {
@@ -357,7 +507,58 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks {
     this.gateway?.setVoiceSelf('', false, false);
     this.speaking.clear();
     if (this.speakingTimer !== undefined) clearTimeout(this.speakingTimer);
+    this.streamers = new Set();
     dispatchCall({ type: 'ended' });
+    dispatchStage({ type: 'reset' });
+  }
+
+  private shareEnded(reason: ShareEnd): void {
+    if (!callStore.getState().localShare) return;
+    dispatchCall({ type: 'localShare', share: null });
+    this.play('streamStop');
+    if (reason !== 'removed') return;
+    // The media server stops a share past the channel's limit.
+    const max = realtimeStore.getState().instance?.maxSharesPerChannel ?? 0;
+    this.notice(
+      max > 0 && this.othersSharing() >= max
+        ? this.d.t('stage.notices.shareLimit', { count: max })
+        : this.d.t('stage.notices.shareStopped'),
+    );
+  }
+
+  /** Who shares in this device's call, by the hub's streaming flags. */
+  private channelStreamers(): Set<string> {
+    const call = callStore.getState();
+    if (call.status === 'idle') return new Set();
+    return new Set(
+      channelOccupants(voiceStatesStore.getState(), call.guildId, call.channelId)
+        .filter((s) => s.streaming)
+        .map((s) => s.userId),
+    );
+  }
+
+  private othersSharing(): number {
+    const myId = sessionStore.getState().me?.user?.id ?? '';
+    return [...this.channelStreamers()].filter((id) => id !== myId).length;
+  }
+
+  /** Plays the stream sounds when someone else in the call starts or stops sharing. */
+  private streamersChanged(): void {
+    const call = callStore.getState();
+    if (call.status !== 'connected' && call.status !== 'reconnecting') return;
+    const next = this.channelStreamers();
+    const myId = sessionStore.getState().me?.user?.id ?? '';
+    const started = [...next].some((id) => id !== myId && !this.streamers.has(id));
+    const stopped = [...this.streamers].some((id) => id !== myId && !next.has(id));
+    this.streamers = next;
+    if (started) this.play('streamStart');
+    else if (stopped) this.play('streamStop');
+  }
+
+  private applyStreamVolumes(s: ShareSettings): void {
+    for (const [id, volume] of Object.entries(s.streamVolumes)) {
+      this.session?.setStreamVolume(id, volume);
+    }
   }
 
   private applySelf(s: VoiceSettings): void {
@@ -382,6 +583,9 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks {
   }
 
   private settingsChanged(next: VoiceSettings, prev: VoiceSettings): void {
+    if (next.deafenStreams !== prev.deafenStreams) {
+      this.session?.setDeafenStreams(next.deafenStreams);
+    }
     if (
       next.userVolumes !== prev.userVolumes ||
       next.localMutes !== prev.localMutes ||

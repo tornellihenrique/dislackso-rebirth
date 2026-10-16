@@ -109,6 +109,10 @@ message InstanceInfo {
   int32 max_guild_members = 5;
   int32 default_voice_user_limit = 6;
   int32 max_upload_mb = 7;
+  // Screen shares one voice channel carries at once.
+  int32 max_shares_per_channel = 8;
+  // The highest screen share preset ("1440p60"); a channel may set a lower one.
+  string max_share_preset = 9;
 }
 
 message Ready {

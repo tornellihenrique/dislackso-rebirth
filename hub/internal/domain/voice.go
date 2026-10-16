@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"slices"
 	"strings"
 	"time"
 )
@@ -64,4 +65,15 @@ func VoicePermissionsFor(serverMute, serverDeaf bool) VoicePermissions {
 	}
 	p.Publish = append(p.Publish, SourceScreenShare, SourceScreenShareAudio)
 	return p
+}
+
+// Without takes sources out of what may be published.
+func (p VoicePermissions) Without(sources ...MediaSource) VoicePermissions {
+	out := VoicePermissions{Subscribe: p.Subscribe}
+	for _, s := range p.Publish {
+		if !slices.Contains(sources, s) {
+			out.Publish = append(out.Publish, s)
+		}
+	}
+	return out
 }

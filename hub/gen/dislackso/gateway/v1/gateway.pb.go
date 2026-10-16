@@ -884,8 +884,12 @@ type InstanceInfo struct {
 	MaxGuildMembers       int32                  `protobuf:"varint,5,opt,name=max_guild_members,json=maxGuildMembers,proto3" json:"max_guild_members,omitempty"`
 	DefaultVoiceUserLimit int32                  `protobuf:"varint,6,opt,name=default_voice_user_limit,json=defaultVoiceUserLimit,proto3" json:"default_voice_user_limit,omitempty"`
 	MaxUploadMb           int32                  `protobuf:"varint,7,opt,name=max_upload_mb,json=maxUploadMb,proto3" json:"max_upload_mb,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// Screen shares one voice channel carries at once.
+	MaxSharesPerChannel int32 `protobuf:"varint,8,opt,name=max_shares_per_channel,json=maxSharesPerChannel,proto3" json:"max_shares_per_channel,omitempty"`
+	// The highest screen share preset ("1440p60"); a channel may set a lower one.
+	MaxSharePreset string `protobuf:"bytes,9,opt,name=max_share_preset,json=maxSharePreset,proto3" json:"max_share_preset,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *InstanceInfo) Reset() {
@@ -965,6 +969,20 @@ func (x *InstanceInfo) GetMaxUploadMb() int32 {
 		return x.MaxUploadMb
 	}
 	return 0
+}
+
+func (x *InstanceInfo) GetMaxSharesPerChannel() int32 {
+	if x != nil {
+		return x.MaxSharesPerChannel
+	}
+	return 0
+}
+
+func (x *InstanceInfo) GetMaxSharePreset() string {
+	if x != nil {
+		return x.MaxSharePreset
+	}
+	return ""
 }
 
 type Ready struct {
@@ -2038,7 +2056,7 @@ const file_dislackso_gateway_v1_gateway_proto_rawDesc = "" +
 	"\x14UpdateVoiceSelfState\x12(\n" +
 	"\x10voice_session_id\x18\x01 \x01(\tR\x0evoiceSessionId\x12\x1b\n" +
 	"\tself_mute\x18\x02 \x01(\bR\bselfMute\x12\x1b\n" +
-	"\tself_deaf\x18\x03 \x01(\bR\bselfDeaf\"\xc8\x02\n" +
+	"\tself_deaf\x18\x03 \x01(\bR\bselfDeaf\"\xa7\x03\n" +
 	"\fInstanceInfo\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12,\n" +
 	"\x12members_can_invite\x18\x02 \x01(\bR\x10membersCanInvite\x128\n" +
@@ -2046,7 +2064,9 @@ const file_dislackso_gateway_v1_gateway_proto_rawDesc = "" +
 	"\x16max_channels_per_guild\x18\x04 \x01(\x05R\x13maxChannelsPerGuild\x12*\n" +
 	"\x11max_guild_members\x18\x05 \x01(\x05R\x0fmaxGuildMembers\x127\n" +
 	"\x18default_voice_user_limit\x18\x06 \x01(\x05R\x15defaultVoiceUserLimit\x12\"\n" +
-	"\rmax_upload_mb\x18\a \x01(\x05R\vmaxUploadMb\"\xba\x01\n" +
+	"\rmax_upload_mb\x18\a \x01(\x05R\vmaxUploadMb\x123\n" +
+	"\x16max_shares_per_channel\x18\b \x01(\x05R\x13maxSharesPerChannel\x12(\n" +
+	"\x10max_share_preset\x18\t \x01(\tR\x0emaxSharePreset\"\xba\x01\n" +
 	"\x05Ready\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12 \n" +

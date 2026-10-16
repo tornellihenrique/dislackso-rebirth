@@ -1,5 +1,13 @@
 export type SoundKind =
-  'join' | 'leave' | 'mute' | 'unmute' | 'deafen' | 'undeafen' | 'disconnected';
+  | 'join'
+  | 'leave'
+  | 'mute'
+  | 'unmute'
+  | 'deafen'
+  | 'undeafen'
+  | 'disconnected'
+  | 'streamStart'
+  | 'streamStop';
 
 /** Notes in Hz and their length in seconds; the sounds are synthesized, not shipped. */
 const tunes: Record<SoundKind, readonly (readonly [number, number])[]> = {
@@ -25,6 +33,16 @@ const tunes: Record<SoundKind, readonly (readonly [number, number])[]> = {
     [659.25, 0.08],
     [523.25, 0.08],
     [392, 0.14],
+  ],
+  streamStart: [
+    [523.25, 0.06],
+    [659.25, 0.06],
+    [783.99, 0.1],
+  ],
+  streamStop: [
+    [783.99, 0.06],
+    [659.25, 0.06],
+    [523.25, 0.1],
   ],
 };
 

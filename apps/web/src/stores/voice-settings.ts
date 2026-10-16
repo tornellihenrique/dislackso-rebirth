@@ -32,6 +32,8 @@ export interface VoiceSettings {
   readonly echoCancellation: boolean;
   readonly autoGainControl: boolean;
   readonly sounds: boolean;
+  /** Deafening also silences the audio of screen shares. */
+  readonly deafenStreams: boolean;
   /** userId → 0–2. */
   readonly userVolumes: Readonly<Record<string, number>>;
   readonly localMutes: Readonly<Record<string, true>>;
@@ -66,6 +68,7 @@ export const defaultVoiceSettings: VoiceSettings = {
   echoCancellation: true,
   autoGainControl: true,
   sounds: true,
+  deafenStreams: false,
   userVolumes: {},
   localMutes: {},
 };

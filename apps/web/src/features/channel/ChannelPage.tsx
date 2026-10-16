@@ -4,6 +4,7 @@ import { Hash, MessageSquareDashed, Users, Volume2 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { StageHeaderActions, VoiceCount } from '@/features/stage/StageHeaderActions';
 import { VoiceStage } from '@/features/voice/VoiceStage';
 import { useEntities } from '@/stores/entities';
 import { useRealtime } from '@/stores/realtime';
@@ -36,13 +37,15 @@ export function ChannelPage() {
       <header className="flex h-12 shrink-0 items-center gap-2 border-b border-rail px-4">
         <Icon aria-hidden className="size-5 shrink-0 text-fg-muted" />
         <h1 className="font-semibold">{channel.name}</h1>
+        {voice && <VoiceCount guildId={guildId} channelId={channelId} />}
         {channel.topic !== '' && (
           <>
             <span aria-hidden className="mx-1 h-6 w-px bg-border" />
             <p className="min-w-0 flex-1 truncate text-sm text-fg-muted">{channel.topic}</p>
           </>
         )}
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-1">
+          {voice && <StageHeaderActions channelId={channelId} />}
           <Tooltip label={membersLabel} side="bottom">
             <IconButton
               label={membersLabel}

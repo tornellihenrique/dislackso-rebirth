@@ -60,6 +60,8 @@ func readyFrame(sessionID string, r snapshot.Ready) []byte {
 			MaxGuildMembers:       wire.ClampInt32(l.MaxGuildMembers),
 			DefaultVoiceUserLimit: wire.ClampInt32(l.DefaultVoiceUserLimit),
 			MaxUploadMb:           wire.ClampInt32(l.MaxUploadMB),
+			MaxSharesPerChannel:   wire.ClampInt32(l.MaxSharesPerChannel),
+			MaxSharePreset:        l.MaxSharePreset,
 		},
 		Guilds: guilds,
 	}}})
