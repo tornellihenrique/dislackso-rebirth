@@ -5,13 +5,11 @@ package app
 import (
 	"context"
 	"log/slog"
-	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"slices"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -60,27 +58,6 @@ func liveKitBinary(t *testing.T) string {
 		t.Skipf("livekit-server not found at %s (run task tools, or set DSX_LIVEKIT_BINARY)", p)
 	}
 	return p
-}
-
-// freePort finds a port free for both TCP and UDP.
-func freePort(t *testing.T) int {
-	t.Helper()
-	for range 20 {
-		ln, err := net.Listen("tcp", "127.0.0.1:0")
-		if err != nil {
-			t.Fatal(err)
-		}
-		port := ln.Addr().(*net.TCPAddr).Port
-		_ = ln.Close()
-		pc, err := net.ListenPacket("udp", net.JoinHostPort("", strconv.Itoa(port)))
-		if err != nil {
-			continue
-		}
-		_ = pc.Close()
-		return port
-	}
-	t.Fatal("no free port")
-	return 0
 }
 
 func eventually(t *testing.T, within time.Duration, what string, cond func() bool) time.Duration {

@@ -122,6 +122,15 @@ test('the video stays live across grid, focus and fullscreen', async () => {
   await expect(stage(page)).not.toHaveAttribute('data-fullscreen', 'true');
   expect(await video(page)).toMatchObject({ tagged: 'first', playing: true });
 
+  // The tile's own button toggles too.
+  await shareTile(page).hover();
+  await shareTile(page).getByRole('button', { name: 'Fullscreen' }).click();
+  await expect(stage(page)).toHaveAttribute('data-fullscreen', 'true');
+  await shareTile(page).hover();
+  await shareTile(page).getByRole('button', { name: 'Exit fullscreen' }).click();
+  await expect(stage(page)).not.toHaveAttribute('data-fullscreen', 'true');
+  expect(await video(page)).toMatchObject({ tagged: 'first', playing: true });
+
   await page.keyboard.press('Control+Shift+S');
   await expect(page.getByTestId('share-stats')).toContainText('Resolution', CONNECT);
   // Text optimization picks AV1 where the browser can send it.

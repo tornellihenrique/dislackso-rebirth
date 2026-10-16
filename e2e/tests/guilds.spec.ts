@@ -203,3 +203,38 @@ test('a kicked member loses the server at once; a banned one cannot come back', 
   expect(admin.errors).toEqual([]);
   expect(ana.errors).toEqual([]);
 });
+
+test('servers reorder by dragging in the rail without leaving the page', async () => {
+  const { page } = admin;
+  const before = page.url();
+  await servers(page).getByRole('button', { name: 'Add a server' }).click();
+  await page.getByRole('dialog').getByLabel('Server name').fill('Ops');
+  await page.getByRole('dialog').getByRole('button', { name: 'Create server' }).click();
+  await expect(page).not.toHaveURL(before);
+  await expect(page).toHaveURL(/\/channels\/\d+\/\d+$/);
+  const url = page.url();
+  await page.evaluate(() => {
+    (window as unknown as { stayed?: boolean }).stayed = true;
+  });
+  const order = () =>
+    servers(page)
+      .getByRole('link')
+      .evaluateAll((links) => links.map((l) => l.getAttribute('aria-label')));
+  await expect.poll(order).toEqual(['Home', SERVER, 'Ops']);
+
+  const from = await servers(page).getByRole('link', { name: SERVER }).boundingBox();
+  const to = await servers(page).getByRole('link', { name: 'Ops' }).boundingBox();
+  if (!from || !to) throw new Error('rail icons not laid out');
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  // Sideways first: the rail only moves icons up and down.
+  await page.mouse.move(from.x + from.width / 2 + 60, from.y + from.height / 2, { steps: 5 });
+  await page.mouse.move(to.x + to.width / 2, to.y + (to.height * 3) / 4, { steps: 10 });
+  await page.mouse.up();
+
+  await expect.poll(order).toEqual(['Home', 'Ops', SERVER]);
+  // The release neither opened the dragged server nor reloaded the app.
+  expect(page.url()).toBe(url);
+  expect(await page.evaluate(() => (window as unknown as { stayed?: boolean }).stayed)).toBe(true);
+  expect(admin.errors).toEqual([]);
+});

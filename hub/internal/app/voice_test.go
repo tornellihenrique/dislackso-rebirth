@@ -27,7 +27,8 @@ func voiceChannel(t *testing.T, state *dislacksov1.GuildState) string {
 func TestVoiceWithoutMediaServer(t *testing.T) {
 	// A configured binary that is missing leaves the hub running without voice.
 	r := start(t, func(c *config.Config) {
-		c.LiveKit = config.LiveKit{Binary: filepath.Join(t.TempDir(), "livekit-server"), Port: 7880}
+		// A free port, so no media server running on this machine answers the proxy.
+		c.LiveKit = config.LiveKit{Binary: filepath.Join(t.TempDir(), "livekit-server"), Port: freePort(t)}
 	})
 	ctx := t.Context()
 	admin := r.browser(t)

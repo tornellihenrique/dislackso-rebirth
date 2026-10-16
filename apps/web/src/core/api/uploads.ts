@@ -10,6 +10,13 @@ import {
 
 export type UploadPurpose = 'avatar' | 'guild_icon';
 
+/**
+ * The hub's limit for avatars and icons. Bigger files are refused here: the
+ * hub stops reading an oversized body, and the browser may then report the
+ * dropped connection instead of the hub's answer.
+ */
+export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
 /** A rectangle in source image pixels. */
 export interface CropArea {
   x: number;
@@ -67,6 +74,9 @@ export function uploadError(status: number, body: UploadErrorBody | null): Conne
 export function createUploadApi(fetchImpl: typeof fetch = fetch): UploadApi {
   return {
     async upload(purpose, file, name, crop) {
+      if (file.size > MAX_IMAGE_BYTES) {
+        throw uploadError(413, { code: 'invalid_argument', reason: 'file_too_large' });
+      }
       const form = new FormData();
       form.append('file', file, name);
       const query = new URLSearchParams({ purpose });

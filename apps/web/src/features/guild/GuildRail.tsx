@@ -15,7 +15,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Link, useParams } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useEntities } from '@/stores/entities';
@@ -25,6 +25,9 @@ import { ProductMark } from '@/ui/ProductMark';
 import { Tooltip } from '@/ui/Tooltip';
 
 import { CreateGuildDialog } from './CreateGuildDialog';
+
+/** The click that ends a drag arrives right after it. */
+const CLICK_AFTER_DRAG_MS = 300;
 
 /** The left pill: tall for the open guild, medium on hover. */
 function Pill({ active }: { active: boolean }) {
@@ -36,7 +39,14 @@ function Pill({ active }: { active: boolean }) {
   );
 }
 
-function RailGuild({ guildId, active }: { guildId: string; active: boolean }) {
+interface RailGuildProps {
+  guildId: string;
+  active: boolean;
+  /** True right after a drag, whose release must not open the guild. */
+  dragged: () => boolean;
+}
+
+function RailGuild({ guildId, active, dragged }: RailGuildProps) {
   const guild = useEntities((s) => s.guilds[guildId]);
   const lastChannel = useUi((s) => s.lastChannel[guildId]);
   // Pointer only: the rail order is a local nicety, and the links stay the focusable elements.
@@ -45,8 +55,17 @@ function RailGuild({ guildId, active }: { guildId: string; active: boolean }) {
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Translate.toString(transform), transition }}
+      style={{
+        transform: CSS.Translate.toString(transform && { ...transform, x: 0 }),
+        transition,
+      }}
       {...listeners}
+      onClickCapture={(e) => {
+        if (dragged()) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
       className={`w-full ${isDragging ? 'opacity-50' : ''}`}
     >
       <Tooltip label={guild.name} side="right">
@@ -55,6 +74,8 @@ function RailGuild({ guildId, active }: { guildId: string; active: boolean }) {
           params={lastChannel !== undefined ? { guildId, channelId: lastChannel } : { guildId }}
           aria-label={guild.name}
           aria-current={active ? 'page' : undefined}
+          // The browser's own link drag would open the link where it is dropped.
+          draggable={false}
           className="group relative flex w-full justify-center"
         >
           <Pill active={active} />
@@ -73,7 +94,9 @@ export function GuildRail() {
   const { guildId } = useParams({ strict: false });
   const [creating, setCreating] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const draggedAt = useRef(Number.NEGATIVE_INFINITY);
   const onDragEnd = ({ active, over }: DragEndEvent) => {
+    draggedAt.current = performance.now();
     if (!over || active.id === over.id) return;
     const order = arrayMove(
       guildIds,
@@ -106,7 +129,12 @@ export function GuildRail() {
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={guildIds} strategy={verticalListSortingStrategy}>
           {guildIds.map((id) => (
-            <RailGuild key={id} guildId={id} active={id === guildId} />
+            <RailGuild
+              key={id}
+              guildId={id}
+              active={id === guildId}
+              dragged={() => performance.now() - draggedAt.current < CLICK_AFTER_DRAG_MS}
+            />
           ))}
         </SortableContext>
       </DndContext>

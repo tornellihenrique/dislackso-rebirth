@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/http/cookiejar"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -349,4 +351,25 @@ func TestLoginIsRateLimited(t *testing.T) {
 	if !found {
 		t.Errorf("details = %v, want a positive retry delay", ce.Details())
 	}
+}
+
+// freePort finds a port free for both TCP and UDP.
+func freePort(t *testing.T) int {
+	t.Helper()
+	for range 20 {
+		ln, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		port := ln.Addr().(*net.TCPAddr).Port
+		_ = ln.Close()
+		pc, err := net.ListenPacket("udp", net.JoinHostPort("", strconv.Itoa(port)))
+		if err != nil {
+			continue
+		}
+		_ = pc.Close()
+		return port
+	}
+	t.Fatal("no free port")
+	return 0
 }

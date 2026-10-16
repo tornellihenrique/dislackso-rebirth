@@ -250,6 +250,7 @@ export const en = {
       focus: 'Focus',
       unfocus: 'Back to the grid',
       fullscreen: 'Fullscreen',
+      exitFullscreen: 'Exit fullscreen',
       stats: 'Stats',
       streamVolume: 'Stream volume',
       streamMuted: 'Stream muted',
