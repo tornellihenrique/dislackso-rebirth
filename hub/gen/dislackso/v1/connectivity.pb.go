@@ -438,13 +438,16 @@ type ExposureStatus struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Kind  ExposureKind           `protobuf:"varint,1,opt,name=kind,proto3,enum=dislackso.v1.ExposureKind" json:"kind,omitempty"`
 	State ExposureState          `protobuf:"varint,2,opt,name=state,proto3,enum=dislackso.v1.ExposureState" json:"state,omitempty"`
-	// The public address while running.
+	// The public address while running, and while waiting for it to answer.
 	Url      string `protobuf:"bytes,3,opt,name=url,proto3" json:"url,omitempty"`
 	LoginUrl string `protobuf:"bytes,4,opt,name=login_url,json=loginUrl,proto3" json:"login_url,omitempty"`
 	// What went wrong, as a code the client explains ("tailscale_https_disabled").
-	Problem       string `protobuf:"bytes,5,opt,name=problem,proto3" json:"problem,omitempty"`
-	Detail        string `protobuf:"bytes,6,opt,name=detail,proto3" json:"detail,omitempty"`
-	SinceMs       int64  `protobuf:"varint,7,opt,name=since_ms,json=sinceMs,proto3" json:"since_ms,omitempty"`
+	Problem string `protobuf:"bytes,5,opt,name=problem,proto3" json:"problem,omitempty"`
+	Detail  string `protobuf:"bytes,6,opt,name=detail,proto3" json:"detail,omitempty"`
+	SinceMs int64  `protobuf:"varint,7,opt,name=since_ms,json=sinceMs,proto3" json:"since_ms,omitempty"`
+	// What a starting provider waits for ("certificate", "publishing"), or
+	// "unverified" for a running address the hub could not reach from outside.
+	Stage         string `protobuf:"bytes,8,opt,name=stage,proto3" json:"stage,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -526,6 +529,13 @@ func (x *ExposureStatus) GetSinceMs() int64 {
 		return x.SinceMs
 	}
 	return 0
+}
+
+func (x *ExposureStatus) GetStage() string {
+	if x != nil {
+		return x.Stage
+	}
+	return ""
 }
 
 type TurnSettings struct {
@@ -1689,7 +1699,7 @@ const file_dislackso_v1_connectivity_proto_rawDesc = "" +
 	"directAddr\x12\x19\n" +
 	"\blan_addr\x18\a \x01(\tR\alanAddr\x12!\n" +
 	"\ftunnel_token\x18\b \x01(\tR\vtunnelToken\x12(\n" +
-	"\x10tunnel_token_set\x18\t \x01(\bR\x0etunnelTokenSet\"\xef\x01\n" +
+	"\x10tunnel_token_set\x18\t \x01(\bR\x0etunnelTokenSet\"\x85\x02\n" +
 	"\x0eExposureStatus\x12.\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x1a.dislackso.v1.ExposureKindR\x04kind\x121\n" +
 	"\x05state\x18\x02 \x01(\x0e2\x1b.dislackso.v1.ExposureStateR\x05state\x12\x10\n" +
@@ -1697,7 +1707,8 @@ const file_dislackso_v1_connectivity_proto_rawDesc = "" +
 	"\tlogin_url\x18\x04 \x01(\tR\bloginUrl\x12\x18\n" +
 	"\aproblem\x18\x05 \x01(\tR\aproblem\x12\x16\n" +
 	"\x06detail\x18\x06 \x01(\tR\x06detail\x12\x19\n" +
-	"\bsince_ms\x18\a \x01(\x03R\asinceMs\"\xa2\x02\n" +
+	"\bsince_ms\x18\a \x01(\x03R\asinceMs\x12\x14\n" +
+	"\x05stage\x18\b \x01(\tR\x05stage\"\xa2\x02\n" +
 	"\fTurnSettings\x12*\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x16.dislackso.v1.TurnKindR\x04kind\x12*\n" +
 	"\x11cloudflare_key_id\x18\x02 \x01(\tR\x0fcloudflareKeyId\x12\x12\n" +

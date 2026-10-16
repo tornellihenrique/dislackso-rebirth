@@ -28,7 +28,7 @@ func (e *ExposureError) Unwrap() error { return e.Err }
 
 // MappedPorts is what the home router agreed to forward.
 type MappedPorts struct {
-	// "nat-pmp" or "upnp".
+	// "pcp", "nat-pmp" or "upnp".
 	Protocol string
 	// External is the router's public address with the UDP port.
 	External netip.AddrPort
@@ -42,4 +42,10 @@ type MappedPorts struct {
 type PortMapper interface {
 	Map(ctx context.Context, udp, tcp int) (MappedPorts, error)
 	Unmap(ctx context.Context)
+}
+
+// PublicProbe looks at an address from the internet's side.
+type PublicProbe interface {
+	// Reachable fails until rawURL answers an HTTPS GET with a 2xx status.
+	Reachable(ctx context.Context, rawURL string) error
 }

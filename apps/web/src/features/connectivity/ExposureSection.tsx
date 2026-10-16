@@ -51,6 +51,12 @@ function isProblem(code: string): code is Problem {
   return Object.hasOwn(en.connectivity.problems, code);
 }
 
+type Stage = keyof typeof en.connectivity.exposure.stages;
+
+function isStage(code: string): code is Stage {
+  return Object.hasOwn(en.connectivity.exposure.stages, code);
+}
+
 interface ExposureSectionProps {
   settings: ExposureSettings | undefined;
   status: ExposureStatus | undefined;
@@ -208,6 +214,11 @@ function StatusCard({ status }: { status: ExposureStatus }) {
         <StatusDot tone={stateTones[state]} />
         {t(`connectivity.exposure.states.${state}`, { provider })}
       </p>
+      {isStage(status.stage) && (
+        <p className="text-fg-muted">
+          {t(`connectivity.exposure.stages.${status.stage}`, { url: status.url })}
+        </p>
+      )}
       {state === 'running' && status.url !== '' && (
         <CopyField label={t('connectivity.exposure.address')} value={status.url} />
       )}

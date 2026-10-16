@@ -70,13 +70,16 @@ enum ExposureState {
 message ExposureStatus {
   ExposureKind kind = 1;
   ExposureState state = 2;
-  // The public address while running.
+  // The public address while running, and while waiting for it to answer.
   string url = 3;
   string login_url = 4;
   // What went wrong, as a code the client explains ("tailscale_https_disabled").
   string problem = 5;
   string detail = 6;
   int64 since_ms = 7;
+  // What a starting provider waits for ("certificate", "publishing"), or
+  // "unverified" for a running address the hub could not reach from outside.
+  string stage = 8;
 }
 
 enum TurnKind {

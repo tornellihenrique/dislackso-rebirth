@@ -36,6 +36,7 @@ func ExposureStatus(s domain.ExposureStatus) *dislacksov1.ExposureStatus {
 		LoginUrl: s.LoginURL,
 		Problem:  s.Problem,
 		Detail:   s.Detail,
+		Stage:    s.Stage,
 		SinceMs:  s.Since.UnixMilli(),
 	}
 }

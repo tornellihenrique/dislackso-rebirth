@@ -15,6 +15,7 @@ import (
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/exposure/tailscale"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/hostos"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/ice"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/publicprobe"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/stun"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/domain"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/ports"
@@ -32,7 +33,8 @@ func exposureProviders(dataDir string, clk ports.Clock, logger *slog.Logger) exp
 		switch s.Kind {
 		case domain.ExposureTailscaleFunnel:
 			return &tailscale.Provider{
-				Dir: filepath.Join(dataDir, "tsnet"), Hostname: s.TailscaleHostname, Logger: logger, Clock: clk,
+				Dir: filepath.Join(dataDir, "tsnet"), Hostname: s.TailscaleHostname,
+				Probe: publicprobe.Prober{}, Logger: logger, Clock: clk,
 			}
 		case domain.ExposureCloudflareQuick, domain.ExposureCloudflareTunnel:
 			return &cloudflared.Provider{
