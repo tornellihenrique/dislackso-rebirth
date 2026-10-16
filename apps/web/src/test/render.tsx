@@ -27,6 +27,16 @@ export function stubVoice(): VoiceActions {
     toggleLocalMute: () => undefined,
     setPrefs: () => undefined,
     startAudio: () => Promise.resolve(),
+    startShare: () => Promise.resolve(),
+    stopShare: () => Promise.resolve(),
+    setWatching: () => undefined,
+    setStreamVolume: () => undefined,
+    setShareSettings: () => undefined,
+    mountShare: () => () => undefined,
+    mountSelfShare: () => () => undefined,
+    shareStats: () => Promise.resolve(undefined),
+    selfShareStats: () => Promise.resolve(undefined),
+    connectionStats: () => Promise.resolve(undefined),
   };
 }
 

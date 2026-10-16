@@ -4,6 +4,7 @@ import { Hash, MessageSquareDashed, Users, Volume2 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { StageHeaderActions } from '@/features/stage/StageHeaderActions';
 import { VoiceStage } from '@/features/voice/VoiceStage';
 import { useEntities } from '@/stores/entities';
 import { useRealtime } from '@/stores/realtime';
@@ -42,7 +43,8 @@ export function ChannelPage() {
             <p className="min-w-0 flex-1 truncate text-sm text-fg-muted">{channel.topic}</p>
           </>
         )}
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-1">
+          {voice && <StageHeaderActions channelId={channelId} />}
           <Tooltip label={membersLabel} side="bottom">
             <IconButton
               label={membersLabel}

@@ -1,6 +1,8 @@
 import { Tooltip as T } from 'radix-ui';
 import type { ReactNode } from 'react';
 
+import { usePortalContainer } from './portal';
+
 interface TooltipProps {
   label: string;
   side?: 'top' | 'right' | 'bottom' | 'left';
@@ -9,10 +11,11 @@ interface TooltipProps {
 
 /** A short label shown on hover and focus; the trigger must be a single element. */
 export function Tooltip({ label, side = 'top', children }: TooltipProps) {
+  const container = usePortalContainer();
   return (
     <T.Root>
       <T.Trigger asChild>{children}</T.Trigger>
-      <T.Portal>
+      <T.Portal container={container}>
         <T.Content
           side={side}
           sideOffset={8}

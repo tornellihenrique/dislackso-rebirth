@@ -1,8 +1,12 @@
 import type { RemoteAudioTrack } from 'livekit-client';
 
+/** A participant's microphone, or the audio of their screen share. */
+export type AudioKind = 'voice' | 'stream';
+
 interface Entry {
   readonly track: RemoteAudioTrack;
   readonly identity: string;
+  readonly kind: AudioKind;
   readonly el: HTMLMediaElement;
   boost: { readonly source: MediaStreamAudioSourceNode; readonly gain: GainNode } | undefined;
 }
@@ -19,21 +23,25 @@ export const MAX_USER_VOLUME = 2;
  */
 export class RemoteAudio {
   private readonly entries = new Map<RemoteAudioTrack, Entry>();
-  private readonly volumes = new Map<string, number>();
+  private readonly volumes: Record<AudioKind, Map<string, number>> = {
+    voice: new Map(),
+    stream: new Map(),
+  };
   private readonly mutedUsers = new Set<string>();
   private deafened = false;
+  private deafenStreams = false;
   private master = 1;
   private output = '';
   private ctx: AudioContext | undefined;
 
   constructor(private readonly host: HTMLElement) {}
 
-  add(track: RemoteAudioTrack, identity: string): void {
+  add(track: RemoteAudioTrack, identity: string, kind: AudioKind = 'voice'): void {
     if (this.entries.has(track)) return;
     const el = track.attach();
     el.hidden = true;
     this.host.append(el);
-    const entry: Entry = { track, identity, el, boost: undefined };
+    const entry: Entry = { track, identity, kind, el, boost: undefined };
     this.entries.set(track, entry);
     if (this.output !== '') void this.sink(el, this.output);
     this.apply(entry);
@@ -48,8 +56,8 @@ export class RemoteAudio {
     this.entries.delete(track);
   }
 
-  setVolume(identity: string, volume: number): void {
-    this.volumes.set(identity, Math.min(MAX_USER_VOLUME, Math.max(0, volume)));
+  setVolume(identity: string, volume: number, kind: AudioKind = 'voice'): void {
+    this.volumes[kind].set(identity, Math.min(MAX_USER_VOLUME, Math.max(0, volume)));
     this.applyTo(identity);
   }
 
@@ -65,8 +73,10 @@ export class RemoteAudio {
     this.applyTo(identity);
   }
 
-  setDeafened(deafened: boolean): void {
+  /** Deafening silences voices, and stream audio too when deafenStreams is on. */
+  setDeafened(deafened: boolean, deafenStreams = this.deafenStreams): void {
     this.deafened = deafened;
+    this.deafenStreams = deafenStreams;
     for (const e of this.entries.values()) this.apply(e);
   }
 
@@ -99,8 +109,14 @@ export class RemoteAudio {
   }
 
   private apply(e: Entry): void {
-    const volume = Math.min(MAX_USER_VOLUME, (this.volumes.get(e.identity) ?? 1) * this.master);
-    const silent = this.deafened || this.mutedUsers.has(e.identity);
+    const volume = Math.min(
+      MAX_USER_VOLUME,
+      (this.volumes[e.kind].get(e.identity) ?? 1) * this.master,
+    );
+    const silent =
+      e.kind === 'voice'
+        ? this.deafened || this.mutedUsers.has(e.identity)
+        : this.deafened && this.deafenStreams;
     if (volume > 1 && !silent) {
       this.boostTo(e, volume);
       return;

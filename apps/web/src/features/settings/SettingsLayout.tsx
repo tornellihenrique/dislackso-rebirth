@@ -14,6 +14,7 @@ interface NavItemProps {
     | '/settings/profile'
     | '/settings/appearance'
     | '/settings/voice'
+    | '/settings/share'
     | '/settings/sessions'
     | '/settings/instance';
   children: ReactNode;
@@ -65,6 +66,7 @@ export function SettingsLayout() {
           <NavItem to="/settings/account">{t('settings.nav.account')}</NavItem>
           <NavItem to="/settings/profile">{t('settings.nav.profile')}</NavItem>
           <NavItem to="/settings/voice">{t('settings.nav.voice')}</NavItem>
+          <NavItem to="/settings/share">{t('settings.nav.share')}</NavItem>
           <NavItem to="/settings/appearance">{t('settings.nav.appearance')}</NavItem>
           <NavItem to="/settings/sessions">{t('settings.nav.sessions')}</NavItem>
           {admin && (

@@ -2,6 +2,8 @@ import { Check, ChevronRight } from 'lucide-react';
 import { ContextMenu as CM, DropdownMenu as DM } from 'radix-ui';
 import type { ReactNode } from 'react';
 
+import { usePortalContainer } from './portal';
+
 const contentClass =
   'z-50 min-w-52 rounded-md bg-floating p-1.5 text-sm text-fg shadow-lg outline-none';
 const itemClass =
@@ -11,20 +13,23 @@ const toneClass = {
   danger: 'text-danger data-[highlighted]:bg-danger data-[highlighted]:text-accent-fg',
 };
 const separatorClass = 'my-1 h-px bg-border';
+const labelClass = 'px-2 pt-1.5 pb-1 text-xs font-semibold tracking-wide text-fg-muted uppercase';
 
 interface MenuProps {
   trigger: ReactNode;
   children: ReactNode;
   align?: 'start' | 'center' | 'end';
+  side?: 'top' | 'right' | 'bottom' | 'left';
 }
 
 /** A dropdown menu opened by `trigger`, which must be a single focusable element. */
-export function Menu({ trigger, children, align = 'start' }: MenuProps) {
+export function Menu({ trigger, children, align = 'start', side = 'bottom' }: MenuProps) {
+  const container = usePortalContainer();
   return (
     <DM.Root>
       <DM.Trigger asChild>{trigger}</DM.Trigger>
-      <DM.Portal>
-        <DM.Content align={align} sideOffset={6} className={contentClass}>
+      <DM.Portal container={container}>
+        <DM.Content align={align} side={side} sideOffset={6} className={contentClass}>
           {children}
         </DM.Content>
       </DM.Portal>
@@ -63,6 +68,98 @@ export function MenuSeparator() {
   return <DM.Separator className={separatorClass} />;
 }
 
+export function MenuLabel({ children }: { children: ReactNode }) {
+  return <DM.Label className={labelClass}>{children}</DM.Label>;
+}
+
+function Box({ checked, round = false }: { checked: boolean; round?: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={`flex size-4 items-center justify-center border ${round ? 'rounded-full' : 'rounded-sm'} ${checked ? 'border-accent bg-accent text-accent-fg' : 'border-fg-muted'}`}
+    >
+      {checked && <Check className="size-3" />}
+    </span>
+  );
+}
+
+interface RadioGroupProps<T extends string> {
+  value: T;
+  onValueChange: (value: T) => void;
+  children: ReactNode;
+}
+
+/** One choice among the MenuRadioItems inside. */
+export function MenuRadioGroup<T extends string>({
+  value,
+  onValueChange,
+  children,
+}: RadioGroupProps<T>) {
+  return (
+    <DM.RadioGroup
+      value={value}
+      onValueChange={(v) => {
+        onValueChange(v as T);
+      }}
+    >
+      {children}
+    </DM.RadioGroup>
+  );
+}
+
+interface RadioItemProps {
+  value: string;
+  checked: boolean;
+  disabled?: boolean;
+  children: ReactNode;
+}
+
+export function MenuRadioItem({ value, checked, disabled = false, children }: RadioItemProps) {
+  return (
+    <DM.RadioItem
+      value={value}
+      disabled={disabled}
+      // The menu stays open, so several settings can change in one go.
+      onSelect={(e) => {
+        e.preventDefault();
+      }}
+      className={`${itemClass} ${toneClass.normal}`}
+    >
+      {children}
+      <Box checked={checked} round />
+    </DM.RadioItem>
+  );
+}
+
+interface CheckItemProps {
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  disabled?: boolean;
+  children: ReactNode;
+}
+
+export function MenuCheckItem({
+  checked,
+  onCheckedChange,
+  disabled = false,
+  children,
+}: CheckItemProps) {
+  return (
+    <DM.CheckboxItem
+      checked={checked}
+      disabled={disabled}
+      onCheckedChange={onCheckedChange}
+      onSelect={(e) => {
+        e.preventDefault();
+      }}
+      className={`${itemClass} ${toneClass.normal}`}
+    >
+      {children}
+      <Box checked={checked} />
+    </DM.CheckboxItem>
+  );
+}
+
 interface ContextMenuAreaProps {
   menu: ReactNode;
   children: ReactNode;
@@ -70,10 +167,11 @@ interface ContextMenuAreaProps {
 
 /** Shows `menu` on right-click (or the context-menu key) anywhere in `children`. */
 export function ContextMenuArea({ menu, children }: ContextMenuAreaProps) {
+  const container = usePortalContainer();
   return (
     <CM.Root>
       <CM.Trigger asChild>{children}</CM.Trigger>
-      <CM.Portal>
+      <CM.Portal container={container}>
         <CM.Content className={contentClass}>{menu}</CM.Content>
       </CM.Portal>
     </CM.Root>
@@ -103,13 +201,6 @@ export function ContextSeparator() {
   return <CM.Separator className={separatorClass} />;
 }
 
-interface CheckItemProps {
-  checked: boolean;
-  onCheckedChange: (checked: boolean) => void;
-  disabled?: boolean;
-  children: ReactNode;
-}
-
 /** A context menu item with a check box, such as "Server mute". */
 export function ContextCheckItem({
   checked,
@@ -125,14 +216,7 @@ export function ContextCheckItem({
       className={`${itemClass} ${toneClass.normal}`}
     >
       {children}
-      <span
-        aria-hidden
-        className={`flex size-4 items-center justify-center rounded-sm border ${checked ? 'border-accent bg-accent text-accent-fg' : 'border-fg-muted'}`}
-      >
-        <CM.ItemIndicator>
-          <Check className="size-3" />
-        </CM.ItemIndicator>
-      </span>
+      <Box checked={checked} />
     </CM.CheckboxItem>
   );
 }
@@ -144,13 +228,14 @@ interface SubProps {
 
 /** A context menu item that opens a nested menu. */
 export function ContextSub({ label, children }: SubProps) {
+  const container = usePortalContainer();
   return (
     <CM.Sub>
       <CM.SubTrigger className={`${itemClass} ${toneClass.normal} data-[state=open]:bg-hover`}>
         {label}
         <ChevronRight aria-hidden className="size-4" />
       </CM.SubTrigger>
-      <CM.Portal>
+      <CM.Portal container={container}>
         <CM.SubContent sideOffset={4} className={contentClass}>
           {children}
         </CM.SubContent>
