@@ -35,7 +35,9 @@ const (
 // mediaServer is the LiveKit sidecar: its keys, its supervisor once the hub
 // listens, and the provider services use.
 type mediaServer struct {
-	cfg      config.LiveKit
+	cfg config.LiveKit
+	// nodeIP is the public IPv4 the hub found before starting LiveKit.
+	nodeIP   string
 	dataDir  string
 	logLevel string
 	logger   *slog.Logger
@@ -148,7 +150,7 @@ func (m *mediaServer) start(ctx context.Context, wg *sync.WaitGroup, hubAddr net
 	err := livekit.WriteServerConfig(path, livekit.ServerOptions{
 		Port: m.cfg.Port, UDPPort: m.cfg.UDPPort, TCPPort: m.cfg.TCPPort, APIKey: m.key,
 		WebhookURL: "http://" + net.JoinHostPort("127.0.0.1", strconv.Itoa(tcp.Port)) + media.WebhookPath,
-		ExternalIP: m.cfg.ExternalIP, LogLevel: m.logLevel,
+		ExternalIP: m.cfg.ExternalIP, NodeIP: m.nodeIP, LogLevel: m.logLevel,
 	})
 	if err != nil {
 		return err

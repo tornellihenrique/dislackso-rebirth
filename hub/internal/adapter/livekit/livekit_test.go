@@ -290,3 +290,23 @@ func TestServerConfig(t *testing.T) {
 		t.Errorf("keys env = %s", KeysEnv(key, secret))
 	}
 }
+
+func TestServerConfigWithKnownNodeIP(t *testing.T) {
+	data, err := ServerConfig(ServerOptions{Port: 7880, UDPPort: 7882, ExternalIP: true, NodeIP: "203.0.113.9"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got struct{ RTC map[string]any }
+	if err := yaml.Unmarshal(data, &got); err != nil {
+		t.Fatal(err)
+	}
+	// An explicit node IP with the lookup off is what LiveKit advertises as is.
+	for k, want := range map[string]any{
+		"node_ip": "203.0.113.9", "use_external_ip": false,
+		"skip_external_ip_validation": false, "advertise_internal_ip": true,
+	} {
+		if got.RTC[k] != want {
+			t.Errorf("rtc.%s = %v, want %v", k, got.RTC[k], want)
+		}
+	}
+}

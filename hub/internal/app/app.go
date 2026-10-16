@@ -328,10 +328,13 @@ func (a *App) probeNetwork(ctx, bg context.Context, background *sync.WaitGroup) 
 	if a.media.binary == "" || !lk.ExternalIP {
 		return
 	}
-	if p := a.doctor.Probe(ctx, lk.UDPPort); p.NAT == domain.NATNoInternet {
+	switch p := a.doctor.Probe(ctx, lk.UDPPort); {
+	case p.NAT == domain.NATNoInternet:
 		// LiveKit refuses to start when it cannot find its public address.
 		a.media.cfg.ExternalIP = false
 		a.logger.WarnContext(ctx, "no internet connection: voice works on this network only until the hub restarts online")
+	case p.PublicIPv4.IsValid():
+		a.media.nodeIP = p.PublicIPv4.String()
 	}
 	background.Go(func() { a.doctor.Run(bg, lk.UDPPort, lk.TCPPort) })
 }

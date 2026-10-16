@@ -19,7 +19,11 @@ type ServerOptions struct {
 	// ExternalIP discovers the public address over STUN; LiveKit refuses to
 	// start when STUN is unreachable.
 	ExternalIP bool
-	LogLevel   string
+	// NodeIP is a public address the hub already found. LiveKit then skips its
+	// own lookup, which prefers IPv6 and on a host with broken IPv6 takes
+	// about a minute, longer than the supervisor waits for it to be healthy.
+	NodeIP   string
+	LogLevel string
 }
 
 // STUNServers find the host's public address and are handed to clients.
@@ -37,9 +41,10 @@ type serverConfig struct {
 }
 
 type rtcConfig struct {
-	UDPPort       int  `yaml:"udp_port"`
-	TCPPort       int  `yaml:"tcp_port"`
-	UseExternalIP bool `yaml:"use_external_ip"`
+	UDPPort       int    `yaml:"udp_port"`
+	TCPPort       int    `yaml:"tcp_port"`
+	UseExternalIP bool   `yaml:"use_external_ip"`
+	NodeIP        string `yaml:"node_ip,omitempty"`
 	// Hosts behind NAT usually cannot reach their own public address.
 	SkipExternalIPValidation bool     `yaml:"skip_external_ip_validation"`
 	AdvertiseInternalIP      bool     `yaml:"advertise_internal_ip"`
@@ -76,9 +81,10 @@ func ServerConfig(o ServerOptions) ([]byte, error) {
 		RTC: rtcConfig{
 			UDPPort:                  o.UDPPort,
 			TCPPort:                  o.TCPPort,
-			UseExternalIP:            o.ExternalIP,
-			SkipExternalIPValidation: o.ExternalIP,
-			AdvertiseInternalIP:      o.ExternalIP,
+			UseExternalIP:            o.ExternalIP && o.NodeIP == "",
+			NodeIP:                   o.NodeIP,
+			SkipExternalIPValidation: o.ExternalIP && o.NodeIP == "",
+			AdvertiseInternalIP:      o.ExternalIP || o.NodeIP != "",
 			STUNServers:              STUNServers,
 		},
 		Room:    roomConfig{AutoCreate: true, EmptyTimeout: 30, DepartureTimeout: 20},
