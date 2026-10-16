@@ -843,7 +843,7 @@ export const en = {
       tailscale_https_disabled:
         'Turn on HTTPS certificates for your tailnet: Tailscale admin console → DNS → HTTPS Certificates → Enable. The hub retries on its own.',
       tailscale_funnel_not_allowed:
-        'Your tailnet does not allow Funnel for this machine yet. In the Tailscale admin console, open Access controls and allow Funnel (the console offers it), then wait a minute.',
+        'Your tailnet does not allow Funnel yet. In the Tailscale admin console, open Access controls → JSON editor, add the funnel node attribute for autogroup:member and save, then wait a minute.',
       tailscale_login: 'Sign the hub in to Tailscale with the button above.',
       cloudflared_download_failed:
         'Could not download cloudflared from GitHub. Check the internet connection; the hub retries.',

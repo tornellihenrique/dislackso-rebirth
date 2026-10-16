@@ -852,7 +852,7 @@ export const ptBR: Messages = {
       tailscale_https_disabled:
         'Ative os certificados HTTPS da sua tailnet: console de administração do Tailscale → DNS → HTTPS Certificates → Enable. O hub tenta de novo sozinho.',
       tailscale_funnel_not_allowed:
-        'Sua tailnet ainda não permite o Funnel para esta máquina. No console de administração do Tailscale, abra Access controls e permita o Funnel (o console oferece isso), depois espere um minuto.',
+        'Sua tailnet ainda não permite o Funnel. No console de administração do Tailscale, abra Access controls → JSON editor, adicione o atributo de nó funnel para autogroup:member e salve, depois espere um minuto.',
       tailscale_login: 'Conecte o hub ao Tailscale com o botão acima.',
       cloudflared_download_failed:
         'Não foi possível baixar o cloudflared do GitHub. Verifique a conexão com a internet; o hub tenta de novo.',
