@@ -1,18 +1,24 @@
 // Package settings owns the instance settings: cached reads, validated
-// updates, and the SMTP password kept in the secret store.
+// updates, and the secrets (SMTP password, tunnel token, TURN secret) kept
+// in the secret store.
 package settings
 
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/domain"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/ports"
 )
 
-// SMTPPasswordSecret is the secret-store key of the SMTP password.
-const SMTPPasswordSecret = "smtp.password"
+// Secret-store keys.
+const (
+	SMTPPasswordSecret = "smtp.password"
+	TunnelTokenSecret  = "exposure.tunnel_token"
+	TURNSecret         = "turn.secret"
+)
 
 type Service struct {
 	repo    ports.SettingsRepo
@@ -83,7 +89,15 @@ type Patch struct {
 	MembersCanInvite *bool
 	SMTP             *domain.SMTPSettings
 	// SMTPPassword replaces the stored password when non-empty.
-	SMTPPassword      string
+	SMTPPassword string
+	Exposure     *domain.ExposureSettings
+	// TunnelToken replaces the Cloudflare tunnel token when non-empty.
+	TunnelToken string
+	TURN        *domain.TURNSettings
+	// TURNSecret replaces the relay provider's secret when non-empty.
+	TURNSecret        string
+	TURNBudgetGB      *int
+	Host              *domain.HostSettings
 	MarkSetupComplete bool
 }
 
@@ -119,6 +133,34 @@ func (s *Service) Update(ctx context.Context, p Patch) (domain.InstanceSettings,
 		next.SMTP = *p.SMTP
 		checks = append(checks, domain.ValidateSMTP("smtp.", next.SMTP)...)
 	}
+	if p.Exposure != nil {
+		next.Exposure = *p.Exposure
+		next.Exposure.TailscaleHostname = strings.ToLower(strings.TrimSpace(next.Exposure.TailscaleHostname))
+		next.Exposure.DirectDomain = strings.ToLower(strings.TrimSpace(next.Exposure.DirectDomain))
+		next.Exposure.TunnelURL = domain.NormalizePublicURL(next.Exposure.TunnelURL)
+		tokenSet, err := s.secretSet(ctx, TunnelTokenSecret, p.TunnelToken)
+		if err != nil {
+			return domain.InstanceSettings{}, err
+		}
+		checks = append(checks, domain.ValidateExposure("exposure.", next.Exposure, tokenSet)...)
+	}
+	if p.TURN != nil {
+		next.TURN = *p.TURN
+		secretSet, err := s.secretSet(ctx, TURNSecret, p.TURNSecret)
+		if err != nil {
+			return domain.InstanceSettings{}, err
+		}
+		checks = append(checks, domain.ValidateTURN("turn.", next.TURN, secretSet)...)
+	}
+	if p.TURNBudgetGB != nil {
+		next.Limits.TURNMonthlyBudgetGB = *p.TURNBudgetGB
+		if *p.TURNBudgetGB < 0 || *p.TURNBudgetGB > domain.TURNBudgetMaxGB {
+			checks = append(checks, &domain.FieldViolation{Field: "turn.monthly_budget_gb", Reason: domain.ReasonFieldInvalid})
+		}
+	}
+	if p.Host != nil {
+		next.Host = *p.Host
+	}
 	if err := domain.Violations(checks...); err != nil {
 		return domain.InstanceSettings{}, err
 	}
@@ -127,9 +169,16 @@ func (s *Service) Update(ctx context.Context, p Patch) (domain.InstanceSettings,
 		next.SetupCompletedAt = &now
 	}
 
-	if p.SMTPPassword != "" {
-		if err := s.secrets.SetSecret(ctx, SMTPPasswordSecret, p.SMTPPassword); err != nil {
-			return domain.InstanceSettings{}, fmt.Errorf("store smtp password: %w", err)
+	for key, value := range map[string]string{
+		SMTPPasswordSecret: p.SMTPPassword,
+		TunnelTokenSecret:  p.TunnelToken,
+		TURNSecret:         p.TURNSecret,
+	} {
+		if value == "" {
+			continue
+		}
+		if err := s.secrets.SetSecret(ctx, key, value); err != nil {
+			return domain.InstanceSettings{}, fmt.Errorf("store %s: %w", key, err)
 		}
 	}
 	if err := s.repo.SaveSettings(ctx, next); err != nil {
@@ -137,4 +186,31 @@ func (s *Service) Update(ctx context.Context, p Patch) (domain.InstanceSettings,
 	}
 	s.cache = &next
 	return next, nil
+}
+
+// Secret returns a stored secret, or empty when there is none.
+func (s *Service) Secret(ctx context.Context, key string) (string, error) {
+	v, _, err := s.secrets.Secret(ctx, key)
+	if err != nil {
+		return "", fmt.Errorf("read %s: %w", key, err)
+	}
+	return v, nil
+}
+
+// SecretSet reports whether a secret is stored, for write-only fields.
+func (s *Service) SecretSet(ctx context.Context, key string) (bool, error) {
+	return s.secretSet(ctx, key, "")
+}
+
+// secretSet reports whether a secret will be set after an update that may
+// bring a new value.
+func (s *Service) secretSet(ctx context.Context, key, incoming string) (bool, error) {
+	if incoming != "" {
+		return true, nil
+	}
+	_, ok, err := s.secrets.Secret(ctx, key)
+	if err != nil {
+		return false, fmt.Errorf("read %s: %w", key, err)
+	}
+	return ok, nil
 }

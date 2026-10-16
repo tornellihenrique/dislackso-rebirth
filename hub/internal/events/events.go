@@ -22,6 +22,9 @@ func GuildTopic(id domain.ID) Topic { return Topic("guild:" + id.String()) }
 // GuildAdminsTopic reaches the owner and admins of a guild.
 func GuildAdminsTopic(id domain.ID) Topic { return Topic("admins:" + id.String()) }
 
+// InstanceAdminsTopic reaches the instance admins.
+const InstanceAdminsTopic Topic = "instance-admins"
+
 type Event struct {
 	Topics  []Topic
 	Payload Payload
@@ -120,6 +123,11 @@ type VoiceForced struct {
 	Action    VoiceForcedAction
 }
 
+// ExposureChanged tells instance admins the exposure provider's state or
+// public URL changed.
+type ExposureChanged struct{ Status domain.ExposureStatus }
+
+func (ExposureChanged) isPayload()   {}
 func (GuildCreated) isPayload()      {}
 func (GuildUpdated) isPayload()      {}
 func (GuildDeleted) isPayload()      {}

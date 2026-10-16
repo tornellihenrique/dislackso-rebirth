@@ -153,6 +153,8 @@ func toEvent(p events.Payload) *gatewayv1.Event {
 			f.ChannelId = p.ChannelID.String()
 		}
 		ev.Kind = &gatewayv1.Event_VoiceForced{VoiceForced: f}
+	case events.ExposureChanged:
+		ev.Kind = &gatewayv1.Event_ExposureChanged{ExposureChanged: wire.ExposureStatus(p.Status)}
 	default:
 		return nil
 	}

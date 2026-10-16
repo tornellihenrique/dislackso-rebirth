@@ -38,14 +38,10 @@ func (h *voiceHandler) Join(ctx context.Context, req *dislacksov1.JoinRequest) (
 	if err != nil {
 		return nil, h.toConnect(ctx, err)
 	}
-	ice := make([]*dislacksov1.IceServer, len(j.ICE))
-	for i, s := range j.ICE {
-		ice[i] = &dislacksov1.IceServer{Urls: s.URLs, Username: s.Username, Credential: s.Credential}
-	}
 	return &dislacksov1.JoinResponse{
 		Url:        j.URL,
 		Token:      j.Token,
-		IceServers: ice,
+		IceServers: iceServersToProto(j.ICE),
 		State:      wire.VoiceState(j.State),
 		Limits:     &dislacksov1.VoiceLimits{MicBitrateMaxKbps: wire.ClampInt32(j.MicBitrateMaxKbps)},
 	}, nil

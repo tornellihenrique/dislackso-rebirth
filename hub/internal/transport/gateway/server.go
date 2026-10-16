@@ -20,6 +20,7 @@ import (
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/events"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/ports"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/auth"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/relay"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/snapshot"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/httpauth"
 )
@@ -91,6 +92,11 @@ type Voice interface {
 	UpdateSelf(ctx context.Context, userID domain.ID, sessionID string, mute, deaf bool)
 }
 
+// Telemetry receives what voice clients measure about their connection.
+type Telemetry interface {
+	Report(ctx context.Context, userID domain.ID, t relay.Telemetry)
+}
+
 type Subscriber interface {
 	Subscribe(fn func(events.Event)) (cancel func())
 }
@@ -101,6 +107,7 @@ type Options struct {
 	Snapshots Snapshots
 	Presence  Presence
 	Voice     Voice
+	Telemetry Telemetry
 	// Tokens generates session IDs.
 	Tokens       ports.TokenGen
 	Clock        ports.Clock
@@ -371,6 +378,9 @@ func (s *Server) identify(ctx context.Context, c *connection, p auth.Principal) 
 	}
 	s.byUser[sess.userID][sess] = true
 	s.subscribe(sess, events.UserTopic(sess.userID))
+	if p.Actor.InstanceAdmin {
+		s.subscribe(sess, events.InstanceAdminsTopic)
+	}
 	s.mu.Unlock()
 
 	fail := func(err error) (*session, error) {
@@ -514,6 +524,15 @@ func (s *Server) serve(ctx context.Context, c *connection, sess *session, token 
 		case *gatewayv1.ClientFrame_UpdateVoiceSelfState:
 			u := k.UpdateVoiceSelfState
 			s.o.Voice.UpdateSelf(ctx, sess.userID, u.GetVoiceSessionId(), u.GetSelfMute(), u.GetSelfDeaf())
+		case *gatewayv1.ClientFrame_ClientTelemetry:
+			if s.o.Telemetry != nil {
+				t := k.ClientTelemetry
+				s.o.Telemetry.Report(ctx, sess.userID, relay.Telemetry{
+					SessionID: t.GetVoiceSessionId(),
+					Relay:     t.GetCandidate() == gatewayv1.CandidateType_CANDIDATE_TYPE_RELAY,
+					Bytes:     t.GetBytesSent() + t.GetBytesReceived(),
+				})
+			}
 		case *gatewayv1.ClientFrame_Identify, *gatewayv1.ClientFrame_Resume:
 			c.close(closeAlreadyIdentify, "already identified")
 			return errClosed
@@ -624,6 +643,14 @@ func (s *Server) route(ev events.Event) {
 			s.subscribe(sess, events.GuildTopic(p.State.Guild.ID))
 			if adminRole(role) {
 				s.subscribe(sess, events.GuildAdminsTopic(p.State.Guild.ID))
+			}
+		}
+	case events.MeUpdated:
+		for sess := range s.byUser[p.User.ID] {
+			if p.User.IsInstanceAdmin {
+				s.subscribe(sess, events.InstanceAdminsTopic)
+			} else {
+				s.unsubscribeTopic(sess, events.InstanceAdminsTopic)
 			}
 		}
 	case events.MemberUpdated:

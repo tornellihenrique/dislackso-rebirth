@@ -115,3 +115,9 @@ type FileRepo interface {
 	CreateFile(ctx context.Context, f domain.File) error
 	FileByID(ctx context.Context, id domain.ID) (domain.File, error)
 }
+
+// TURNUsageRepo keeps the relayed bytes clients report, per month ("2026-10").
+type TURNUsageRepo interface {
+	AddTURNUsage(ctx context.Context, month string, bytes int64) error
+	TURNUsage(ctx context.Context, month string) (int64, error)
+}

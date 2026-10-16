@@ -63,7 +63,7 @@ func newMediaServer(ctx context.Context, cfg config.Config, secrets ports.Secret
 		APIURL:    m.apiURL().String(),
 		APIKey:    key,
 		APISecret: secret,
-		Ready:     m.ready,
+		Ready:     m.Ready,
 	})
 	if !cfg.LiveKit.Disabled {
 		if m.binary, err = findLiveKit(cfg.LiveKit.Binary); err != nil {
@@ -114,7 +114,7 @@ func (m *mediaServer) apiURL() *url.URL {
 	return &url.URL{Scheme: "http", Host: net.JoinHostPort("127.0.0.1", strconv.Itoa(m.cfg.Port))}
 }
 
-func (m *mediaServer) ready() bool {
+func (m *mediaServer) Ready() bool {
 	s := m.sup.Load()
 	return s != nil && s.Ready()
 }
@@ -124,7 +124,7 @@ func (m *mediaServer) Name() string { return "media" }
 // Check fails while the sidecar is configured but not serving; a hub
 // without voice has nothing to check.
 func (m *mediaServer) Check(context.Context) error {
-	if m.binary == "" || m.ready() {
+	if m.binary == "" || m.Ready() {
 		return nil
 	}
 	state := sidecar.StateStopped

@@ -19,6 +19,8 @@ service AuthService {
   rpc RequestPasswordReset(RequestPasswordResetRequest) returns (RequestPasswordResetResponse);
   // Signs out every session of the account.
   rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse);
+  // Applies an email change from the link sent to the new address.
+  rpc ConfirmEmailChange(ConfirmEmailChangeRequest) returns (ConfirmEmailChangeResponse);
 }
 
 message GetSetupStateRequest {}
@@ -81,3 +83,9 @@ message ResetPasswordRequest {
 }
 
 message ResetPasswordResponse {}
+
+message ConfirmEmailChangeRequest {
+  string token = 1;
+}
+
+message ConfirmEmailChangeResponse {}

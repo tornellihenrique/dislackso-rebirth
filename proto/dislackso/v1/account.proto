@@ -18,6 +18,13 @@ service AccountService {
   }
   rpc RevokeSession(RevokeSessionRequest) returns (RevokeSessionResponse);
   rpc RevokeOtherSessions(RevokeOtherSessionsRequest) returns (RevokeOtherSessionsResponse);
+  // Emails a confirmation link to the new address; the address changes when
+  // the link is opened (AuthService.ConfirmEmailChange). Without email the
+  // address changes at once.
+  rpc RequestEmailChange(RequestEmailChangeRequest) returns (RequestEmailChangeResponse);
+  // Deletes the account for good. Servers the user owns must be transferred
+  // or deleted first.
+  rpc DeleteAccount(DeleteAccountRequest) returns (DeleteAccountResponse);
 }
 
 message GetMeRequest {}
@@ -82,3 +89,21 @@ message RevokeOtherSessionsRequest {}
 message RevokeOtherSessionsResponse {
   int32 revoked = 1;
 }
+
+message RequestEmailChangeRequest {
+  string new_email = 1;
+  string password = 2;
+}
+
+message RequestEmailChangeResponse {
+  // True when a confirmation email went out; false when the address changed
+  // at once (no email configured).
+  bool confirmation_sent = 1;
+  Me me = 2;
+}
+
+message DeleteAccountRequest {
+  string password = 1;
+}
+
+message DeleteAccountResponse {}

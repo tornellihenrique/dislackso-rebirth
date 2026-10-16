@@ -63,6 +63,15 @@ type InstanceSettings struct {
 	MembersCanInvite bool
 	SMTP             SMTPSettings
 	Limits           Limits
+	Exposure         ExposureSettings
+	TURN             TURNSettings
+	Host             HostSettings
+}
+
+// HostSettings are conveniences for the machine running the hub.
+type HostSettings struct {
+	// KeepAwake stops the machine from sleeping while the hub runs.
+	KeepAwake bool
 }
 
 func (s InstanceSettings) SetupComplete() bool { return s.SetupCompletedAt != nil }
@@ -84,6 +93,9 @@ func DefaultInstanceSettings() InstanceSettings {
 			MicBitrateMaxKbps:     96,
 			TURNMonthlyBudgetGB:   900,
 		},
+		Exposure: DefaultExposureSettings(),
+		TURN:     TURNSettings{Kind: TURNNone},
+		Host:     HostSettings{KeepAwake: true},
 	}
 }
 

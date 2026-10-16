@@ -36,6 +36,8 @@ const (
 	ReasonSetupComplete        = "setup_complete"
 	ReasonSetupTokenInvalid    = "setup_token_invalid"
 	ReasonNotLocal             = "not_local"
+	ReasonUnsupported          = "unsupported"
+	ReasonRelayNotConfigured   = "relay_not_configured"
 	ReasonNotInstanceAdmin     = "not_instance_admin"
 	ReasonCannotTargetSelf     = "cannot_target_self"
 	ReasonUserNotFound         = "user_not_found"

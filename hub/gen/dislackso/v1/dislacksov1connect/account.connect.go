@@ -44,6 +44,12 @@ const (
 	// AccountServiceRevokeOtherSessionsProcedure is the procedure name of the AccountService's
 	// RevokeOtherSessions RPC.
 	AccountServiceRevokeOtherSessionsProcedure = "/dislackso.v1.AccountService/RevokeOtherSessions"
+	// AccountServiceRequestEmailChangeProcedure is the procedure name of the AccountService's
+	// RequestEmailChange RPC.
+	AccountServiceRequestEmailChangeProcedure = "/dislackso.v1.AccountService/RequestEmailChange"
+	// AccountServiceDeleteAccountProcedure is the procedure name of the AccountService's DeleteAccount
+	// RPC.
+	AccountServiceDeleteAccountProcedure = "/dislackso.v1.AccountService/DeleteAccount"
 )
 
 var (
@@ -98,6 +104,20 @@ var (
 			Procedure:  AccountServiceRevokeOtherSessionsProcedure,
 		}
 	})
+	accountServiceRequestEmailChangeSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_dislackso_v1_account_proto.Services().ByName("AccountService").Methods().ByName("RequestEmailChange"),
+			Procedure:  AccountServiceRequestEmailChangeProcedure,
+		}
+	})
+	accountServiceDeleteAccountSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_dislackso_v1_account_proto.Services().ByName("AccountService").Methods().ByName("DeleteAccount"),
+			Procedure:  AccountServiceDeleteAccountProcedure,
+		}
+	})
 )
 
 // AccountServiceClient is a client for the dislackso.v1.AccountService service.
@@ -110,6 +130,13 @@ type AccountServiceClient interface {
 	ListSessions(context.Context, *v1.ListSessionsRequest) (*v1.ListSessionsResponse, error)
 	RevokeSession(context.Context, *v1.RevokeSessionRequest) (*v1.RevokeSessionResponse, error)
 	RevokeOtherSessions(context.Context, *v1.RevokeOtherSessionsRequest) (*v1.RevokeOtherSessionsResponse, error)
+	// Emails a confirmation link to the new address; the address changes when
+	// the link is opened (AuthService.ConfirmEmailChange). Without email the
+	// address changes at once.
+	RequestEmailChange(context.Context, *v1.RequestEmailChangeRequest) (*v1.RequestEmailChangeResponse, error)
+	// Deletes the account for good. Servers the user owns must be transferred
+	// or deleted first.
+	DeleteAccount(context.Context, *v1.DeleteAccountRequest) (*v1.DeleteAccountResponse, error)
 }
 
 // NewAccountServiceClient constructs a client for the dislackso.v1.AccountService service. Multiple
@@ -128,6 +155,13 @@ type AccountServiceHandler interface {
 	ListSessions(context.Context, *v1.ListSessionsRequest) (*v1.ListSessionsResponse, error)
 	RevokeSession(context.Context, *v1.RevokeSessionRequest) (*v1.RevokeSessionResponse, error)
 	RevokeOtherSessions(context.Context, *v1.RevokeOtherSessionsRequest) (*v1.RevokeOtherSessionsResponse, error)
+	// Emails a confirmation link to the new address; the address changes when
+	// the link is opened (AuthService.ConfirmEmailChange). Without email the
+	// address changes at once.
+	RequestEmailChange(context.Context, *v1.RequestEmailChangeRequest) (*v1.RequestEmailChangeResponse, error)
+	// Deletes the account for good. Servers the user owns must be transferred
+	// or deleted first.
+	DeleteAccount(context.Context, *v1.DeleteAccountRequest) (*v1.DeleteAccountResponse, error)
 }
 
 // RegisterAccountServiceHandler registers svc as the dislackso.v1.AccountService implementation on
@@ -142,6 +176,8 @@ func RegisterAccountServiceHandler(server *connect.Server, svc AccountServiceHan
 		connect.Method{Spec: accountServiceListSessionsSpec(), Handler: adapter.listSessions},
 		connect.Method{Spec: accountServiceRevokeSessionSpec(), Handler: adapter.revokeSession},
 		connect.Method{Spec: accountServiceRevokeOtherSessionsSpec(), Handler: adapter.revokeOtherSessions},
+		connect.Method{Spec: accountServiceRequestEmailChangeSpec(), Handler: adapter.requestEmailChange},
+		connect.Method{Spec: accountServiceDeleteAccountSpec(), Handler: adapter.deleteAccount},
 	)
 }
 
@@ -174,6 +210,14 @@ func (UnimplementedAccountServiceHandler) RevokeSession(context.Context, *v1.Rev
 
 func (UnimplementedAccountServiceHandler) RevokeOtherSessions(context.Context, *v1.RevokeOtherSessionsRequest) (*v1.RevokeOtherSessionsResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, "dislackso.v1.AccountService.RevokeOtherSessions is not implemented")
+}
+
+func (UnimplementedAccountServiceHandler) RequestEmailChange(context.Context, *v1.RequestEmailChangeRequest) (*v1.RequestEmailChangeResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "dislackso.v1.AccountService.RequestEmailChange is not implemented")
+}
+
+func (UnimplementedAccountServiceHandler) DeleteAccount(context.Context, *v1.DeleteAccountRequest) (*v1.DeleteAccountResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "dislackso.v1.AccountService.DeleteAccount is not implemented")
 }
 
 type accountServiceClient struct {
@@ -231,6 +275,22 @@ func (c *accountServiceClient) RevokeSession(ctx context.Context, req *v1.Revoke
 func (c *accountServiceClient) RevokeOtherSessions(ctx context.Context, req *v1.RevokeOtherSessionsRequest) (*v1.RevokeOtherSessionsResponse, error) {
 	var res v1.RevokeOtherSessionsResponse
 	if err := c.client.CallUnary(ctx, accountServiceRevokeOtherSessionsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *accountServiceClient) RequestEmailChange(ctx context.Context, req *v1.RequestEmailChangeRequest) (*v1.RequestEmailChangeResponse, error) {
+	var res v1.RequestEmailChangeResponse
+	if err := c.client.CallUnary(ctx, accountServiceRequestEmailChangeSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *accountServiceClient) DeleteAccount(ctx context.Context, req *v1.DeleteAccountRequest) (*v1.DeleteAccountResponse, error) {
+	var res v1.DeleteAccountResponse
+	if err := c.client.CallUnary(ctx, accountServiceDeleteAccountSpec(), req, &res); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -316,6 +376,30 @@ func (h accountServiceHandler) revokeOtherSessions(ctx context.Context, _ connec
 		return err
 	}
 	res, err := h.svc.RevokeOtherSessions(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h accountServiceHandler) requestEmailChange(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.RequestEmailChangeRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.RequestEmailChange(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h accountServiceHandler) deleteAccount(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.DeleteAccountRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.DeleteAccount(ctx, &req)
 	if err != nil {
 		return err
 	}

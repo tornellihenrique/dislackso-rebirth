@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dislackso/v1/account.proto.
  */
 export const file_dislackso_v1_account: GenFile = /*@__PURE__*/
-  fileDesc("ChpkaXNsYWNrc28vdjEvYWNjb3VudC5wcm90bxIMZGlzbGFja3NvLnYxIg4KDEdldE1lUmVxdWVzdCItCg1HZXRNZVJlc3BvbnNlEhwKAm1lGAEgASgLMhAuZGlzbGFja3NvLnYxLk1lInIKFFVwZGF0ZVByb2ZpbGVSZXF1ZXN0EhkKDGRpc3BsYXlfbmFtZRgBIAEoCUgAiAEBEhsKDmF2YXRhcl9maWxlX2lkGAIgASgJSAGIAQFCDwoNX2Rpc3BsYXlfbmFtZUIRCg9fYXZhdGFyX2ZpbGVfaWQiNQoVVXBkYXRlUHJvZmlsZVJlc3BvbnNlEhwKAm1lGAEgASgLMhAuZGlzbGFja3NvLnYxLk1lIkcKFUNoYW5nZVBhc3N3b3JkUmVxdWVzdBIYChBjdXJyZW50X3Bhc3N3b3JkGAEgASgJEhQKDG5ld19wYXNzd29yZBgCIAEoCSIYChZDaGFuZ2VQYXNzd29yZFJlc3BvbnNlImMKGlNldFN0YXR1c1ByZWZlcmVuY2VSZXF1ZXN0Ei4KBnN0YXR1cxgBIAEoDjIeLmRpc2xhY2tzby52MS5TdGF0dXNQcmVmZXJlbmNlEhUKDWN1c3RvbV9zdGF0dXMYAiABKAkiOwobU2V0U3RhdHVzUHJlZmVyZW5jZVJlc3BvbnNlEhwKAm1lGAEgASgLMhAuZGlzbGFja3NvLnYxLk1lInAKB1Nlc3Npb24SCgoCaWQYASABKAkSEgoKY3JlYXRlZF9hdBgCIAEoAxIUCgxsYXN0X3NlZW5fYXQYAyABKAMSEgoKdXNlcl9hZ2VudBgEIAEoCRIKCgJpcBgFIAEoCRIPCgdjdXJyZW50GAYgASgIIhUKE0xpc3RTZXNzaW9uc1JlcXVlc3QiPwoUTGlzdFNlc3Npb25zUmVzcG9uc2USJwoIc2Vzc2lvbnMYASADKAsyFS5kaXNsYWNrc28udjEuU2Vzc2lvbiIqChRSZXZva2VTZXNzaW9uUmVxdWVzdBISCgpzZXNzaW9uX2lkGAEgASgJIhcKFVJldm9rZVNlc3Npb25SZXNwb25zZSIcChpSZXZva2VPdGhlclNlc3Npb25zUmVxdWVzdCIuChtSZXZva2VPdGhlclNlc3Npb25zUmVzcG9uc2USDwoHcmV2b2tlZBgBIAEoBTKcBQoOQWNjb3VudFNlcnZpY2USRQoFR2V0TWUSGi5kaXNsYWNrc28udjEuR2V0TWVSZXF1ZXN0GhsuZGlzbGFja3NvLnYxLkdldE1lUmVzcG9uc2UiA5ACARJYCg1VcGRhdGVQcm9maWxlEiIuZGlzbGFja3NvLnYxLlVwZGF0ZVByb2ZpbGVSZXF1ZXN0GiMuZGlzbGFja3NvLnYxLlVwZGF0ZVByb2ZpbGVSZXNwb25zZRJbCg5DaGFuZ2VQYXNzd29yZBIjLmRpc2xhY2tzby52MS5DaGFuZ2VQYXNzd29yZFJlcXVlc3QaJC5kaXNsYWNrc28udjEuQ2hhbmdlUGFzc3dvcmRSZXNwb25zZRJqChNTZXRTdGF0dXNQcmVmZXJlbmNlEiguZGlzbGFja3NvLnYxLlNldFN0YXR1c1ByZWZlcmVuY2VSZXF1ZXN0GikuZGlzbGFja3NvLnYxLlNldFN0YXR1c1ByZWZlcmVuY2VSZXNwb25zZRJaCgxMaXN0U2Vzc2lvbnMSIS5kaXNsYWNrc28udjEuTGlzdFNlc3Npb25zUmVxdWVzdBoiLmRpc2xhY2tzby52MS5MaXN0U2Vzc2lvbnNSZXNwb25zZSIDkAIBElgKDVJldm9rZVNlc3Npb24SIi5kaXNsYWNrc28udjEuUmV2b2tlU2Vzc2lvblJlcXVlc3QaIy5kaXNsYWNrc28udjEuUmV2b2tlU2Vzc2lvblJlc3BvbnNlEmoKE1Jldm9rZU90aGVyU2Vzc2lvbnMSKC5kaXNsYWNrc28udjEuUmV2b2tlT3RoZXJTZXNzaW9uc1JlcXVlc3QaKS5kaXNsYWNrc28udjEuUmV2b2tlT3RoZXJTZXNzaW9uc1Jlc3BvbnNlQsEBChBjb20uZGlzbGFja3NvLnYxQgxBY2NvdW50UHJvdG9QAVpOZ2l0aHViLmNvbS90b3JuZWxsaWhlbnJpcXVlL2Rpc2xhY2tzby1yZWJpcnRoL2h1Yi9nZW4vZGlzbGFja3NvL3YxO2Rpc2xhY2tzb3YxogIDRFhYqgIMRGlzbGFja3NvLlYxygIMRGlzbGFja3NvXFYx4gIYRGlzbGFja3NvXFYxXEdQQk1ldGFkYXRh6gINRGlzbGFja3NvOjpWMWIGcHJvdG8z", [file_dislackso_v1_common]);
+  fileDesc("ChpkaXNsYWNrc28vdjEvYWNjb3VudC5wcm90bxIMZGlzbGFja3NvLnYxIg4KDEdldE1lUmVxdWVzdCItCg1HZXRNZVJlc3BvbnNlEhwKAm1lGAEgASgLMhAuZGlzbGFja3NvLnYxLk1lInIKFFVwZGF0ZVByb2ZpbGVSZXF1ZXN0EhkKDGRpc3BsYXlfbmFtZRgBIAEoCUgAiAEBEhsKDmF2YXRhcl9maWxlX2lkGAIgASgJSAGIAQFCDwoNX2Rpc3BsYXlfbmFtZUIRCg9fYXZhdGFyX2ZpbGVfaWQiNQoVVXBkYXRlUHJvZmlsZVJlc3BvbnNlEhwKAm1lGAEgASgLMhAuZGlzbGFja3NvLnYxLk1lIkcKFUNoYW5nZVBhc3N3b3JkUmVxdWVzdBIYChBjdXJyZW50X3Bhc3N3b3JkGAEgASgJEhQKDG5ld19wYXNzd29yZBgCIAEoCSIYChZDaGFuZ2VQYXNzd29yZFJlc3BvbnNlImMKGlNldFN0YXR1c1ByZWZlcmVuY2VSZXF1ZXN0Ei4KBnN0YXR1cxgBIAEoDjIeLmRpc2xhY2tzby52MS5TdGF0dXNQcmVmZXJlbmNlEhUKDWN1c3RvbV9zdGF0dXMYAiABKAkiOwobU2V0U3RhdHVzUHJlZmVyZW5jZVJlc3BvbnNlEhwKAm1lGAEgASgLMhAuZGlzbGFja3NvLnYxLk1lInAKB1Nlc3Npb24SCgoCaWQYASABKAkSEgoKY3JlYXRlZF9hdBgCIAEoAxIUCgxsYXN0X3NlZW5fYXQYAyABKAMSEgoKdXNlcl9hZ2VudBgEIAEoCRIKCgJpcBgFIAEoCRIPCgdjdXJyZW50GAYgASgIIhUKE0xpc3RTZXNzaW9uc1JlcXVlc3QiPwoUTGlzdFNlc3Npb25zUmVzcG9uc2USJwoIc2Vzc2lvbnMYASADKAsyFS5kaXNsYWNrc28udjEuU2Vzc2lvbiIqChRSZXZva2VTZXNzaW9uUmVxdWVzdBISCgpzZXNzaW9uX2lkGAEgASgJIhcKFVJldm9rZVNlc3Npb25SZXNwb25zZSIcChpSZXZva2VPdGhlclNlc3Npb25zUmVxdWVzdCIuChtSZXZva2VPdGhlclNlc3Npb25zUmVzcG9uc2USDwoHcmV2b2tlZBgBIAEoBSJAChlSZXF1ZXN0RW1haWxDaGFuZ2VSZXF1ZXN0EhEKCW5ld19lbWFpbBgBIAEoCRIQCghwYXNzd29yZBgCIAEoCSJVChpSZXF1ZXN0RW1haWxDaGFuZ2VSZXNwb25zZRIZChFjb25maXJtYXRpb25fc2VudBgBIAEoCBIcCgJtZRgCIAEoCzIQLmRpc2xhY2tzby52MS5NZSIoChREZWxldGVBY2NvdW50UmVxdWVzdBIQCghwYXNzd29yZBgBIAEoCSIXChVEZWxldGVBY2NvdW50UmVzcG9uc2Uy3wYKDkFjY291bnRTZXJ2aWNlEkUKBUdldE1lEhouZGlzbGFja3NvLnYxLkdldE1lUmVxdWVzdBobLmRpc2xhY2tzby52MS5HZXRNZVJlc3BvbnNlIgOQAgESWAoNVXBkYXRlUHJvZmlsZRIiLmRpc2xhY2tzby52MS5VcGRhdGVQcm9maWxlUmVxdWVzdBojLmRpc2xhY2tzby52MS5VcGRhdGVQcm9maWxlUmVzcG9uc2USWwoOQ2hhbmdlUGFzc3dvcmQSIy5kaXNsYWNrc28udjEuQ2hhbmdlUGFzc3dvcmRSZXF1ZXN0GiQuZGlzbGFja3NvLnYxLkNoYW5nZVBhc3N3b3JkUmVzcG9uc2USagoTU2V0U3RhdHVzUHJlZmVyZW5jZRIoLmRpc2xhY2tzby52MS5TZXRTdGF0dXNQcmVmZXJlbmNlUmVxdWVzdBopLmRpc2xhY2tzby52MS5TZXRTdGF0dXNQcmVmZXJlbmNlUmVzcG9uc2USWgoMTGlzdFNlc3Npb25zEiEuZGlzbGFja3NvLnYxLkxpc3RTZXNzaW9uc1JlcXVlc3QaIi5kaXNsYWNrc28udjEuTGlzdFNlc3Npb25zUmVzcG9uc2UiA5ACARJYCg1SZXZva2VTZXNzaW9uEiIuZGlzbGFja3NvLnYxLlJldm9rZVNlc3Npb25SZXF1ZXN0GiMuZGlzbGFja3NvLnYxLlJldm9rZVNlc3Npb25SZXNwb25zZRJqChNSZXZva2VPdGhlclNlc3Npb25zEiguZGlzbGFja3NvLnYxLlJldm9rZU90aGVyU2Vzc2lvbnNSZXF1ZXN0GikuZGlzbGFja3NvLnYxLlJldm9rZU90aGVyU2Vzc2lvbnNSZXNwb25zZRJnChJSZXF1ZXN0RW1haWxDaGFuZ2USJy5kaXNsYWNrc28udjEuUmVxdWVzdEVtYWlsQ2hhbmdlUmVxdWVzdBooLmRpc2xhY2tzby52MS5SZXF1ZXN0RW1haWxDaGFuZ2VSZXNwb25zZRJYCg1EZWxldGVBY2NvdW50EiIuZGlzbGFja3NvLnYxLkRlbGV0ZUFjY291bnRSZXF1ZXN0GiMuZGlzbGFja3NvLnYxLkRlbGV0ZUFjY291bnRSZXNwb25zZULBAQoQY29tLmRpc2xhY2tzby52MUIMQWNjb3VudFByb3RvUAFaTmdpdGh1Yi5jb20vdG9ybmVsbGloZW5yaXF1ZS9kaXNsYWNrc28tcmViaXJ0aC9odWIvZ2VuL2Rpc2xhY2tzby92MTtkaXNsYWNrc292MaICA0RYWKoCDERpc2xhY2tzby5WMcoCDERpc2xhY2tzb1xWMeICGERpc2xhY2tzb1xWMVxHUEJNZXRhZGF0YeoCDURpc2xhY2tzbzo6VjFiBnByb3RvMw", [file_dislackso_v1_common]);
 
 /**
  * @generated from message dislackso.v1.GetMeRequest
@@ -300,6 +300,83 @@ export const RevokeOtherSessionsResponseSchema: GenMessage<RevokeOtherSessionsRe
   messageDesc(file_dislackso_v1_account, 14);
 
 /**
+ * @generated from message dislackso.v1.RequestEmailChangeRequest
+ */
+export type RequestEmailChangeRequest = Message<"dislackso.v1.RequestEmailChangeRequest"> & {
+  /**
+   * @generated from field: string new_email = 1;
+   */
+  newEmail: string;
+
+  /**
+   * @generated from field: string password = 2;
+   */
+  password: string;
+};
+
+/**
+ * Describes the message dislackso.v1.RequestEmailChangeRequest.
+ * Use `create(RequestEmailChangeRequestSchema)` to create a new message.
+ */
+export const RequestEmailChangeRequestSchema: GenMessage<RequestEmailChangeRequest> = /*@__PURE__*/
+  messageDesc(file_dislackso_v1_account, 15);
+
+/**
+ * @generated from message dislackso.v1.RequestEmailChangeResponse
+ */
+export type RequestEmailChangeResponse = Message<"dislackso.v1.RequestEmailChangeResponse"> & {
+  /**
+   * True when a confirmation email went out; false when the address changed
+   * at once (no email configured).
+   *
+   * @generated from field: bool confirmation_sent = 1;
+   */
+  confirmationSent: boolean;
+
+  /**
+   * @generated from field: dislackso.v1.Me me = 2;
+   */
+  me?: Me | undefined;
+};
+
+/**
+ * Describes the message dislackso.v1.RequestEmailChangeResponse.
+ * Use `create(RequestEmailChangeResponseSchema)` to create a new message.
+ */
+export const RequestEmailChangeResponseSchema: GenMessage<RequestEmailChangeResponse> = /*@__PURE__*/
+  messageDesc(file_dislackso_v1_account, 16);
+
+/**
+ * @generated from message dislackso.v1.DeleteAccountRequest
+ */
+export type DeleteAccountRequest = Message<"dislackso.v1.DeleteAccountRequest"> & {
+  /**
+   * @generated from field: string password = 1;
+   */
+  password: string;
+};
+
+/**
+ * Describes the message dislackso.v1.DeleteAccountRequest.
+ * Use `create(DeleteAccountRequestSchema)` to create a new message.
+ */
+export const DeleteAccountRequestSchema: GenMessage<DeleteAccountRequest> = /*@__PURE__*/
+  messageDesc(file_dislackso_v1_account, 17);
+
+/**
+ * @generated from message dislackso.v1.DeleteAccountResponse
+ */
+export type DeleteAccountResponse = Message<"dislackso.v1.DeleteAccountResponse"> & {
+};
+
+/**
+ * Describes the message dislackso.v1.DeleteAccountResponse.
+ * Use `create(DeleteAccountResponseSchema)` to create a new message.
+ */
+export const DeleteAccountResponseSchema: GenMessage<DeleteAccountResponse> = /*@__PURE__*/
+  messageDesc(file_dislackso_v1_account, 18);
+
+/**
  * AccountService manages the signed-in user's own account.
  *
  * @generated from service dislackso.v1.AccountService
@@ -362,6 +439,29 @@ export const AccountService: GenService<{
     methodKind: "unary";
     input: typeof RevokeOtherSessionsRequestSchema;
     output: typeof RevokeOtherSessionsResponseSchema;
+  },
+  /**
+   * Emails a confirmation link to the new address; the address changes when
+   * the link is opened (AuthService.ConfirmEmailChange). Without email the
+   * address changes at once.
+   *
+   * @generated from rpc dislackso.v1.AccountService.RequestEmailChange
+   */
+  requestEmailChange: {
+    methodKind: "unary";
+    input: typeof RequestEmailChangeRequestSchema;
+    output: typeof RequestEmailChangeResponseSchema;
+  },
+  /**
+   * Deletes the account for good. Servers the user owns must be transferred
+   * or deleted first.
+   *
+   * @generated from rpc dislackso.v1.AccountService.DeleteAccount
+   */
+  deleteAccount: {
+    methodKind: "unary";
+    input: typeof DeleteAccountRequestSchema;
+    output: typeof DeleteAccountResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_dislackso_v1_account, 0);

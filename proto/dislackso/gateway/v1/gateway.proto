@@ -4,6 +4,7 @@ package dislackso.gateway.v1;
 
 import "dislackso/v1/channel.proto";
 import "dislackso/v1/common.proto";
+import "dislackso/v1/connectivity.proto";
 import "dislackso/v1/guild.proto";
 import "dislackso/v1/invite.proto";
 import "dislackso/v1/moderation.proto";
@@ -24,6 +25,7 @@ message ClientFrame {
     Heartbeat heartbeat = 3;
     UpdatePresence update_presence = 4;
     UpdateVoiceSelfState update_voice_self_state = 5;
+    ClientTelemetry client_telemetry = 6;
   }
 }
 
@@ -101,6 +103,27 @@ message UpdateVoiceSelfState {
   bool self_deaf = 3;
 }
 
+enum CandidateType {
+  CANDIDATE_TYPE_UNSPECIFIED = 0;
+  CANDIDATE_TYPE_HOST = 1;
+  CANDIDATE_TYPE_SRFLX = 2;
+  CANDIDATE_TYPE_PRFLX = 3;
+  CANDIDATE_TYPE_RELAY = 4;
+}
+
+// ClientTelemetry reports a voice connection's path every 30 s, so admins see
+// how much goes through relays (TURN) and the hub can keep to the budget.
+message ClientTelemetry {
+  // Other sessions than the client's current one are ignored.
+  string voice_session_id = 1;
+  // The local candidate of the selected ICE pair.
+  CandidateType candidate = 2;
+  // Totals since the connection started.
+  uint64 bytes_sent = 3;
+  uint64 bytes_received = 4;
+  int32 rtt_ms = 5;
+}
+
 message InstanceInfo {
   string name = 1;
   bool members_can_invite = 2;
@@ -164,6 +187,8 @@ message Event {
     dislackso.v1.VoiceState voice_state_update = 19;
     // The receiver's voice connection was ended or moved by someone else.
     VoiceForced voice_forced = 20;
+    // To instance admins: the exposure provider's state or public URL changed.
+    dislackso.v1.ExposureStatus exposure_changed = 21;
   }
 }
 
