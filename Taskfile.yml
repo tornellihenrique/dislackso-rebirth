@@ -138,7 +138,7 @@ tasks:
       - task: gen:check
 
   build:
-    desc: Build the web client and embed it into a single hub binary at bin/
+    desc: Build the web client and embed it into a single hub binary at bin/, with livekit-server next to it
     cmds:
       - task: build:web
       - task: build:hub
@@ -149,6 +149,8 @@ tasks:
 
   build:hub:
     vars:
+      LIVEKIT_SRC: '{{.TOOLS_BIN}}/livekit-server{{exeExt}}'
+      LIVEKIT_STAMP: '{{.TOOLS_BIN}}/.stamps/livekit-server'
       VERSION:
         sh: git describe --tags --always --dirty --match "v*" 2>/dev/null || echo dev
     cmds:
@@ -156,6 +158,13 @@ tasks:
         go -C hub build -trimpath
         -ldflags "-s -w -X github.com/tornellihenrique/dislackso-rebirth/hub/internal/buildinfo.version={{.VERSION}}"
         -o "{{.HUB_BIN}}" ./cmd/hub
+      # The hub looks for livekit-server next to itself, so bin/hub then has
+      # voice when started by double-click. Copied only when the pinned
+      # version changes: a running copy cannot be overwritten on Windows.
+      - >-
+        if [ -f "{{.LIVEKIT_SRC}}" ] && [ "$(cat "{{.LIVEKIT_STAMP}}")" != "$(cat "{{.ROOT}}/bin/.livekit-server" 2>/dev/null)" ]; then
+        cp "{{.LIVEKIT_SRC}}" "{{.ROOT}}/bin/livekit-server{{exeExt}}" && cp "{{.LIVEKIT_STAMP}}" "{{.ROOT}}/bin/.livekit-server";
+        fi
 
   release:archive:
     desc: 'Package the hub and livekit-server for one platform into dist/ (task release:archive GOOS=windows GOARCH=amd64)'

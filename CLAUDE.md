@@ -25,7 +25,7 @@ task check      # lint + typecheck + unit tests (Go + TS) + gen freshness
 task test:int   # Go integration tests with real livekit-server
 task e2e        # Playwright with fake media
 task bench:share  # screen share codec and layer measurements (~10 min, not in CI)
-task build      # web build embedded into hub binary; desktop build
+task build      # web build embedded into hub binary at bin/ (livekit-server copied next to it); desktop build
 ```
 
 ## Repo map
