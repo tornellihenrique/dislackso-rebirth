@@ -17,6 +17,7 @@ export function GuildIcon({ name, url, active = false, size = 'md' }: GuildIconP
       <img
         src={url}
         alt=""
+        draggable={false}
         className={`${sizes[size]} ${shape} object-cover transition-[border-radius] duration-150`}
       />
     );

@@ -21,6 +21,17 @@ export async function startApp(container: HTMLElement): Promise<void> {
   const nonce = document.querySelector('meta[name="csp-nonce"]')?.getAttribute('content');
   if (nonce) setNonce(nonce);
 
+  // A link or file dropped where nothing takes it would open in this tab,
+  // reloading the app and ending the call.
+  window.addEventListener('dragover', (e) => {
+    if (e.defaultPrevented) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'none';
+  });
+  window.addEventListener('drop', (e) => {
+    e.preventDefault();
+  });
+
   const language = detectLanguage(navigator.languages);
   document.documentElement.lang = language;
   applyAppearance(appearanceStore.getState(), document.documentElement);
