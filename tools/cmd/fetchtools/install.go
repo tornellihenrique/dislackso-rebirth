@@ -16,6 +16,8 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
+	"strings"
 )
 
 type installer struct {
@@ -62,7 +64,7 @@ func (in installer) install(ctx context.Context, t tool) error {
 		err = extractTarEntry(archivePath, a.Path, dest)
 	case archiveGoSource:
 		_, _ = fmt.Fprintf(in.log, "building %s from source (no published binary for %s)\n", t.Name, in.platform)
-		err = buildFromSource(ctx, archivePath, filepath.Join(work, "src"), a, dest)
+		err = buildFromSource(ctx, archivePath, filepath.Join(work, "src"), a, in.platform, dest)
 	default:
 		err = fmt.Errorf("unknown archive kind %q", a.Archive)
 	}
@@ -162,7 +164,7 @@ func extractTarEntry(archivePath, entry, dest string) error {
 	}, entry)
 }
 
-func buildFromSource(ctx context.Context, archivePath, srcDir string, a artifact, dest string) error {
+func buildFromSource(ctx context.Context, archivePath, srcDir string, a artifact, platform, dest string) error {
 	err := walkTarGz(archivePath, func(hdr *tar.Header, r io.Reader) (bool, error) {
 		return false, extractTarMember(srcDir, hdr, r)
 	}, "")
@@ -173,7 +175,14 @@ func buildFromSource(ctx context.Context, archivePath, srcDir string, a artifact
 	tmp := dest + ".tmp"
 	cmd := exec.CommandContext(ctx, "go", "build", "-trimpath", "-o", tmp, a.Package)
 	cmd.Dir = filepath.Join(srcDir, filepath.FromSlash(a.Path))
-	cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
+	goos, goarch, _ := strings.Cut(platform, "/")
+	// livekit-server reads CPU stats through cgo on macOS, so cgo stays on
+	// when building for this machine's own OS.
+	cgo := "0"
+	if goos == runtime.GOOS {
+		cgo = "1"
+	}
+	cmd.Env = append(os.Environ(), "CGO_ENABLED="+cgo, "GOOS="+goos, "GOARCH="+goarch)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
