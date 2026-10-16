@@ -1,5 +1,5 @@
 // Package auth registers users, signs them in and out, and handles email
-// verification and password resets.
+// verification, email changes and password resets.
 package auth
 
 import (
@@ -54,6 +54,7 @@ type MailAvailability interface {
 type Emails interface {
 	VerifyEmail(ctx context.Context, to, name, locale, link string) error
 	PasswordReset(ctx context.Context, to, name, locale, link string) error
+	ConfirmEmailChange(ctx context.Context, to, name, locale, link string) error
 }
 
 // InviteClaimer redeems registration invites inside the registration
@@ -77,6 +78,7 @@ type Deps struct {
 	Settings SettingsReader
 	Emails   Emails
 	Invites  InviteClaimer
+	Events   ports.EventPublisher
 	Logger   *slog.Logger
 }
 

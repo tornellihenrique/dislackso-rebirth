@@ -1,4 +1,10 @@
-import { useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
+import {
+  useId,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
+} from 'react';
 
 const controlClass =
   'w-full rounded-sm bg-input px-3 py-2 text-sm text-fg outline-none focus-visible:ring-2 focus-visible:ring-accent aria-invalid:ring-2 aria-invalid:ring-danger disabled:opacity-60';
@@ -55,6 +61,27 @@ export function TextField({ label, hint, error, ...input }: TextFieldProps) {
         aria-describedby={describedBy(id, hint, error)}
         className={controlClass}
         {...input}
+      />
+    </FieldFrame>
+  );
+}
+
+interface TextAreaFieldProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'id'> {
+  label: string;
+  hint?: string | undefined;
+  error?: string | undefined;
+}
+
+export function TextAreaField({ label, hint, error, ...textarea }: TextAreaFieldProps) {
+  const id = useId();
+  return (
+    <FieldFrame id={id} label={label} hint={hint} error={error}>
+      <textarea
+        id={id}
+        aria-invalid={error !== undefined}
+        aria-describedby={describedBy(id, hint, error)}
+        className={`${controlClass} resize-y font-mono text-xs`}
+        {...textarea}
       />
     </FieldFrame>
   );

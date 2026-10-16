@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/domain"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/events"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/ports"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/settings"
 )
@@ -31,6 +32,7 @@ type Deps struct {
 	Sessions   ports.SessionRepo
 	Tx         ports.TxRunner
 	Clock      ports.Clock
+	Events     ports.EventPublisher
 	Settings   Settings
 	ResetLinks ResetLinks
 	Emails     TestEmails
@@ -123,7 +125,8 @@ func (s *Service) SetUserInstanceAdmin(ctx context.Context, actor domain.Actor, 
 	})
 }
 
-// changeUser applies change to another user's account. Admins cannot target
+// changeUser applies change to another user's account and tells their
+// sessions (the gateway follows instance admin changes). Admins cannot target
 // themselves, so an instance never loses its last admin by accident.
 func (s *Service) changeUser(ctx context.Context, actor domain.Actor, userID domain.ID, change func(context.Context, *domain.User, time.Time) error) (domain.User, error) {
 	if err := s.policy.ManageInstance(actor); err != nil {
@@ -147,7 +150,11 @@ func (s *Service) changeUser(ctx context.Context, actor domain.Actor, userID dom
 			return err
 		}
 		user.UpdatedAt = now
-		return s.d.Users.UpdateUser(ctx, user)
+		if err := s.d.Users.UpdateUser(ctx, user); err != nil {
+			return err
+		}
+		s.d.Events.Publish(ctx, events.Event{Topics: []events.Topic{events.UserTopic(user.ID)}, Payload: events.MeUpdated{User: user}})
+		return nil
 	})
 	return user, err
 }

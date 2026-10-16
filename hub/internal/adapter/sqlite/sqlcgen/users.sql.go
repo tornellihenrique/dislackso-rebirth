@@ -63,6 +63,36 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 	return err
 }
 
+const deleteUser = `-- name: DeleteUser :execrows
+UPDATE users SET
+  username = 'deleted-' || id,
+  email = 'deleted-' || id || '@deleted.invalid',
+  email_verified_at = NULL,
+  password_hash = '',
+  display_name = '',
+  avatar_file_id = NULL,
+  custom_status = '',
+  is_instance_admin = 0,
+  updated_at = ?1,
+  deleted_at = ?1
+WHERE id = ?2 AND deleted_at IS NULL
+`
+
+type DeleteUserParams struct {
+	At int64
+	ID int64
+}
+
+// Deleted accounts keep their row for history (audit log, bans) as an
+// anonymous "Deleted User"; the username and email become free again.
+func (q *Queries) DeleteUser(ctx context.Context, arg DeleteUserParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteUser, arg.At, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT id, username, email, email_verified_at, password_hash, display_name, avatar_file_id, status_pref, custom_status, is_instance_admin, disabled_at, created_at, updated_at, deleted_at FROM users WHERE email = ? AND deleted_at IS NULL
 `

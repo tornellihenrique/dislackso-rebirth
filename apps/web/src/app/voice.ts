@@ -1,4 +1,7 @@
+import type { MessageInitShape } from '@bufbuild/protobuf';
 import {
+  CandidateType,
+  type ClientTelemetrySchema,
   VoiceForcedAction,
   type VoiceForced,
 } from '@dislackso/contracts/gen/dislackso/gateway/v1/gateway_pb';
@@ -16,7 +19,8 @@ import { capPreset } from '@/core/media/share-presets';
 import { SELF_SHARE, ShareViews } from '@/core/media/share-views';
 import type { SoundKind, SoundPlayer } from '@/core/media/sounds';
 import { SpeakingTracker } from '@/core/media/speaking';
-import type { ConnectionStats, OutboundVideoStats } from '@/core/media/stats';
+import type { ConnectionStats, OutboundVideoStats, PathStats } from '@/core/media/stats';
+import { TransportMeter } from '@/core/media/transport-meter';
 import type {
   AudioPrefs,
   CallEnd,
@@ -44,6 +48,16 @@ import {
   type VoiceSettings,
 } from '@/stores/voice-settings';
 import { channelOccupants, dispatchVoiceStates, voiceStatesStore } from '@/stores/voice-states';
+
+const TELEMETRY_EVERY_MS = 30_000;
+
+const candidateTypes: Record<PathStats['candidate'], CandidateType> = {
+  host: CandidateType.HOST,
+  srflx: CandidateType.SRFLX,
+  prflx: CandidateType.PRFLX,
+  relay: CandidateType.RELAY,
+  unknown: CandidateType.UNSPECIFIED,
+};
 
 /** What features can do with voice. */
 export interface VoiceActions {
@@ -79,6 +93,7 @@ export interface VoiceGatewayHooks {
 
 export interface VoiceGateway {
   setVoiceSelf(voiceSessionId: string, selfMute: boolean, selfDeaf: boolean): void;
+  sendTelemetry(t: MessageInitShape<typeof ClientTelemetrySchema>): void;
 }
 
 export interface VoiceDeps {
@@ -144,6 +159,8 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks {
   private streamers = new Set<string>();
   /** The shares' video, here so tiles can show them before the media engine loads. */
   private readonly views = new ShareViews();
+  private telemetry: ReturnType<typeof setInterval> | undefined;
+  private meter = new TransportMeter();
 
   constructor(private readonly d: VoiceDeps) {
     this.listener = {
@@ -284,6 +301,7 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks {
       this.applyStreamVolumes(shareSettingsStore.getState());
       this.streamers = this.channelStreamers();
       dispatchCall({ type: 'connection', state: 'connected' });
+      this.startTelemetry(sessionId);
       this.play('join');
     } catch (err) {
       if (gen !== this.generation) return;
@@ -504,12 +522,44 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks {
   }
 
   private ended(): void {
+    clearInterval(this.telemetry);
+    this.telemetry = undefined;
     this.gateway?.setVoiceSelf('', false, false);
     this.speaking.clear();
     if (this.speakingTimer !== undefined) clearTimeout(this.speakingTimer);
     this.streamers = new Set();
     dispatchCall({ type: 'ended' });
     dispatchStage({ type: 'reset' });
+  }
+
+  /** Tells the hub how the call connects and what it carried, for its relay budget. */
+  private startTelemetry(voiceSessionId: string): void {
+    clearInterval(this.telemetry);
+    this.meter = new TransportMeter();
+    const meter = this.meter;
+    this.telemetry = setInterval(() => {
+      void this.reportTelemetry(voiceSessionId, meter);
+    }, TELEMETRY_EVERY_MS);
+  }
+
+  private async reportTelemetry(voiceSessionId: string, meter: TransportMeter): Promise<void> {
+    const readings = await this.session?.transportReadings();
+    if (!readings || readings.size === 0 || meter !== this.meter) return;
+    let candidate: PathStats['candidate'] = 'unknown';
+    let rttMs = 0;
+    for (const [key, r] of readings) {
+      meter.add(key, r);
+      if (candidate !== 'relay' && r.path.candidate !== 'unknown') candidate = r.path.candidate;
+      if (rttMs === 0 && r.path.rttMs !== undefined) rttMs = r.path.rttMs;
+    }
+    const { bytesSent, bytesReceived } = meter.totals;
+    this.gateway?.sendTelemetry({
+      voiceSessionId,
+      candidate: candidateTypes[candidate],
+      bytesSent: BigInt(bytesSent),
+      bytesReceived: BigInt(bytesReceived),
+      rttMs,
+    });
   }
 
   private shareEnded(reason: ShareEnd): void {

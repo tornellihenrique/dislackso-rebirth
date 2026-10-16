@@ -21,7 +21,11 @@ import (
 )
 
 func main() {
-	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
+	code := run(os.Args[1:], os.Stdout, os.Stderr)
+	if code != 0 {
+		holdWindow(os.Stderr)
+	}
+	os.Exit(code)
 }
 
 func run(args []string, stdout, stderr io.Writer) int {
@@ -32,6 +36,14 @@ func run(args []string, stdout, stderr io.Writer) int {
 	switch cmd {
 	case "run":
 		return runHub(rest, stderr)
+	case "doctor":
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+		if err := app.Doctor(ctx, stdout); err != nil {
+			_, _ = fmt.Fprintln(stderr, "hub:", err)
+			return 1
+		}
+		return 0
 	case "version":
 		_, _ = fmt.Fprintf(stdout, "%s hub %s\n", product.Name, buildinfo.Version())
 		return 0
@@ -50,6 +62,7 @@ func usage(w io.Writer) {
 
 Usage:
   hub [run] [flags]   start the hub (default; "hub run -h" lists flags)
+  hub doctor          check how reachable this machine is for calls
   hub version         print the version
   hub help            show this help
 `, product.Name, buildinfo.Version())

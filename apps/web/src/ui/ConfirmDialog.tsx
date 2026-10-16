@@ -18,6 +18,8 @@ interface ConfirmDialogProps {
   danger?: boolean;
   /** Asks for free text (such as a reason) passed to onConfirm. */
   inputLabel?: string;
+  /** A password is passed on as typed, without trimming. */
+  inputType?: 'text' | 'password';
   /** The confirm button stays disabled until the input equals this text. */
   requireText?: string;
 }
@@ -33,6 +35,7 @@ export function ConfirmDialog({
   error,
   danger = true,
   inputLabel,
+  inputType = 'text',
   requireText,
 }: ConfirmDialogProps) {
   const { t } = useTranslation();
@@ -54,7 +57,7 @@ export function ConfirmDialog({
           e.preventDefault();
           // React submit events bubble through portals into an enclosing form.
           e.stopPropagation();
-          if (!blocked) onConfirm(input.trim());
+          if (!blocked) onConfirm(inputType === 'password' ? input : input.trim());
         }}
       >
         <div className="text-sm">{body}</div>
@@ -62,6 +65,8 @@ export function ConfirmDialog({
         {inputLabel !== undefined && (
           <TextField
             label={inputLabel}
+            type={inputType}
+            autoComplete={inputType === 'password' ? 'current-password' : 'off'}
             value={input}
             maxLength={512}
             onChange={(e) => {

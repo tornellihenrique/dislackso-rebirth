@@ -6,6 +6,7 @@ import type {
   VoiceForced,
 } from '@dislackso/contracts/gen/dislackso/gateway/v1/gateway_pb';
 import type { Me, VoiceState } from '@dislackso/contracts/gen/dislackso/v1/common_pb';
+import type { ExposureStatus } from '@dislackso/contracts/gen/dislackso/v1/connectivity_pb';
 
 import type { EntitiesEvent } from '@/stores/entities';
 import type { PresenceEvent } from '@/stores/presence';
@@ -28,6 +29,8 @@ export interface DispatchTargets {
   listChanged(kind: ListKind, guildId: string): void;
   /** The user lost a guild; called while the guild is still in the store. */
   guildLost(guildId: string, reason: GuildDeleteReason): void;
+  /** The hub's public address changed state; instance admins only. */
+  exposureChanged(status: ExposureStatus): void;
 }
 
 /**
@@ -116,6 +119,9 @@ function applyEvent(t: DispatchTargets, event: Event): void {
       break;
     case 'voiceForced':
       t.voiceForced(kind.value);
+      break;
+    case 'exposureChanged':
+      t.exposureChanged(kind.value);
       break;
     case 'meUpdate':
       t.me(kind.value);

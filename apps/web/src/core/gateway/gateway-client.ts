@@ -1,6 +1,7 @@
 import { create, fromBinary, toBinary, type MessageInitShape } from '@bufbuild/protobuf';
 import {
   ClientFrameSchema,
+  type ClientTelemetrySchema,
   CloseCode,
   ServerFrameSchema,
   type ServerFrame,
@@ -104,6 +105,14 @@ export class GatewayClient {
     if (this.live && this.voiceSelf) {
       this.send({ kind: { case: 'updateVoiceSelfState', value: this.voiceSelf } });
     }
+  }
+
+  /**
+   * Reports what this device measures about its voice connection, for the
+   * hub's relay budget. Dropped while disconnected: the next report covers it.
+   */
+  sendTelemetry(t: MessageInitShape<typeof ClientTelemetrySchema>): void {
+    if (this.live) this.send({ kind: { case: 'clientTelemetry', value: t } });
   }
 
   private open(): void {

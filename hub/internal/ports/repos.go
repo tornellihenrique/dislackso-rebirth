@@ -18,6 +18,8 @@ type UserRepo interface {
 	UserByLogin(ctx context.Context, login string) (domain.User, error)
 	// UpdateUser writes every mutable field of u.
 	UpdateUser(ctx context.Context, u domain.User) error
+	// DeleteUser anonymizes the account and hides it from every lookup.
+	DeleteUser(ctx context.Context, id domain.ID, at time.Time) error
 	ListUsers(ctx context.Context) ([]domain.User, error)
 	// GuildUsers returns the users who are members of the guild.
 	GuildUsers(ctx context.Context, guildID domain.ID) ([]domain.User, error)
@@ -114,4 +116,10 @@ type AuditRepo interface {
 type FileRepo interface {
 	CreateFile(ctx context.Context, f domain.File) error
 	FileByID(ctx context.Context, id domain.ID) (domain.File, error)
+}
+
+// TURNUsageRepo keeps the relayed bytes clients report, per month ("2026-10").
+type TURNUsageRepo interface {
+	AddTURNUsage(ctx context.Context, month string, bytes int64) error
+	TURNUsage(ctx context.Context, month string) (int64, error)
 }

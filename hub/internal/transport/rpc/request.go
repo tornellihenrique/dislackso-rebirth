@@ -14,6 +14,7 @@ import (
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/auth"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/clientip"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/httpauth"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/ingress"
 )
 
 // SessionCookie holds the opaque session token.
@@ -67,7 +68,7 @@ func middleware(next http.Handler, authn Authenticator, resolveIP clientip.Resol
 				UserAgent: r.UserAgent(),
 				Locale:    locale.Match(r.Header.Get("Accept-Language")),
 			},
-			secure: r.TLS != nil,
+			secure: ingress.Secure(r),
 		}
 		if c, err := r.Cookie(SessionCookie); err == nil && c.Value != "" {
 			p, err := authn.Authenticate(r.Context(), c.Value)
@@ -87,10 +88,10 @@ func middleware(next http.Handler, authn Authenticator, resolveIP clientip.Resol
 	})
 }
 
-// Secure follows the request scheme so the hub also works over plain HTTP
-// on localhost.
+// Secure follows the scheme the client used (a tunnel ends TLS before the
+// hub), so the hub also works over plain HTTP on localhost.
 func sessionCookie(token string, expires time.Time, secure bool) *http.Cookie {
-	return &http.Cookie{ //nolint:gosec // Secure is set whenever the request used TLS
+	return &http.Cookie{ //nolint:gosec // Secure is set whenever the client used HTTPS
 		Name:     SessionCookie,
 		Value:    token,
 		Path:     "/",
@@ -102,7 +103,7 @@ func sessionCookie(token string, expires time.Time, secure bool) *http.Cookie {
 }
 
 func clearedCookie(secure bool) *http.Cookie {
-	return &http.Cookie{ //nolint:gosec // Secure is set whenever the request used TLS
+	return &http.Cookie{ //nolint:gosec // Secure is set whenever the client used HTTPS
 		Name:     SessionCookie,
 		Path:     "/",
 		MaxAge:   -1,

@@ -37,7 +37,7 @@ func newService(t *testing.T) (*Service, *fakes.Store, *fakes.Emails) {
 		t.Fatal(err)
 	}
 	svc := New(Deps{
-		Users: store, Sessions: store, Tx: store, Clock: clock,
+		Users: store, Sessions: store, Tx: store, Clock: clock, Events: fakes.NewEvents(store),
 		Settings:   settings.New(store, &fakes.Secrets{}, clock),
 		ResetLinks: stubResetLinks{},
 		Emails:     emails,

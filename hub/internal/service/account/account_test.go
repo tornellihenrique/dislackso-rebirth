@@ -44,7 +44,7 @@ func newHarness(t *testing.T, required, verified bool) *harness {
 	h := &harness{store: fakes.NewStore(), clock: fakes.NewClock(), limiter: &fakes.Limiter{}, presence: &statusSink{}}
 	h.events = fakes.NewEvents(h.store)
 	h.svc = New(Deps{
-		Users: h.store, Sessions: h.store, Members: h.store, Files: h.store, Tx: h.store, Hasher: fakes.Hasher{},
+		Users: h.store, Sessions: h.store, Members: h.store, Guilds: h.store, Files: h.store, Tx: h.store, Hasher: fakes.Hasher{},
 		Clock: h.clock, Limiter: h.limiter, Events: h.events, Presence: h.presence, Verification: verification(required),
 	})
 	now := h.clock.Now()
@@ -238,5 +238,78 @@ func TestSetStatusUpdatesPresence(t *testing.T) {
 	}
 	if _, err := h.svc.SetStatus(t.Context(), h.actor, "busy", ""); err == nil || len(h.presence.calls) != 1 {
 		t.Errorf("an invalid status reached presence: %v", err)
+	}
+}
+
+func TestDeleteAccountChecks(t *testing.T) {
+	tests := []struct {
+		name    string
+		prepare func(t *testing.T, h *harness)
+		reason  string
+		kind    error
+	}{
+		{"wrong password", nil, domain.ReasonFieldIncorrect, domain.ErrInvalid},
+		{"owns a server", func(t *testing.T, h *harness) {
+			if err := h.store.CreateGuild(t.Context(), domain.Guild{ID: 5, Name: "team", OwnerID: 1}); err != nil {
+				t.Fatal(err)
+			}
+		}, domain.ReasonOwnsGuilds, domain.ErrFailedPrecondition},
+		{"last instance admin", func(t *testing.T, h *harness) {
+			u, _ := h.store.UserByID(t.Context(), 1)
+			u.IsInstanceAdmin = true
+			if err := h.store.UpdateUser(t.Context(), u); err != nil {
+				t.Fatal(err)
+			}
+		}, domain.ReasonLastInstanceAdmin, domain.ErrFailedPrecondition},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newHarness(t, true, true)
+			password := "correct horse"
+			if tt.prepare == nil {
+				password = "wrong"
+			} else {
+				tt.prepare(t, h)
+			}
+			err := h.svc.DeleteAccount(t.Context(), h.actor, password)
+			requireReason(t, err, tt.kind, tt.reason)
+			if _, err := h.store.UserByID(t.Context(), 1); err != nil {
+				t.Errorf("account gone after a refused deletion: %v", err)
+			}
+		})
+	}
+}
+
+func TestDeleteAccount(t *testing.T) {
+	h := newHarness(t, true, true)
+	ctx := t.Context()
+	now := h.clock.Now()
+	if err := h.store.CreateGuild(ctx, domain.Guild{ID: 5, Name: "team", OwnerID: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.store.AddMember(ctx, domain.Member{GuildID: 5, UserID: 1, Role: domain.RoleMember, JoinedAt: now, UpdatedAt: now}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := h.svc.DeleteAccount(ctx, h.actor, "correct horse"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.store.UserByID(ctx, 1); !errors.Is(err, domain.ErrNotFound) {
+		t.Errorf("user lookup err = %v, want not found", err)
+	}
+	if _, err := h.store.MemberByID(ctx, 5, 1); !errors.Is(err, domain.ErrNotFound) {
+		t.Errorf("membership err = %v, want not found", err)
+	}
+	if sessions, _ := h.store.ActiveSessions(ctx, 1, now); len(sessions) != 0 {
+		t.Errorf("sessions = %v, want none", sessions)
+	}
+	var removed bool
+	for _, ev := range h.events.Take() {
+		if p, ok := ev.Payload.(events.MemberRemoved); ok && p.GuildID == 5 && p.UserID == 1 {
+			removed = true
+		}
+	}
+	if !removed {
+		t.Error("no MemberRemoved event: the server and voice would not learn the user left")
 	}
 }

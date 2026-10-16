@@ -6,6 +6,8 @@ import (
 	"net"
 	"net/http"
 	"time"
+
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/ingress"
 )
 
 // SecurityHeaders sets the headers every response carries.
@@ -15,6 +17,9 @@ func SecurityHeaders(next http.Handler) http.Handler {
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("Referrer-Policy", "same-origin")
 		h.Set("Cross-Origin-Opener-Policy", "same-origin")
+		if ingress.From(r).HSTS {
+			h.Set("Strict-Transport-Security", "max-age=15552000")
+		}
 		next.ServeHTTP(w, r)
 	})
 }

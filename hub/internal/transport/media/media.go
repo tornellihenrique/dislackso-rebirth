@@ -8,13 +8,13 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"strings"
 
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/ports"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/ingress"
 )
 
 const (
@@ -73,11 +73,11 @@ func proxy(o Options) http.Handler {
 }
 
 // webhook takes events from the media server on this machine. The signature
-// is what proves the sender; the loopback check keeps the endpoint off the
-// exposed address.
+// is what proves the sender; the local check keeps the endpoint off every
+// exposed address, tunnels included.
 func webhook(o Options) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !loopback(r.RemoteAddr) {
+		if !ingress.IsLocal(r) {
 			http.NotFound(w, r)
 			return
 		}
@@ -92,13 +92,4 @@ func webhook(o Options) http.HandlerFunc {
 		}
 		w.WriteHeader(http.StatusNoContent)
 	}
-}
-
-func loopback(remoteAddr string) bool {
-	host, _, err := net.SplitHostPort(remoteAddr)
-	if err != nil {
-		return false
-	}
-	ip := net.ParseIP(host)
-	return ip != nil && ip.IsLoopback()
 }

@@ -737,6 +737,86 @@ func (*ResetPasswordResponse) Descriptor() ([]byte, []int) {
 	return file_dislackso_v1_auth_proto_rawDescGZIP(), []int{15}
 }
 
+type ConfirmEmailChangeRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ConfirmEmailChangeRequest) Reset() {
+	*x = ConfirmEmailChangeRequest{}
+	mi := &file_dislackso_v1_auth_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConfirmEmailChangeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConfirmEmailChangeRequest) ProtoMessage() {}
+
+func (x *ConfirmEmailChangeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_v1_auth_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConfirmEmailChangeRequest.ProtoReflect.Descriptor instead.
+func (*ConfirmEmailChangeRequest) Descriptor() ([]byte, []int) {
+	return file_dislackso_v1_auth_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *ConfirmEmailChangeRequest) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+type ConfirmEmailChangeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ConfirmEmailChangeResponse) Reset() {
+	*x = ConfirmEmailChangeResponse{}
+	mi := &file_dislackso_v1_auth_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConfirmEmailChangeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConfirmEmailChangeResponse) ProtoMessage() {}
+
+func (x *ConfirmEmailChangeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_v1_auth_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConfirmEmailChangeResponse.ProtoReflect.Descriptor instead.
+func (*ConfirmEmailChangeResponse) Descriptor() ([]byte, []int) {
+	return file_dislackso_v1_auth_proto_rawDescGZIP(), []int{17}
+}
+
 var File_dislackso_v1_auth_proto protoreflect.FileDescriptor
 
 const file_dislackso_v1_auth_proto_rawDesc = "" +
@@ -775,7 +855,10 @@ const file_dislackso_v1_auth_proto_rawDesc = "" +
 	"\x14ResetPasswordRequest\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\x12!\n" +
 	"\fnew_password\x18\x02 \x01(\tR\vnewPassword\"\x17\n" +
-	"\x15ResetPasswordResponse2\xc4\x05\n" +
+	"\x15ResetPasswordResponse\"1\n" +
+	"\x19ConfirmEmailChangeRequest\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\"\x1c\n" +
+	"\x1aConfirmEmailChangeResponse2\xad\x06\n" +
 	"\vAuthService\x12]\n" +
 	"\rGetSetupState\x12\".dislackso.v1.GetSetupStateRequest\x1a#.dislackso.v1.GetSetupStateResponse\"\x03\x90\x02\x01\x12I\n" +
 	"\bRegister\x12\x1d.dislackso.v1.RegisterRequest\x1a\x1e.dislackso.v1.RegisterResponse\x12@\n" +
@@ -784,7 +867,8 @@ const file_dislackso_v1_auth_proto_rawDesc = "" +
 	"\vVerifyEmail\x12 .dislackso.v1.VerifyEmailRequest\x1a!.dislackso.v1.VerifyEmailResponse\x12g\n" +
 	"\x12ResendVerification\x12'.dislackso.v1.ResendVerificationRequest\x1a(.dislackso.v1.ResendVerificationResponse\x12m\n" +
 	"\x14RequestPasswordReset\x12).dislackso.v1.RequestPasswordResetRequest\x1a*.dislackso.v1.RequestPasswordResetResponse\x12X\n" +
-	"\rResetPassword\x12\".dislackso.v1.ResetPasswordRequest\x1a#.dislackso.v1.ResetPasswordResponseB\xbe\x01\n" +
+	"\rResetPassword\x12\".dislackso.v1.ResetPasswordRequest\x1a#.dislackso.v1.ResetPasswordResponse\x12g\n" +
+	"\x12ConfirmEmailChange\x12'.dislackso.v1.ConfirmEmailChangeRequest\x1a(.dislackso.v1.ConfirmEmailChangeResponseB\xbe\x01\n" +
 	"\x10com.dislackso.v1B\tAuthProtoP\x01ZNgithub.com/tornellihenrique/dislackso-rebirth/hub/gen/dislackso/v1;dislacksov1\xa2\x02\x03DXX\xaa\x02\fDislackso.V1\xca\x02\fDislackso\\V1\xe2\x02\x18Dislackso\\V1\\GPBMetadata\xea\x02\rDislackso::V1b\x06proto3"
 
 var (
@@ -799,7 +883,7 @@ func file_dislackso_v1_auth_proto_rawDescGZIP() []byte {
 	return file_dislackso_v1_auth_proto_rawDescData
 }
 
-var file_dislackso_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_dislackso_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_dislackso_v1_auth_proto_goTypes = []any{
 	(*GetSetupStateRequest)(nil),         // 0: dislackso.v1.GetSetupStateRequest
 	(*GetSetupStateResponse)(nil),        // 1: dislackso.v1.GetSetupStateResponse
@@ -817,13 +901,15 @@ var file_dislackso_v1_auth_proto_goTypes = []any{
 	(*RequestPasswordResetResponse)(nil), // 13: dislackso.v1.RequestPasswordResetResponse
 	(*ResetPasswordRequest)(nil),         // 14: dislackso.v1.ResetPasswordRequest
 	(*ResetPasswordResponse)(nil),        // 15: dislackso.v1.ResetPasswordResponse
-	(RegistrationMode)(0),                // 16: dislackso.v1.RegistrationMode
-	(*Me)(nil),                           // 17: dislackso.v1.Me
+	(*ConfirmEmailChangeRequest)(nil),    // 16: dislackso.v1.ConfirmEmailChangeRequest
+	(*ConfirmEmailChangeResponse)(nil),   // 17: dislackso.v1.ConfirmEmailChangeResponse
+	(RegistrationMode)(0),                // 18: dislackso.v1.RegistrationMode
+	(*Me)(nil),                           // 19: dislackso.v1.Me
 }
 var file_dislackso_v1_auth_proto_depIdxs = []int32{
-	16, // 0: dislackso.v1.GetSetupStateResponse.registration_mode:type_name -> dislackso.v1.RegistrationMode
-	17, // 1: dislackso.v1.RegisterResponse.me:type_name -> dislackso.v1.Me
-	17, // 2: dislackso.v1.LoginResponse.me:type_name -> dislackso.v1.Me
+	18, // 0: dislackso.v1.GetSetupStateResponse.registration_mode:type_name -> dislackso.v1.RegistrationMode
+	19, // 1: dislackso.v1.RegisterResponse.me:type_name -> dislackso.v1.Me
+	19, // 2: dislackso.v1.LoginResponse.me:type_name -> dislackso.v1.Me
 	0,  // 3: dislackso.v1.AuthService.GetSetupState:input_type -> dislackso.v1.GetSetupStateRequest
 	2,  // 4: dislackso.v1.AuthService.Register:input_type -> dislackso.v1.RegisterRequest
 	4,  // 5: dislackso.v1.AuthService.Login:input_type -> dislackso.v1.LoginRequest
@@ -832,16 +918,18 @@ var file_dislackso_v1_auth_proto_depIdxs = []int32{
 	10, // 8: dislackso.v1.AuthService.ResendVerification:input_type -> dislackso.v1.ResendVerificationRequest
 	12, // 9: dislackso.v1.AuthService.RequestPasswordReset:input_type -> dislackso.v1.RequestPasswordResetRequest
 	14, // 10: dislackso.v1.AuthService.ResetPassword:input_type -> dislackso.v1.ResetPasswordRequest
-	1,  // 11: dislackso.v1.AuthService.GetSetupState:output_type -> dislackso.v1.GetSetupStateResponse
-	3,  // 12: dislackso.v1.AuthService.Register:output_type -> dislackso.v1.RegisterResponse
-	5,  // 13: dislackso.v1.AuthService.Login:output_type -> dislackso.v1.LoginResponse
-	7,  // 14: dislackso.v1.AuthService.Logout:output_type -> dislackso.v1.LogoutResponse
-	9,  // 15: dislackso.v1.AuthService.VerifyEmail:output_type -> dislackso.v1.VerifyEmailResponse
-	11, // 16: dislackso.v1.AuthService.ResendVerification:output_type -> dislackso.v1.ResendVerificationResponse
-	13, // 17: dislackso.v1.AuthService.RequestPasswordReset:output_type -> dislackso.v1.RequestPasswordResetResponse
-	15, // 18: dislackso.v1.AuthService.ResetPassword:output_type -> dislackso.v1.ResetPasswordResponse
-	11, // [11:19] is the sub-list for method output_type
-	3,  // [3:11] is the sub-list for method input_type
+	16, // 11: dislackso.v1.AuthService.ConfirmEmailChange:input_type -> dislackso.v1.ConfirmEmailChangeRequest
+	1,  // 12: dislackso.v1.AuthService.GetSetupState:output_type -> dislackso.v1.GetSetupStateResponse
+	3,  // 13: dislackso.v1.AuthService.Register:output_type -> dislackso.v1.RegisterResponse
+	5,  // 14: dislackso.v1.AuthService.Login:output_type -> dislackso.v1.LoginResponse
+	7,  // 15: dislackso.v1.AuthService.Logout:output_type -> dislackso.v1.LogoutResponse
+	9,  // 16: dislackso.v1.AuthService.VerifyEmail:output_type -> dislackso.v1.VerifyEmailResponse
+	11, // 17: dislackso.v1.AuthService.ResendVerification:output_type -> dislackso.v1.ResendVerificationResponse
+	13, // 18: dislackso.v1.AuthService.RequestPasswordReset:output_type -> dislackso.v1.RequestPasswordResetResponse
+	15, // 19: dislackso.v1.AuthService.ResetPassword:output_type -> dislackso.v1.ResetPasswordResponse
+	17, // 20: dislackso.v1.AuthService.ConfirmEmailChange:output_type -> dislackso.v1.ConfirmEmailChangeResponse
+	12, // [12:21] is the sub-list for method output_type
+	3,  // [3:12] is the sub-list for method input_type
 	3,  // [3:3] is the sub-list for extension type_name
 	3,  // [3:3] is the sub-list for extension extendee
 	0,  // [0:3] is the sub-list for field type_name
@@ -859,7 +947,7 @@ func file_dislackso_v1_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_dislackso_v1_auth_proto_rawDesc), len(file_dislackso_v1_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   16,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

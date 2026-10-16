@@ -36,6 +36,8 @@ const (
 	ReasonSetupComplete        = "setup_complete"
 	ReasonSetupTokenInvalid    = "setup_token_invalid"
 	ReasonNotLocal             = "not_local"
+	ReasonUnsupported          = "unsupported"
+	ReasonRelayNotConfigured   = "relay_not_configured"
 	ReasonNotInstanceAdmin     = "not_instance_admin"
 	ReasonCannotTargetSelf     = "cannot_target_self"
 	ReasonUserNotFound         = "user_not_found"
@@ -51,6 +53,8 @@ const (
 	ReasonCannotTargetOwner    = "cannot_target_owner"
 	ReasonCannotTargetAdmin    = "cannot_target_admin"
 	ReasonOwnerCannotLeave     = "owner_cannot_leave"
+	ReasonOwnsGuilds           = "owns_guilds"
+	ReasonLastInstanceAdmin    = "last_instance_admin"
 	ReasonGuildLimitReached    = "guild_limit_reached"
 	ReasonChannelLimitReached  = "channel_limit_reached"
 	ReasonGuildFull            = "guild_full"
@@ -74,6 +78,7 @@ const (
 	ReasonFieldTaken         = "taken"
 	ReasonFieldTooCommon     = "too_common"
 	ReasonFieldIncorrect     = "incorrect"
+	ReasonFieldUnchanged     = "unchanged"
 	// ReasonFieldInvalid: the value is well-formed but not accepted, e.g. an expired invite code.
 	ReasonFieldInvalid = "invalid"
 )

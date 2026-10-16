@@ -2,6 +2,7 @@ import { createRootRoute, createRoute, createRouter, redirect } from '@tanstack/
 
 import { InstancePage } from '@/features/admin/InstancePage';
 import { ChannelPage } from '@/features/channel/ChannelPage';
+import { ConnectivityPage } from '@/features/connectivity/ConnectivityPage';
 import { GuildIndexPage } from '@/features/guild/GuildIndexPage';
 import { GuildLayout } from '@/features/guild/GuildLayout';
 import { AuditLogPage } from '@/features/guild-settings/AuditLogPage';
@@ -13,6 +14,7 @@ import { InvitesPage } from '@/features/guild-settings/InvitesPage';
 import { MembersPage } from '@/features/guild-settings/MembersPage';
 import { OverviewPage } from '@/features/guild-settings/OverviewPage';
 import { InviteLandingPage } from '@/features/invites/InviteLandingPage';
+import { ConfirmEmailPage } from '@/features/auth/ConfirmEmailPage';
 import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { RegisterPage } from '@/features/auth/RegisterPage';
@@ -118,6 +120,14 @@ const verifyEmailRoute = createRoute({
   validateSearch: tokenSearch,
   beforeLoad: requireSetupDone,
   component: VerifyEmailPage,
+});
+
+const confirmEmailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/confirm-email',
+  validateSearch: tokenSearch,
+  beforeLoad: requireSetupDone,
+  component: ConfirmEmailPage,
 });
 
 const inviteRoute = createRoute({
@@ -267,6 +277,15 @@ const settingsInstanceRoute = createRoute({
   component: InstancePage,
 });
 
+const settingsConnectivityRoute = createRoute({
+  getParentRoute: () => settingsRoute,
+  path: 'connectivity',
+  beforeLoad: () => {
+    if (session().me?.instanceAdmin !== true) throw redirect({ to: '/settings/account' });
+  },
+  component: ConnectivityPage,
+});
+
 const routeTree = rootRoute.addChildren([
   setupRoute,
   setupRequiredRoute,
@@ -275,6 +294,7 @@ const routeTree = rootRoute.addChildren([
   forgotPasswordRoute,
   resetPasswordRoute,
   verifyEmailRoute,
+  confirmEmailRoute,
   inviteRoute,
   authedRoute.addChildren([
     verifyPendingRoute,
@@ -289,6 +309,7 @@ const routeTree = rootRoute.addChildren([
         settingsAppearanceRoute,
         settingsSessionsRoute,
         settingsInstanceRoute,
+        settingsConnectivityRoute,
       ]),
     ]),
   ]),

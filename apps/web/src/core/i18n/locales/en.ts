@@ -46,6 +46,11 @@ export const en = {
     banned: 'You were banned from {{name}}.',
     deleted: '{{name}} was deleted.',
     dismiss: 'Dismiss',
+    exposure: {
+      running: 'The hub is reachable at {{url}}.',
+      needsLogin: 'Sign the hub in to Tailscale in Settings → Connectivity.',
+      failed: 'The hub is no longer reachable from outside. See Settings → Connectivity.',
+    },
   },
   userPanel: {
     setStatus: 'Set status',
@@ -512,6 +517,13 @@ export const en = {
       failed: 'Confirmation failed',
       continue: 'Continue',
     },
+    confirmEmail: {
+      checking: 'Confirming your new email…',
+      done: 'Email changed',
+      doneBody: 'Your account now uses this address.',
+      failed: 'Confirmation failed',
+      taken: 'Another account already uses that address.',
+    },
     forgot: {
       title: 'Reset your password',
       body: "Enter your account's email and we'll send you a reset link.",
@@ -561,8 +573,8 @@ export const en = {
     },
     connectivity: {
       title: 'Connectivity',
-      body: 'Making the hub reachable from the internet (Tailscale Funnel, Cloudflare Tunnel) and relay servers for voice come in a later version.',
-      reachable: 'For now teammates on the same network can reach this instance at {{url}}.',
+      body: 'After setup, choose how teammates reach the hub. Tailscale Funnel gives a free, stable https address; a Cloudflare quick tunnel needs no account at all.',
+      next: 'Finishing opens the Connectivity page. Until then, only this machine can open the hub.',
     },
   },
   email: {
@@ -595,6 +607,7 @@ export const en = {
       appearance: 'Appearance',
       sessions: 'Sessions',
       instance: 'Instance',
+      connectivity: 'Connectivity',
     },
     voice: {
       title: 'Voice & audio',
@@ -666,6 +679,21 @@ export const en = {
       changePassword: 'Change password',
       currentPassword: 'Current password',
       passwordChanged: 'Password changed. Your other sessions were signed out.',
+      changeEmail: 'Change email',
+      changeEmailBody: 'We send a link to the new address; the change applies when you open it.',
+      newEmail: 'New email',
+      changeEmailSubmit: 'Change email',
+      emailSent:
+        'Check {{email}} and open the link to finish. Your email stays the same until then.',
+      emailChanged: 'Email changed.',
+      delete: {
+        title: 'Delete account',
+        body: 'Leaves every server and removes your profile for good. Servers you own must be handed over or deleted first.',
+        open: 'Delete account',
+        confirmTitle: 'Delete your account?',
+        confirmBody: "This can't be undone. Enter your password to confirm.",
+        confirm: 'Delete account',
+      },
     },
     profile: {
       title: 'Profile',
@@ -718,6 +746,7 @@ export const en = {
       inviteOnly: 'Invite only',
       open: 'Open to anyone with the link',
       closed: 'Closed',
+      publicUrlManaged: 'Set by Settings → Connectivity while the public address is running.',
     },
     email: {
       title: 'Email',
@@ -746,6 +775,200 @@ export const en = {
       resetLink: 'Password reset link',
       resetLinkCreated: 'Send this link to {{name}}. It works once and expires {{when}}.',
       you: 'You',
+    },
+  },
+  connectivity: {
+    title: 'Connectivity',
+    body: 'How people reach this hub, and how well calls connect.',
+    secretKeep: 'Leave empty to keep the saved one',
+    exposure: {
+      title: 'Public address',
+      body: 'Teammates open this address in their browser. Call audio and video do not go through it.',
+      how: 'How people reach the hub',
+      apply: 'Save and restart',
+      applied: 'Saved. The address restarts with the new settings.',
+      address: 'Address',
+      login: 'Sign in to Tailscale',
+      loginBody:
+        'Open the link and sign in to your Tailscale account to connect the hub. This page updates when it is done.',
+      tailscaleHostname: 'Machine name',
+      tailscaleHostnameHint: 'The address becomes https://<name>.<your tailnet>.ts.net.',
+      tunnelUrl: 'Public URL',
+      tunnelUrlHint: 'The public hostname you routed to this tunnel in Cloudflare.',
+      tunnelToken: 'Tunnel token',
+      tunnelTokenHint:
+        'From the Cloudflare dashboard: Zero Trust → Networks → Tunnels → your tunnel → the long value after --token in the install command.',
+      directDomain: 'Domain',
+      directEmail: 'Contact email (optional)',
+      directEmailHint: "Let's Encrypt writes here before a certificate expires.",
+      listenAddr: 'Listen address',
+      directAddrHint: 'Port 443 must reach this machine from the internet.',
+      lanAddrHint:
+        "Usually 0.0.0.0:7443; other devices then open https://<this machine's IP>:7443.",
+      states: {
+        off: 'Only this machine can open the hub.',
+        starting: 'Starting {{provider}}…',
+        needsLogin: '{{provider}} needs you to sign in.',
+        running: 'Reachable through {{provider}}.',
+        failed: '{{provider}} is not working.',
+      },
+      choices: {
+        tailscale: {
+          label: 'Tailscale Funnel (recommended)',
+          hint: 'A free, stable https://….ts.net address. Needs a free Tailscale account; nothing to install.',
+        },
+        quick: {
+          label: 'Cloudflare quick tunnel',
+          hint: 'A random https://….trycloudflare.com address, no account needed. It changes every time the hub starts and links stop working, so it suits a first try.',
+        },
+        tunnel: {
+          label: 'Cloudflare Tunnel (own domain)',
+          hint: 'Your own domain on Cloudflare (free plan). Create a tunnel in the Cloudflare dashboard and route its public hostname to http://localhost:7301.',
+        },
+        direct: {
+          label: 'Public address with a domain',
+          hint: "This machine has a public IP and your domain points at it. The hub gets a Let's Encrypt certificate itself.",
+        },
+        lan: {
+          label: 'This network only',
+          hint: 'Devices on your network open the hub with a self-signed certificate; browsers warn about it once.',
+        },
+        local: {
+          label: 'Only this machine',
+          hint: 'Nobody else can reach the hub.',
+        },
+      },
+    },
+    problems: {
+      tailscale_https_disabled:
+        'Turn on HTTPS certificates for your tailnet: Tailscale admin console → DNS → HTTPS Certificates → Enable. The hub retries on its own.',
+      tailscale_funnel_not_allowed:
+        'Your tailnet does not allow Funnel for this machine yet. In the Tailscale admin console, open Access controls and allow Funnel (the console offers it), then wait a minute.',
+      tailscale_login: 'Sign the hub in to Tailscale with the button above.',
+      cloudflared_download_failed:
+        'Could not download cloudflared from GitHub. Check the internet connection; the hub retries.',
+      cloudflared_exited:
+        'cloudflared stopped. Its log is in the data folder, at logs/cloudflared.log.',
+      tunnel_token_missing: 'Paste the tunnel token from the Cloudflare dashboard.',
+      address_in_use: 'Another program uses that port. Close it or choose another address.',
+      certificate_failed:
+        'Could not get a certificate. Check that the domain points at this machine and that port 443 reaches it.',
+      exposure_failed: 'Something went wrong; the hub retries. The details below may help.',
+    },
+    selfTest: {
+      title: 'Voice reachability',
+      body: 'How well people outside your network can connect to calls on this hub.',
+      notRun: 'The test has not run yet.',
+      run: 'Run the test',
+      runAgain: 'Run again',
+      yes: 'Yes',
+      no: 'No',
+      media: 'Media server',
+      mediaUp: 'Running',
+      mediaDown: 'Not running',
+      nat: 'Router',
+      publicIpv4: 'Public IPv4',
+      ipv6: 'IPv6',
+      portForwarding: 'Port forwarding',
+      forwarded: '{{protocol}}: {{external}}',
+      notForwarded: 'Not available',
+      relay: 'Relay (TURN)',
+      checked: 'Checked',
+      ratings: {
+        excellent: {
+          label: 'Excellent',
+          body: 'People anywhere connect straight to this machine.',
+        },
+        good: {
+          label: 'Good',
+          body: 'Most people connect straight to this machine; a few strict networks may need a relay.',
+        },
+        relayDependent: {
+          label: 'Needs a relay',
+          body: 'People outside your network connect only through a relay (TURN).',
+        },
+        offline: {
+          label: 'Offline',
+          body: 'This machine has no internet connection, so only your local network can join calls.',
+        },
+      },
+      nats: {
+        noInternet: 'No internet connection',
+        open: 'None in the way (public address)',
+        portPreserving: 'Keeps ports, calls usually connect directly',
+        endpointIndependent: 'Standard NAT',
+        symmetric: 'Strict NAT, calls need a relay',
+      },
+    },
+    advice: {
+      offline_host: 'Connect this machine to the internet and restart the hub.',
+      media_down:
+        'The media server is not running, so calls do not work. Check the hub console or logs/livekit.log.',
+      enable_upnp:
+        "Turn on UPnP or NAT-PMP in your router's settings, or forward UDP port 7882 and TCP port 7881 to this machine, then run the test again.",
+      relay_needed:
+        "Set up a relay below so everyone can join calls; Cloudflare's free tier covers a small team.",
+      relay_quota: 'Calls from outside go through the relay and count against its monthly budget.',
+      exposure_off: 'Choose how people reach the hub above; for now only this machine can open it.',
+      exposure_down: "The hub's public address is not working right now; see above.",
+    },
+    relay: {
+      title: 'Voice relay (TURN)',
+      body: 'A relay carries calls for people whose network blocks direct connections. Only those calls use it.',
+      provider: 'Relay',
+      keyId: 'TURN key ID',
+      apiToken: 'API token',
+      urls: 'TURN URLs',
+      urlsHint: 'One per line, like turn:turn.example.com:3478.',
+      username: 'Username',
+      password: 'Password',
+      sharedSecret: 'Shared secret',
+      budget: 'Monthly budget (GB)',
+      budgetHint:
+        'The hub stops handing out relay access once the month reaches this; 0 means no limit.',
+      override: 'Keep the relay on past the budget',
+      usage: '{{used}} GB of {{budget}} GB used this month, on pace for {{projected}} GB.',
+      usageNoBudget: '{{used}} GB used this month, on pace for {{projected}} GB.',
+      sessions_one: '{{relayed}} of {{count}} voice connection goes through the relay now.',
+      sessions_other: '{{relayed}} of {{count}} voice connections go through the relay now.',
+      overBudget:
+        'The budget is spent: the relay is off until next month, or until you raise the budget.',
+      nearBudget: "Relay use is above 90 % of this month's budget.",
+      test: 'Test the relay',
+      testBody: 'Checks from this browser that a call can connect through the relay alone.',
+      testPassed: 'The relay works: this browser connected through it.',
+      testFailed: 'This browser could not connect through the relay. Check the relay settings.',
+      choices: {
+        none: {
+          label: 'None',
+          hint: 'People behind strict networks may not be able to join calls.',
+        },
+        cloudflare: {
+          label: 'Cloudflare Realtime TURN',
+          hint: 'Free for the first 1,000 GB a month. Create a TURN key in the Cloudflare dashboard (Realtime → TURN Server) and paste its ID and API token.',
+        },
+        static: {
+          label: 'TURN server with a username',
+          hint: 'Any TURN server with a fixed username and password.',
+        },
+        coturn: {
+          label: 'coturn with a shared secret',
+          hint: 'A coturn server set up with use-auth-secret; the hub creates short-lived passwords.',
+        },
+      },
+    },
+    host: {
+      title: 'This computer',
+      body: 'Settings for the machine that runs the hub.',
+      remote: 'Open this page on the machine that runs the hub to change these.',
+      keepAwake: 'Keep this computer awake while the hub runs',
+      keepAwakeHint: 'The screen can still turn off; the computer does not go to sleep.',
+      runAtLogin: 'Start the hub when I sign in to this computer',
+      runAtLoginHint: 'It starts the same way you started it this time.',
+      firewall: 'Allow voice through Windows Firewall',
+      firewallBody:
+        'If calls from outside fail, Windows Firewall may be blocking the media server.',
+      firewallAsked: 'Windows asks you to confirm. After that, run the test again.',
     },
   },
   errors: {
@@ -787,6 +1010,10 @@ export const en = {
       not_voice_channel: "That isn't a voice channel.",
       not_in_voice: "That person isn't in voice.",
       voice_unavailable: 'Voice is not available on this instance right now.',
+      owns_guilds: 'Transfer or delete the servers you own first.',
+      last_instance_admin: 'Make someone else an instance admin first, so the instance keeps one.',
+      relay_not_configured: 'Set up a relay first.',
+      unsupported: "This computer doesn't support that.",
     },
     fields: {
       required: 'Required.',
@@ -796,6 +1023,7 @@ export const en = {
       taken: 'Already in use.',
       too_common: 'Too easy to guess. Choose something less common.',
       incorrect: 'Incorrect.',
+      unchanged: 'Same as the current one.',
       invalid: 'Invalid or expired.',
       unsupported_file: 'Use a PNG, JPEG, GIF or WebP image.',
       image_too_large: 'That image is too big to process. Try a smaller one or a shorter GIF.',

@@ -42,6 +42,9 @@ const (
 	AuthServiceRequestPasswordResetProcedure = "/dislackso.v1.AuthService/RequestPasswordReset"
 	// AuthServiceResetPasswordProcedure is the procedure name of the AuthService's ResetPassword RPC.
 	AuthServiceResetPasswordProcedure = "/dislackso.v1.AuthService/ResetPassword"
+	// AuthServiceConfirmEmailChangeProcedure is the procedure name of the AuthService's
+	// ConfirmEmailChange RPC.
+	AuthServiceConfirmEmailChangeProcedure = "/dislackso.v1.AuthService/ConfirmEmailChange"
 )
 
 var (
@@ -102,6 +105,13 @@ var (
 			Procedure:  AuthServiceResetPasswordProcedure,
 		}
 	})
+	authServiceConfirmEmailChangeSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_dislackso_v1_auth_proto.Services().ByName("AuthService").Methods().ByName("ConfirmEmailChange"),
+			Procedure:  AuthServiceConfirmEmailChangeProcedure,
+		}
+	})
 )
 
 // AuthServiceClient is a client for the dislackso.v1.AuthService service.
@@ -116,6 +126,8 @@ type AuthServiceClient interface {
 	RequestPasswordReset(context.Context, *v1.RequestPasswordResetRequest) (*v1.RequestPasswordResetResponse, error)
 	// Signs out every session of the account.
 	ResetPassword(context.Context, *v1.ResetPasswordRequest) (*v1.ResetPasswordResponse, error)
+	// Applies an email change from the link sent to the new address.
+	ConfirmEmailChange(context.Context, *v1.ConfirmEmailChangeRequest) (*v1.ConfirmEmailChangeResponse, error)
 }
 
 // NewAuthServiceClient constructs a client for the dislackso.v1.AuthService service. Multiple
@@ -136,6 +148,8 @@ type AuthServiceHandler interface {
 	RequestPasswordReset(context.Context, *v1.RequestPasswordResetRequest) (*v1.RequestPasswordResetResponse, error)
 	// Signs out every session of the account.
 	ResetPassword(context.Context, *v1.ResetPasswordRequest) (*v1.ResetPasswordResponse, error)
+	// Applies an email change from the link sent to the new address.
+	ConfirmEmailChange(context.Context, *v1.ConfirmEmailChangeRequest) (*v1.ConfirmEmailChangeResponse, error)
 }
 
 // RegisterAuthServiceHandler registers svc as the dislackso.v1.AuthService implementation on
@@ -151,6 +165,7 @@ func RegisterAuthServiceHandler(server *connect.Server, svc AuthServiceHandler) 
 		connect.Method{Spec: authServiceResendVerificationSpec(), Handler: adapter.resendVerification},
 		connect.Method{Spec: authServiceRequestPasswordResetSpec(), Handler: adapter.requestPasswordReset},
 		connect.Method{Spec: authServiceResetPasswordSpec(), Handler: adapter.resetPassword},
+		connect.Method{Spec: authServiceConfirmEmailChangeSpec(), Handler: adapter.confirmEmailChange},
 	)
 }
 
@@ -187,6 +202,10 @@ func (UnimplementedAuthServiceHandler) RequestPasswordReset(context.Context, *v1
 
 func (UnimplementedAuthServiceHandler) ResetPassword(context.Context, *v1.ResetPasswordRequest) (*v1.ResetPasswordResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, "dislackso.v1.AuthService.ResetPassword is not implemented")
+}
+
+func (UnimplementedAuthServiceHandler) ConfirmEmailChange(context.Context, *v1.ConfirmEmailChangeRequest) (*v1.ConfirmEmailChangeResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "dislackso.v1.AuthService.ConfirmEmailChange is not implemented")
 }
 
 type authServiceClient struct {
@@ -252,6 +271,14 @@ func (c *authServiceClient) RequestPasswordReset(ctx context.Context, req *v1.Re
 func (c *authServiceClient) ResetPassword(ctx context.Context, req *v1.ResetPasswordRequest) (*v1.ResetPasswordResponse, error) {
 	var res v1.ResetPasswordResponse
 	if err := c.client.CallUnary(ctx, authServiceResetPasswordSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *authServiceClient) ConfirmEmailChange(ctx context.Context, req *v1.ConfirmEmailChangeRequest) (*v1.ConfirmEmailChangeResponse, error) {
+	var res v1.ConfirmEmailChangeResponse
+	if err := c.client.CallUnary(ctx, authServiceConfirmEmailChangeSpec(), req, &res); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -349,6 +376,18 @@ func (h authServiceHandler) resetPassword(ctx context.Context, _ connect.Spec, s
 		return err
 	}
 	res, err := h.svc.ResetPassword(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h authServiceHandler) confirmEmailChange(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ConfirmEmailChangeRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ConfirmEmailChange(ctx, &req)
 	if err != nil {
 		return err
 	}

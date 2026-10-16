@@ -19,6 +19,7 @@ type AuthService interface {
 	ResendVerification(ctx context.Context, client domain.ClientInfo, actor domain.Actor) error
 	RequestPasswordReset(ctx context.Context, client domain.ClientInfo, email string) error
 	ResetPassword(ctx context.Context, client domain.ClientInfo, token, newPassword string) error
+	ConfirmEmailChange(ctx context.Context, client domain.ClientInfo, token string) error
 }
 
 type authHandler struct {
@@ -80,6 +81,13 @@ func (h *authHandler) VerifyEmail(ctx context.Context, req *dislacksov1.VerifyEm
 		return nil, h.toConnect(ctx, err)
 	}
 	return &dislacksov1.VerifyEmailResponse{}, nil
+}
+
+func (h *authHandler) ConfirmEmailChange(ctx context.Context, req *dislacksov1.ConfirmEmailChangeRequest) (*dislacksov1.ConfirmEmailChangeResponse, error) {
+	if err := h.svc.ConfirmEmailChange(ctx, clientFrom(ctx), req.GetToken()); err != nil {
+		return nil, h.toConnect(ctx, err)
+	}
+	return &dislacksov1.ConfirmEmailChangeResponse{}, nil
 }
 
 func (h *authHandler) ResendVerification(ctx context.Context, _ *dislacksov1.ResendVerificationRequest) (*dislacksov1.ResendVerificationResponse, error) {

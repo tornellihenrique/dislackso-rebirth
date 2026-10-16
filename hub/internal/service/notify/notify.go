@@ -21,6 +21,7 @@ type Kind string
 const (
 	KindVerifyEmail   Kind = "verify"
 	KindPasswordReset Kind = "reset"
+	KindChangeEmail   Kind = "change_email"
 	KindTest          Kind = "test"
 )
 
@@ -100,6 +101,10 @@ func (n *Notifier) VerifyEmail(ctx context.Context, to, name, loc, link string) 
 
 func (n *Notifier) PasswordReset(ctx context.Context, to, name, loc, link string) error {
 	return n.send(ctx, KindPasswordReset, to, name, loc, link)
+}
+
+func (n *Notifier) ConfirmEmailChange(ctx context.Context, to, name, loc, link string) error {
+	return n.send(ctx, KindChangeEmail, to, name, loc, link)
 }
 
 func (n *Notifier) Test(ctx context.Context, to, loc string) error {

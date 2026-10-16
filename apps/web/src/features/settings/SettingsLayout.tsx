@@ -16,7 +16,8 @@ interface NavItemProps {
     | '/settings/voice'
     | '/settings/share'
     | '/settings/sessions'
-    | '/settings/instance';
+    | '/settings/instance'
+    | '/settings/connectivity';
   children: ReactNode;
 }
 
@@ -75,6 +76,7 @@ export function SettingsLayout() {
                 {t('settings.instanceSection')}
               </h2>
               <NavItem to="/settings/instance">{t('settings.nav.instance')}</NavItem>
+              <NavItem to="/settings/connectivity">{t('settings.nav.connectivity')}</NavItem>
             </>
           )}
           <hr className="my-3 border-border" />

@@ -157,6 +157,28 @@ tasks:
         -ldflags "-s -w -X github.com/tornellihenrique/dislackso-rebirth/hub/internal/buildinfo.version={{.VERSION}}"
         -o "{{.HUB_BIN}}" ./cmd/hub
 
+  release:archive:
+    desc: 'Package the hub and livekit-server for one platform into dist/ (task release:archive GOOS=windows GOARCH=amd64)'
+    vars:
+      GOOS: '{{.GOOS | default OS}}'
+      GOARCH: '{{.GOARCH | default ARCH}}'
+      VERSION:
+        sh: git describe --tags --always --dirty --match "v*" 2>/dev/null || echo dev
+      EXE: '{{if eq .GOOS "windows"}}.exe{{end}}'
+      NAME: 'dislackso-hub-{{.VERSION}}-{{.GOOS}}-{{.GOARCH}}'
+      STAGE: '{{.ROOT}}/dist/stage/{{.GOOS}}-{{.GOARCH}}'
+    deps: [build:web]
+    cmds:
+      - go -C tools run ./cmd/fetchtools -manifest "{{.ROOT}}/tools/manifest.json" -bin "{{.STAGE}}/tools" -platform {{.GOOS}}/{{.GOARCH}} livekit-server
+      - >-
+        GOOS={{.GOOS}} GOARCH={{.GOARCH}} CGO_ENABLED=0 go -C hub build -trimpath
+        -ldflags "-s -w -X github.com/tornellihenrique/dislackso-rebirth/hub/internal/buildinfo.version={{.VERSION}}"
+        -o "{{.STAGE}}/hub{{.EXE}}" ./cmd/hub
+      - >-
+        go -C tools run ./cmd/pack -o "{{.ROOT}}/dist/{{.NAME}}{{if eq .GOOS "windows"}}.zip{{else}}.tar.gz{{end}}"
+        -prefix "{{.NAME}}"
+        "{{.STAGE}}/hub{{.EXE}}" "{{.STAGE}}/tools/livekit-server{{.EXE}}" "{{.ROOT}}/release/README.txt"
+
   e2e:
     desc: Build the hub and run the Playwright suite against it
     deps: [build]

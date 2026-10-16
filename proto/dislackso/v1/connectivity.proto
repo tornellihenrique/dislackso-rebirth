@@ -1,0 +1,236 @@
+syntax = "proto3";
+
+package dislackso.v1;
+
+import "dislackso/v1/voice.proto";
+
+// ConnectivityService makes the hub reachable and shows how well it is:
+// exposure (the public HTTPS address), relays for voice (TURN), the
+// self-test, and conveniences for the machine running the hub. Every method
+// requires an instance admin.
+service ConnectivityService {
+  rpc GetConnectivity(GetConnectivityRequest) returns (GetConnectivityResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  // Saves the exposure settings and restarts the provider with them.
+  rpc SetExposure(SetExposureRequest) returns (SetExposureResponse);
+  rpc SetTurn(SetTurnRequest) returns (SetTurnResponse);
+  rpc RunSelfTest(RunSelfTestRequest) returns (RunSelfTestResponse);
+  // A media server token for a throwaway room, with relay servers only: the
+  // browser proves that people who need a relay can connect.
+  rpc StartRelayTest(StartRelayTestRequest) returns (StartRelayTestResponse);
+  // Only from the machine running the hub.
+  rpc SetHostOptions(SetHostOptionsRequest) returns (SetHostOptionsResponse);
+  // Asks the host (Windows) to allow the media server through its firewall.
+  // Only from the machine running the hub; Windows asks for confirmation.
+  rpc AddFirewallRule(AddFirewallRuleRequest) returns (AddFirewallRuleResponse);
+}
+
+enum ExposureKind {
+  EXPOSURE_KIND_UNSPECIFIED = 0;
+  // Only this machine can reach the hub.
+  EXPOSURE_KIND_LOCAL = 1;
+  // https://<name>.<tailnet>.ts.net through Tailscale Funnel.
+  EXPOSURE_KIND_TAILSCALE_FUNNEL = 2;
+  // A random https://<words>.trycloudflare.com that changes on every start.
+  EXPOSURE_KIND_CLOUDFLARE_QUICK = 3;
+  // A Cloudflare tunnel to the team's own domain.
+  EXPOSURE_KIND_CLOUDFLARE_TUNNEL = 4;
+  // This machine has a public address and a domain; Let's Encrypt certificate.
+  EXPOSURE_KIND_DIRECT = 5;
+  // Other machines on this network, with a self-signed certificate.
+  EXPOSURE_KIND_LAN = 6;
+}
+
+message ExposureSettings {
+  ExposureKind kind = 1;
+  string tailscale_hostname = 2;
+  // The public URL routed to the hub in the Cloudflare dashboard.
+  string tunnel_url = 3;
+  string direct_domain = 4;
+  string direct_email = 5;
+  string direct_addr = 6;
+  string lan_addr = 7;
+  // Write-only. Empty keeps the stored token.
+  string tunnel_token = 8;
+  // Read-only: whether a token is stored.
+  bool tunnel_token_set = 9;
+}
+
+enum ExposureState {
+  EXPOSURE_STATE_UNSPECIFIED = 0;
+  EXPOSURE_STATE_OFF = 1;
+  EXPOSURE_STATE_STARTING = 2;
+  // The host must sign the hub in: open login_url.
+  EXPOSURE_STATE_NEEDS_LOGIN = 3;
+  EXPOSURE_STATE_RUNNING = 4;
+  EXPOSURE_STATE_FAILED = 5;
+}
+
+message ExposureStatus {
+  ExposureKind kind = 1;
+  ExposureState state = 2;
+  // The public address while running.
+  string url = 3;
+  string login_url = 4;
+  // What went wrong, as a code the client explains ("tailscale_https_disabled").
+  string problem = 5;
+  string detail = 6;
+  int64 since_ms = 7;
+}
+
+enum TurnKind {
+  TURN_KIND_UNSPECIFIED = 0;
+  TURN_KIND_NONE = 1;
+  // Cloudflare Realtime TURN: the hub mints short-lived credentials.
+  TURN_KIND_CLOUDFLARE = 2;
+  // Any TURN server with a fixed username and password.
+  TURN_KIND_STATIC = 3;
+  // A self-hosted coturn with a shared REST secret.
+  TURN_KIND_COTURN_REST = 4;
+}
+
+message TurnSettings {
+  TurnKind kind = 1;
+  string cloudflare_key_id = 2;
+  repeated string urls = 3;
+  string username = 4;
+  // Write-only: the Cloudflare API token, static password or coturn secret.
+  // Empty keeps the stored one.
+  string secret = 5;
+  // Read-only: whether a secret is stored.
+  bool secret_set = 6;
+  // Keep issuing relay credentials past the monthly budget.
+  bool budget_override = 7;
+  int32 monthly_budget_gb = 8;
+}
+
+message TurnUsage {
+  // Relayed bytes this calendar month, as clients report them.
+  int64 month_bytes = 1;
+  // This month's pace extended to the whole month.
+  int64 projected_bytes = 2;
+  int32 budget_gb = 3;
+  // Relay credentials are no longer issued (unless overridden).
+  bool over_budget = 4;
+  // Voice connections now, and how many go through a relay.
+  int32 voice_sessions = 5;
+  int32 relayed_sessions = 6;
+}
+
+enum NatType {
+  NAT_TYPE_UNSPECIFIED = 0;
+  // STUN servers did not answer.
+  NAT_TYPE_NO_INTERNET = 1;
+  // The machine has a public address itself.
+  NAT_TYPE_OPEN = 2;
+  // The router keeps the local port on the outside.
+  NAT_TYPE_PORT_PRESERVING = 3;
+  // Same outside port for every destination.
+  NAT_TYPE_ENDPOINT_INDEPENDENT = 4;
+  // A new outside port per destination: direct connections rarely work.
+  NAT_TYPE_SYMMETRIC = 5;
+}
+
+enum HostRating {
+  HOST_RATING_UNSPECIFIED = 0;
+  HOST_RATING_EXCELLENT = 1;
+  HOST_RATING_GOOD = 2;
+  HOST_RATING_RELAY_DEPENDENT = 3;
+  HOST_RATING_OFFLINE = 4;
+}
+
+message PortMapping {
+  // "upnp" or "nat-pmp"; empty when no router answered.
+  string protocol = 1;
+  // The address people reach the media server at.
+  string external = 2;
+  bool ok = 3;
+  string detail = 4;
+}
+
+message SelfTestReport {
+  int64 ran_at_ms = 1;
+  bool media_up = 2;
+  NatType nat = 3;
+  string public_ipv4 = 4;
+  // The machine has a global IPv6 address that answered over STUN.
+  bool ipv6 = 5;
+  string public_ipv6 = 6;
+  PortMapping mapping = 7;
+  HostRating rating = 8;
+  // Codes the client explains ("enable_upnp", "relay_needed").
+  repeated string advice = 9;
+  // Whether a relay (TURN) is configured.
+  bool relay_configured = 10;
+}
+
+message HostOptions {
+  bool keep_awake = 1;
+  bool run_at_login = 2;
+  // What this host's system supports.
+  bool run_at_login_supported = 3;
+  bool firewall_supported = 4;
+  // The request comes from the machine running the hub, which alone may
+  // change these.
+  bool local = 5;
+}
+
+message Connectivity {
+  ExposureSettings exposure = 1;
+  ExposureStatus status = 2;
+  TurnSettings turn = 3;
+  TurnUsage usage = 4;
+  // Empty until the self-test ran once.
+  SelfTestReport self_test = 5;
+  HostOptions host = 6;
+}
+
+message GetConnectivityRequest {}
+
+message GetConnectivityResponse {
+  Connectivity connectivity = 1;
+}
+
+message SetExposureRequest {
+  ExposureSettings exposure = 1;
+}
+
+message SetExposureResponse {
+  Connectivity connectivity = 1;
+}
+
+message SetTurnRequest {
+  TurnSettings turn = 1;
+}
+
+message SetTurnResponse {
+  Connectivity connectivity = 1;
+}
+
+message RunSelfTestRequest {}
+
+message RunSelfTestResponse {
+  SelfTestReport report = 1;
+}
+
+message StartRelayTestRequest {}
+
+message StartRelayTestResponse {
+  string url = 1;
+  string token = 2;
+  repeated IceServer ice_servers = 3;
+}
+
+message SetHostOptionsRequest {
+  optional bool keep_awake = 1;
+  optional bool run_at_login = 2;
+}
+
+message SetHostOptionsResponse {
+  HostOptions host = 1;
+}
+
+message AddFirewallRuleRequest {}
+
+message AddFirewallRuleResponse {}

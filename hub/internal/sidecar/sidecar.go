@@ -4,9 +4,11 @@
 package sidecar
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -50,6 +52,8 @@ type Spec struct {
 	// OnReady runs each time the process becomes healthy; restarts counts
 	// the earlier exits.
 	OnReady func(ctx context.Context, restarts int)
+	// OnOutput receives each line the process writes, besides the log file.
+	OnOutput func(line string)
 }
 
 type Status struct {
@@ -143,7 +147,13 @@ func (s *Supervisor) runOnce(ctx context.Context) error {
 	}
 	cmd.WaitDelay = stopTimeout
 	cmd.Env = append(os.Environ(), s.spec.Env...)
-	cmd.Stdout, cmd.Stderr = logFile, logFile
+	var out io.Writer = logFile
+	if s.spec.OnOutput != nil {
+		tap := &lineTap{fn: s.spec.OnOutput}
+		defer tap.flush()
+		out = io.MultiWriter(logFile, tap)
+	}
+	cmd.Stdout, cmd.Stderr = out, out
 	configure(cmd)
 	s.set(func(st *Status) { st.State = StateStarting })
 	if err := cmd.Start(); err != nil {
@@ -238,4 +248,36 @@ func openLog(path string) (*os.File, error) {
 		return nil, fmt.Errorf("open sidecar log: %w", err)
 	}
 	return f, nil
+}
+
+// lineTap hands complete lines to fn; exec writes to it from one goroutine
+// per stream, so it locks.
+type lineTap struct {
+	mu  sync.Mutex
+	buf []byte
+	fn  func(string)
+}
+
+func (t *lineTap) Write(p []byte) (int, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.buf = append(t.buf, p...)
+	for {
+		i := bytes.IndexByte(t.buf, '\n')
+		if i < 0 {
+			break
+		}
+		t.fn(string(bytes.TrimRight(t.buf[:i], "\r")))
+		t.buf = t.buf[i+1:]
+	}
+	return len(p), nil
+}
+
+func (t *lineTap) flush() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if len(t.buf) > 0 {
+		t.fn(string(t.buf))
+		t.buf = nil
+	}
 }

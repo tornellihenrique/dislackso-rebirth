@@ -26,10 +26,12 @@ import {
   readConnection,
   readInboundVideo,
   readOutboundVideo,
+  readTransport,
   type ConnectionStats,
   type Counter,
   type InboundVideoStats,
   type OutboundVideoStats,
+  type TransportReading,
 } from './stats';
 
 /** Why a call ended without the user leaving. */
@@ -375,6 +377,24 @@ export class VoiceSession {
       }
     }
     return report ? readConnection(report) : undefined;
+  }
+
+  /** The latest readings of the sending and the receiving peer connection. */
+  async transportReadings(): Promise<ReadonlyMap<'publisher' | 'subscriber', TransportReading>> {
+    const out = new Map<'publisher' | 'subscriber', TransportReading>();
+    const sent = await (this.mic ?? this.share?.video)?.getRTCStatsReport();
+    const publisher = sent ? readTransport(sent) : undefined;
+    if (publisher) out.set('publisher', publisher);
+    for (const p of this.room?.remoteParticipants.values() ?? []) {
+      const track = [...p.trackPublications.values()].find((pub) => pub.track)?.track;
+      const received = await track?.getRTCStatsReport();
+      const subscriber = received ? readTransport(received) : undefined;
+      if (subscriber) {
+        out.set('subscriber', subscriber);
+        break;
+      }
+    }
+    return out;
   }
 
   private captureOptions(prefs: AudioPrefs) {

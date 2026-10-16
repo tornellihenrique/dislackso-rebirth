@@ -12,7 +12,7 @@ import (
 	"testing/fstest"
 
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/health"
-	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/clientip"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/ingress"
 )
 
 type stubChecker struct{ report health.Report }
@@ -37,7 +37,7 @@ func newMux(files fstest.MapFS, report health.Report) http.Handler {
 
 func newMuxWithSetup(files fstest.MapFS, report health.Report, pending bool) http.Handler {
 	mux := http.NewServeMux()
-	Register(mux, Options{Files: files, Health: stubChecker{report: report}, Setup: stubSetup{pending: pending}, ClientIP: clientip.RemoteAddr})
+	Register(mux, Options{Files: files, Health: stubChecker{report: report}, Setup: stubSetup{pending: pending}, ClientIP: ingress.ClientIP})
 	return SecurityHeaders(mux)
 }
 

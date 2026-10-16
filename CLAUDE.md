@@ -31,7 +31,7 @@ task build      # web build embedded into hub binary; desktop build
 ## Repo map
 ```
 proto/                  contracts (Buf) — single source of truth for every wire format
-hub/                    Go backend: cmd/hub, internal/{app,config,domain,ports,service,adapter,transport,events,sidecar,doctor}, gen/
+hub/                    Go backend: cmd/hub, internal/{app,config,domain,ports,service,adapter,transport,events,sidecar}, gen/
 apps/web/               React client (core/* is framework-agnostic; features/*; stores/; ui/)
 apps/desktop/           Electron shell (loads the instance URL; native bridge only)
 packages/contracts/     generated TS

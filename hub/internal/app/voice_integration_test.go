@@ -114,7 +114,7 @@ func newVoiceRig(t *testing.T) *voiceRig {
 	r := start(t, func(c *config.Config) {
 		c.LiveKit = config.LiveKit{Binary: bin, Port: ports[0], UDPPort: ports[1], TCPPort: ports[2]}
 	})
-	eventually(t, 30*time.Second, "the media server", r.app.media.ready)
+	eventually(t, 30*time.Second, "the media server", r.app.media.Ready)
 	ctx := t.Context()
 	admin := r.browser(t)
 	completeSetup(t, admin)

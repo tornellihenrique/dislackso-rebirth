@@ -2,6 +2,7 @@ import { createClient, type Client, type Transport } from '@connectrpc/connect';
 import { AccountService } from '@dislackso/contracts/gen/dislackso/v1/account_pb';
 import { AuthService } from '@dislackso/contracts/gen/dislackso/v1/auth_pb';
 import { ChannelService } from '@dislackso/contracts/gen/dislackso/v1/channel_pb';
+import { ConnectivityService } from '@dislackso/contracts/gen/dislackso/v1/connectivity_pb';
 import { GuildService } from '@dislackso/contracts/gen/dislackso/v1/guild_pb';
 import { InstanceService } from '@dislackso/contracts/gen/dislackso/v1/instance_pb';
 import { InviteService } from '@dislackso/contracts/gen/dislackso/v1/invite_pb';
@@ -19,6 +20,7 @@ export interface HubClients {
   readonly invites: Client<typeof InviteService>;
   readonly moderation: Client<typeof ModerationService>;
   readonly voice: Client<typeof VoiceService>;
+  readonly connectivity: Client<typeof ConnectivityService>;
 }
 
 export function createHubClients(transport: Transport): HubClients {
@@ -32,6 +34,7 @@ export function createHubClients(transport: Transport): HubClients {
     invites: createClient(InviteService, transport),
     moderation: createClient(ModerationService, transport),
     voice: createClient(VoiceService, transport),
+    connectivity: createClient(ConnectivityService, transport),
   };
 }
 

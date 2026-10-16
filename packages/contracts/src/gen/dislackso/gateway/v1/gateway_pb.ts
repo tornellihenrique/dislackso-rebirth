@@ -8,6 +8,8 @@ import type { Channel } from "../../v1/channel_pb";
 import { file_dislackso_v1_channel } from "../../v1/channel_pb";
 import type { Me, Presence, User, VoiceState } from "../../v1/common_pb";
 import { file_dislackso_v1_common } from "../../v1/common_pb";
+import type { ExposureStatus } from "../../v1/connectivity_pb";
+import { file_dislackso_v1_connectivity } from "../../v1/connectivity_pb";
 import type { Guild, GuildState, Member } from "../../v1/guild_pb";
 import { file_dislackso_v1_guild } from "../../v1/guild_pb";
 import type { Invite } from "../../v1/invite_pb";
@@ -20,7 +22,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dislackso/gateway/v1/gateway.proto.
  */
 export const file_dislackso_gateway_v1_gateway: GenFile = /*@__PURE__*/
-  fileDesc("CiJkaXNsYWNrc28vZ2F0ZXdheS92MS9nYXRld2F5LnByb3RvEhRkaXNsYWNrc28uZ2F0ZXdheS52MSK/AgoLQ2xpZW50RnJhbWUSMgoIaWRlbnRpZnkYASABKAsyHi5kaXNsYWNrc28uZ2F0ZXdheS52MS5JZGVudGlmeUgAEi4KBnJlc3VtZRgCIAEoCzIcLmRpc2xhY2tzby5nYXRld2F5LnYxLlJlc3VtZUgAEjQKCWhlYXJ0YmVhdBgDIAEoCzIfLmRpc2xhY2tzby5nYXRld2F5LnYxLkhlYXJ0YmVhdEgAEj8KD3VwZGF0ZV9wcmVzZW5jZRgEIAEoCzIkLmRpc2xhY2tzby5nYXRld2F5LnYxLlVwZGF0ZVByZXNlbmNlSAASTQoXdXBkYXRlX3ZvaWNlX3NlbGZfc3RhdGUYBSABKAsyKi5kaXNsYWNrc28uZ2F0ZXdheS52MS5VcGRhdGVWb2ljZVNlbGZTdGF0ZUgAQgYKBGtpbmQi1QIKC1NlcnZlckZyYW1lEiwKBWhlbGxvGAEgASgLMhsuZGlzbGFja3NvLmdhdGV3YXkudjEuSGVsbG9IABIsCgVyZWFkeRgCIAEoCzIbLmRpc2xhY2tzby5nYXRld2F5LnYxLlJlYWR5SAASMAoHcmVzdW1lZBgDIAEoCzIdLmRpc2xhY2tzby5nYXRld2F5LnYxLlJlc3VtZWRIABI/Cg9pbnZhbGlkX3Nlc3Npb24YBCABKAsyJC5kaXNsYWNrc28uZ2F0ZXdheS52MS5JbnZhbGlkU2Vzc2lvbkgAEjsKDWhlYXJ0YmVhdF9hY2sYBSABKAsyIi5kaXNsYWNrc28uZ2F0ZXdheS52MS5IZWFydGJlYXRBY2tIABIyCghkaXNwYXRjaBgGIAEoCzIeLmRpc2xhY2tzby5nYXRld2F5LnYxLkRpc3BhdGNoSABCBgoEa2luZCJACgVIZWxsbxIdChVoZWFydGJlYXRfaW50ZXJ2YWxfbXMYASABKAUSGAoQcmVzdW1lX3dpbmRvd19tcxgCIAEoBSIvCgpDbGllbnRJbmZvEhAKCHBsYXRmb3JtGAEgASgJEg8KB3ZlcnNpb24YAiABKAkiPAoISWRlbnRpZnkSMAoGY2xpZW50GAEgASgLMiAuZGlzbGFja3NvLmdhdGV3YXkudjEuQ2xpZW50SW5mbyIuCgZSZXN1bWUSEgoKc2Vzc2lvbl9pZBgBIAEoCRIQCghsYXN0X3NlcRgCIAEoBCIdCglIZWFydGJlYXQSEAoIbGFzdF9zZXEYASABKAQiDgoMSGVhcnRiZWF0QWNrIh4KDlVwZGF0ZVByZXNlbmNlEgwKBGlkbGUYASABKAgiVgoUVXBkYXRlVm9pY2VTZWxmU3RhdGUSGAoQdm9pY2Vfc2Vzc2lvbl9pZBgBIAEoCRIRCglzZWxmX211dGUYAiABKAgSEQoJc2VsZl9kZWFmGAMgASgIIokCCgxJbnN0YW5jZUluZm8SDAoEbmFtZRgBIAEoCRIaChJtZW1iZXJzX2Nhbl9pbnZpdGUYAiABKAgSIQoZbWF4X2d1aWxkc19vd25lZF9wZXJfdXNlchgDIAEoBRIeChZtYXhfY2hhbm5lbHNfcGVyX2d1aWxkGAQgASgFEhkKEW1heF9ndWlsZF9tZW1iZXJzGAUgASgFEiAKGGRlZmF1bHRfdm9pY2VfdXNlcl9saW1pdBgGIAEoBRIVCg1tYXhfdXBsb2FkX21iGAcgASgFEh4KFm1heF9zaGFyZXNfcGVyX2NoYW5uZWwYCCABKAUSGAoQbWF4X3NoYXJlX3ByZXNldBgJIAEoCSKZAQoFUmVhZHkSEgoKc2Vzc2lvbl9pZBgBIAEoCRIcCgJtZRgCIAEoCzIQLmRpc2xhY2tzby52MS5NZRI0CghpbnN0YW5jZRgDIAEoCzIiLmRpc2xhY2tzby5nYXRld2F5LnYxLkluc3RhbmNlSW5mbxIoCgZndWlsZHMYBCADKAsyGC5kaXNsYWNrc28udjEuR3VpbGRTdGF0ZSIJCgdSZXN1bWVkIiMKDkludmFsaWRTZXNzaW9uEhEKCXJlc3VtYWJsZRgBIAEoCCJDCghEaXNwYXRjaBILCgNzZXEYASABKAQSKgoFZXZlbnQYAiABKAsyGy5kaXNsYWNrc28uZ2F0ZXdheS52MS5FdmVudCKmCAoFRXZlbnQSMAoMZ3VpbGRfY3JlYXRlGAEgASgLMhguZGlzbGFja3NvLnYxLkd1aWxkU3RhdGVIABIrCgxndWlsZF91cGRhdGUYAiABKAsyEy5kaXNsYWNrc28udjEuR3VpbGRIABI5CgxndWlsZF9kZWxldGUYAyABKAsyIS5kaXNsYWNrc28uZ2F0ZXdheS52MS5HdWlsZERlbGV0ZUgAEjUKCm1lbWJlcl9hZGQYBCABKAsyHy5kaXNsYWNrc28uZ2F0ZXdheS52MS5NZW1iZXJBZGRIABItCg1tZW1iZXJfdXBkYXRlGAUgASgLMhQuZGlzbGFja3NvLnYxLk1lbWJlckgAEjsKDW1lbWJlcl9yZW1vdmUYBiABKAsyIi5kaXNsYWNrc28uZ2F0ZXdheS52MS5NZW1iZXJSZW1vdmVIABIvCg5jaGFubmVsX2NyZWF0ZRgHIAEoCzIVLmRpc2xhY2tzby52MS5DaGFubmVsSAASLwoOY2hhbm5lbF91cGRhdGUYCCABKAsyFS5kaXNsYWNrc28udjEuQ2hhbm5lbEgAEj0KDmNoYW5uZWxfZGVsZXRlGAkgASgLMiMuZGlzbGFja3NvLmdhdGV3YXkudjEuQ2hhbm5lbERlbGV0ZUgAEkUKEmNoYW5uZWxzX3Jlb3JkZXJlZBgKIAEoCzInLmRpc2xhY2tzby5nYXRld2F5LnYxLkNoYW5uZWxzUmVvcmRlcmVkSAASKQoLdXNlcl91cGRhdGUYCyABKAsyEi5kaXNsYWNrc28udjEuVXNlckgAEjEKD3ByZXNlbmNlX3VwZGF0ZRgMIAEoCzIWLmRpc2xhY2tzby52MS5QcmVzZW5jZUgAEi0KDWludml0ZV9jcmVhdGUYDSABKAsyFC5kaXNsYWNrc28udjEuSW52aXRlSAASOwoNaW52aXRlX2RlbGV0ZRgOIAEoCzIiLmRpc2xhY2tzby5nYXRld2F5LnYxLkludml0ZURlbGV0ZUgAEiQKB2Jhbl9hZGQYDyABKAsyES5kaXNsYWNrc28udjEuQmFuSAASNQoKYmFuX3JlbW92ZRgQIAEoCzIfLmRpc2xhY2tzby5nYXRld2F5LnYxLkJhblJlbW92ZUgAEi8KC2F1ZGl0X2VudHJ5GBEgASgLMhguZGlzbGFja3NvLnYxLkF1ZGl0RW50cnlIABIlCgltZV91cGRhdGUYEiABKAsyEC5kaXNsYWNrc28udjEuTWVIABI2ChJ2b2ljZV9zdGF0ZV91cGRhdGUYEyABKAsyGC5kaXNsYWNrc28udjEuVm9pY2VTdGF0ZUgAEjkKDHZvaWNlX2ZvcmNlZBgUIAEoCzIhLmRpc2xhY2tzby5nYXRld2F5LnYxLlZvaWNlRm9yY2VkSABCBgoEa2luZCKaAQoLVm9pY2VGb3JjZWQSNwoGYWN0aW9uGAEgASgOMicuZGlzbGFja3NvLmdhdGV3YXkudjEuVm9pY2VGb3JjZWRBY3Rpb24SEAoIZ3VpbGRfaWQYAiABKAkSEgoKY2hhbm5lbF9pZBgDIAEoCRISCgpieV91c2VyX2lkGAQgASgJEhgKEHZvaWNlX3Nlc3Npb25faWQYBSABKAkiWAoLR3VpbGREZWxldGUSEAoIZ3VpbGRfaWQYASABKAkSNwoGcmVhc29uGAIgASgOMicuZGlzbGFja3NvLmdhdGV3YXkudjEuR3VpbGREZWxldGVSZWFzb24ifQoJTWVtYmVyQWRkEiQKBm1lbWJlchgBIAEoCzIULmRpc2xhY2tzby52MS5NZW1iZXISIAoEdXNlchgCIAEoCzISLmRpc2xhY2tzby52MS5Vc2VyEigKCHByZXNlbmNlGAMgASgLMhYuZGlzbGFja3NvLnYxLlByZXNlbmNlIjEKDE1lbWJlclJlbW92ZRIQCghndWlsZF9pZBgBIAEoCRIPCgd1c2VyX2lkGAIgASgJIjUKDUNoYW5uZWxEZWxldGUSEAoIZ3VpbGRfaWQYASABKAkSEgoKY2hhbm5lbF9pZBgCIAEoCSJOChFDaGFubmVsc1Jlb3JkZXJlZBIQCghndWlsZF9pZBgBIAEoCRInCghjaGFubmVscxgCIAMoCzIVLmRpc2xhY2tzby52MS5DaGFubmVsIi4KDEludml0ZURlbGV0ZRIQCghndWlsZF9pZBgBIAEoCRIMCgRjb2RlGAIgASgJIi4KCUJhblJlbW92ZRIQCghndWlsZF9pZBgBIAEoCRIPCgd1c2VyX2lkGAIgASgJKt4CCglDbG9zZUNvZGUSGgoWQ0xPU0VfQ09ERV9VTlNQRUNJRklFRBAAEhcKEkNMT1NFX0NPREVfVU5LTk9XThCgHxIaChVDTE9TRV9DT0RFX0JBRF9PUENPREUQoR8SHAoXQ0xPU0VfQ09ERV9ERUNPREVfRVJST1IQoh8SIQocQ0xPU0VfQ09ERV9OT1RfQVVUSEVOVElDQVRFRBCjHxIfChpDTE9TRV9DT0RFX1NFU1NJT05fUkVWT0tFRBCkHxIiCh1DTE9TRV9DT0RFX0FMUkVBRFlfSURFTlRJRklFRBClHxIbChZDTE9TRV9DT0RFX0lOVkFMSURfU0VREKcfEhwKF0NMT1NFX0NPREVfUkFURV9MSU1JVEVEEKgfEh8KGkNMT1NFX0NPREVfU0VTU0lPTl9FWFBJUkVEEKkfEh4KGUNMT1NFX0NPREVfSFVCX1JFU1RBUlRJTkcQqh8qfQoRVm9pY2VGb3JjZWRBY3Rpb24SIwofVk9JQ0VfRk9SQ0VEX0FDVElPTl9VTlNQRUNJRklFRBAAEiQKIFZPSUNFX0ZPUkNFRF9BQ1RJT05fRElTQ09OTkVDVEVEEAESHQoZVk9JQ0VfRk9SQ0VEX0FDVElPTl9NT1ZFRBACKrcBChFHdWlsZERlbGV0ZVJlYXNvbhIjCh9HVUlMRF9ERUxFVEVfUkVBU09OX1VOU1BFQ0lGSUVEEAASHwobR1VJTERfREVMRVRFX1JFQVNPTl9ERUxFVEVEEAESHgoaR1VJTERfREVMRVRFX1JFQVNPTl9LSUNLRUQQAhIeChpHVUlMRF9ERUxFVEVfUkVBU09OX0JBTk5FRBADEhwKGEdVSUxEX0RFTEVURV9SRUFTT05fTEVGVBAEQvABChhjb20uZGlzbGFja3NvLmdhdGV3YXkudjFCDEdhdGV3YXlQcm90b1ABWlRnaXRodWIuY29tL3Rvcm5lbGxpaGVucmlxdWUvZGlzbGFja3NvLXJlYmlydGgvaHViL2dlbi9kaXNsYWNrc28vZ2F0ZXdheS92MTtnYXRld2F5djGiAgNER1iqAhREaXNsYWNrc28uR2F0ZXdheS5WMcoCFERpc2xhY2tzb1xHYXRld2F5XFYx4gIgRGlzbGFja3NvXEdhdGV3YXlcVjFcR1BCTWV0YWRhdGHqAhZEaXNsYWNrc286OkdhdGV3YXk6OlYxYgZwcm90bzM", [file_dislackso_v1_channel, file_dislackso_v1_common, file_dislackso_v1_guild, file_dislackso_v1_invite, file_dislackso_v1_moderation]);
+  fileDesc("CiJkaXNsYWNrc28vZ2F0ZXdheS92MS9nYXRld2F5LnByb3RvEhRkaXNsYWNrc28uZ2F0ZXdheS52MSKCAwoLQ2xpZW50RnJhbWUSMgoIaWRlbnRpZnkYASABKAsyHi5kaXNsYWNrc28uZ2F0ZXdheS52MS5JZGVudGlmeUgAEi4KBnJlc3VtZRgCIAEoCzIcLmRpc2xhY2tzby5nYXRld2F5LnYxLlJlc3VtZUgAEjQKCWhlYXJ0YmVhdBgDIAEoCzIfLmRpc2xhY2tzby5nYXRld2F5LnYxLkhlYXJ0YmVhdEgAEj8KD3VwZGF0ZV9wcmVzZW5jZRgEIAEoCzIkLmRpc2xhY2tzby5nYXRld2F5LnYxLlVwZGF0ZVByZXNlbmNlSAASTQoXdXBkYXRlX3ZvaWNlX3NlbGZfc3RhdGUYBSABKAsyKi5kaXNsYWNrc28uZ2F0ZXdheS52MS5VcGRhdGVWb2ljZVNlbGZTdGF0ZUgAEkEKEGNsaWVudF90ZWxlbWV0cnkYBiABKAsyJS5kaXNsYWNrc28uZ2F0ZXdheS52MS5DbGllbnRUZWxlbWV0cnlIAEIGCgRraW5kItUCCgtTZXJ2ZXJGcmFtZRIsCgVoZWxsbxgBIAEoCzIbLmRpc2xhY2tzby5nYXRld2F5LnYxLkhlbGxvSAASLAoFcmVhZHkYAiABKAsyGy5kaXNsYWNrc28uZ2F0ZXdheS52MS5SZWFkeUgAEjAKB3Jlc3VtZWQYAyABKAsyHS5kaXNsYWNrc28uZ2F0ZXdheS52MS5SZXN1bWVkSAASPwoPaW52YWxpZF9zZXNzaW9uGAQgASgLMiQuZGlzbGFja3NvLmdhdGV3YXkudjEuSW52YWxpZFNlc3Npb25IABI7Cg1oZWFydGJlYXRfYWNrGAUgASgLMiIuZGlzbGFja3NvLmdhdGV3YXkudjEuSGVhcnRiZWF0QWNrSAASMgoIZGlzcGF0Y2gYBiABKAsyHi5kaXNsYWNrc28uZ2F0ZXdheS52MS5EaXNwYXRjaEgAQgYKBGtpbmQiQAoFSGVsbG8SHQoVaGVhcnRiZWF0X2ludGVydmFsX21zGAEgASgFEhgKEHJlc3VtZV93aW5kb3dfbXMYAiABKAUiLwoKQ2xpZW50SW5mbxIQCghwbGF0Zm9ybRgBIAEoCRIPCgd2ZXJzaW9uGAIgASgJIjwKCElkZW50aWZ5EjAKBmNsaWVudBgBIAEoCzIgLmRpc2xhY2tzby5nYXRld2F5LnYxLkNsaWVudEluZm8iLgoGUmVzdW1lEhIKCnNlc3Npb25faWQYASABKAkSEAoIbGFzdF9zZXEYAiABKAQiHQoJSGVhcnRiZWF0EhAKCGxhc3Rfc2VxGAEgASgEIg4KDEhlYXJ0YmVhdEFjayIeCg5VcGRhdGVQcmVzZW5jZRIMCgRpZGxlGAEgASgIIlYKFFVwZGF0ZVZvaWNlU2VsZlN0YXRlEhgKEHZvaWNlX3Nlc3Npb25faWQYASABKAkSEQoJc2VsZl9tdXRlGAIgASgIEhEKCXNlbGZfZGVhZhgDIAEoCCKfAQoPQ2xpZW50VGVsZW1ldHJ5EhgKEHZvaWNlX3Nlc3Npb25faWQYASABKAkSNgoJY2FuZGlkYXRlGAIgASgOMiMuZGlzbGFja3NvLmdhdGV3YXkudjEuQ2FuZGlkYXRlVHlwZRISCgpieXRlc19zZW50GAMgASgEEhYKDmJ5dGVzX3JlY2VpdmVkGAQgASgEEg4KBnJ0dF9tcxgFIAEoBSKJAgoMSW5zdGFuY2VJbmZvEgwKBG5hbWUYASABKAkSGgoSbWVtYmVyc19jYW5faW52aXRlGAIgASgIEiEKGW1heF9ndWlsZHNfb3duZWRfcGVyX3VzZXIYAyABKAUSHgoWbWF4X2NoYW5uZWxzX3Blcl9ndWlsZBgEIAEoBRIZChFtYXhfZ3VpbGRfbWVtYmVycxgFIAEoBRIgChhkZWZhdWx0X3ZvaWNlX3VzZXJfbGltaXQYBiABKAUSFQoNbWF4X3VwbG9hZF9tYhgHIAEoBRIeChZtYXhfc2hhcmVzX3Blcl9jaGFubmVsGAggASgFEhgKEG1heF9zaGFyZV9wcmVzZXQYCSABKAkimQEKBVJlYWR5EhIKCnNlc3Npb25faWQYASABKAkSHAoCbWUYAiABKAsyEC5kaXNsYWNrc28udjEuTWUSNAoIaW5zdGFuY2UYAyABKAsyIi5kaXNsYWNrc28uZ2F0ZXdheS52MS5JbnN0YW5jZUluZm8SKAoGZ3VpbGRzGAQgAygLMhguZGlzbGFja3NvLnYxLkd1aWxkU3RhdGUiCQoHUmVzdW1lZCIjCg5JbnZhbGlkU2Vzc2lvbhIRCglyZXN1bWFibGUYASABKAgiQwoIRGlzcGF0Y2gSCwoDc2VxGAEgASgEEioKBWV2ZW50GAIgASgLMhsuZGlzbGFja3NvLmdhdGV3YXkudjEuRXZlbnQi4AgKBUV2ZW50EjAKDGd1aWxkX2NyZWF0ZRgBIAEoCzIYLmRpc2xhY2tzby52MS5HdWlsZFN0YXRlSAASKwoMZ3VpbGRfdXBkYXRlGAIgASgLMhMuZGlzbGFja3NvLnYxLkd1aWxkSAASOQoMZ3VpbGRfZGVsZXRlGAMgASgLMiEuZGlzbGFja3NvLmdhdGV3YXkudjEuR3VpbGREZWxldGVIABI1CgptZW1iZXJfYWRkGAQgASgLMh8uZGlzbGFja3NvLmdhdGV3YXkudjEuTWVtYmVyQWRkSAASLQoNbWVtYmVyX3VwZGF0ZRgFIAEoCzIULmRpc2xhY2tzby52MS5NZW1iZXJIABI7Cg1tZW1iZXJfcmVtb3ZlGAYgASgLMiIuZGlzbGFja3NvLmdhdGV3YXkudjEuTWVtYmVyUmVtb3ZlSAASLwoOY2hhbm5lbF9jcmVhdGUYByABKAsyFS5kaXNsYWNrc28udjEuQ2hhbm5lbEgAEi8KDmNoYW5uZWxfdXBkYXRlGAggASgLMhUuZGlzbGFja3NvLnYxLkNoYW5uZWxIABI9Cg5jaGFubmVsX2RlbGV0ZRgJIAEoCzIjLmRpc2xhY2tzby5nYXRld2F5LnYxLkNoYW5uZWxEZWxldGVIABJFChJjaGFubmVsc19yZW9yZGVyZWQYCiABKAsyJy5kaXNsYWNrc28uZ2F0ZXdheS52MS5DaGFubmVsc1Jlb3JkZXJlZEgAEikKC3VzZXJfdXBkYXRlGAsgASgLMhIuZGlzbGFja3NvLnYxLlVzZXJIABIxCg9wcmVzZW5jZV91cGRhdGUYDCABKAsyFi5kaXNsYWNrc28udjEuUHJlc2VuY2VIABItCg1pbnZpdGVfY3JlYXRlGA0gASgLMhQuZGlzbGFja3NvLnYxLkludml0ZUgAEjsKDWludml0ZV9kZWxldGUYDiABKAsyIi5kaXNsYWNrc28uZ2F0ZXdheS52MS5JbnZpdGVEZWxldGVIABIkCgdiYW5fYWRkGA8gASgLMhEuZGlzbGFja3NvLnYxLkJhbkgAEjUKCmJhbl9yZW1vdmUYECABKAsyHy5kaXNsYWNrc28uZ2F0ZXdheS52MS5CYW5SZW1vdmVIABIvCgthdWRpdF9lbnRyeRgRIAEoCzIYLmRpc2xhY2tzby52MS5BdWRpdEVudHJ5SAASJQoJbWVfdXBkYXRlGBIgASgLMhAuZGlzbGFja3NvLnYxLk1lSAASNgoSdm9pY2Vfc3RhdGVfdXBkYXRlGBMgASgLMhguZGlzbGFja3NvLnYxLlZvaWNlU3RhdGVIABI5Cgx2b2ljZV9mb3JjZWQYFCABKAsyIS5kaXNsYWNrc28uZ2F0ZXdheS52MS5Wb2ljZUZvcmNlZEgAEjgKEGV4cG9zdXJlX2NoYW5nZWQYFSABKAsyHC5kaXNsYWNrc28udjEuRXhwb3N1cmVTdGF0dXNIAEIGCgRraW5kIpoBCgtWb2ljZUZvcmNlZBI3CgZhY3Rpb24YASABKA4yJy5kaXNsYWNrc28uZ2F0ZXdheS52MS5Wb2ljZUZvcmNlZEFjdGlvbhIQCghndWlsZF9pZBgCIAEoCRISCgpjaGFubmVsX2lkGAMgASgJEhIKCmJ5X3VzZXJfaWQYBCABKAkSGAoQdm9pY2Vfc2Vzc2lvbl9pZBgFIAEoCSJYCgtHdWlsZERlbGV0ZRIQCghndWlsZF9pZBgBIAEoCRI3CgZyZWFzb24YAiABKA4yJy5kaXNsYWNrc28uZ2F0ZXdheS52MS5HdWlsZERlbGV0ZVJlYXNvbiJ9CglNZW1iZXJBZGQSJAoGbWVtYmVyGAEgASgLMhQuZGlzbGFja3NvLnYxLk1lbWJlchIgCgR1c2VyGAIgASgLMhIuZGlzbGFja3NvLnYxLlVzZXISKAoIcHJlc2VuY2UYAyABKAsyFi5kaXNsYWNrc28udjEuUHJlc2VuY2UiMQoMTWVtYmVyUmVtb3ZlEhAKCGd1aWxkX2lkGAEgASgJEg8KB3VzZXJfaWQYAiABKAkiNQoNQ2hhbm5lbERlbGV0ZRIQCghndWlsZF9pZBgBIAEoCRISCgpjaGFubmVsX2lkGAIgASgJIk4KEUNoYW5uZWxzUmVvcmRlcmVkEhAKCGd1aWxkX2lkGAEgASgJEicKCGNoYW5uZWxzGAIgAygLMhUuZGlzbGFja3NvLnYxLkNoYW5uZWwiLgoMSW52aXRlRGVsZXRlEhAKCGd1aWxkX2lkGAEgASgJEgwKBGNvZGUYAiABKAkiLgoJQmFuUmVtb3ZlEhAKCGd1aWxkX2lkGAEgASgJEg8KB3VzZXJfaWQYAiABKAkq3gIKCUNsb3NlQ29kZRIaChZDTE9TRV9DT0RFX1VOU1BFQ0lGSUVEEAASFwoSQ0xPU0VfQ09ERV9VTktOT1dOEKAfEhoKFUNMT1NFX0NPREVfQkFEX09QQ09ERRChHxIcChdDTE9TRV9DT0RFX0RFQ09ERV9FUlJPUhCiHxIhChxDTE9TRV9DT0RFX05PVF9BVVRIRU5USUNBVEVEEKMfEh8KGkNMT1NFX0NPREVfU0VTU0lPTl9SRVZPS0VEEKQfEiIKHUNMT1NFX0NPREVfQUxSRUFEWV9JREVOVElGSUVEEKUfEhsKFkNMT1NFX0NPREVfSU5WQUxJRF9TRVEQpx8SHAoXQ0xPU0VfQ09ERV9SQVRFX0xJTUlURUQQqB8SHwoaQ0xPU0VfQ09ERV9TRVNTSU9OX0VYUElSRUQQqR8SHgoZQ0xPU0VfQ09ERV9IVUJfUkVTVEFSVElORxCqHyqWAQoNQ2FuZGlkYXRlVHlwZRIeChpDQU5ESURBVEVfVFlQRV9VTlNQRUNJRklFRBAAEhcKE0NBTkRJREFURV9UWVBFX0hPU1QQARIYChRDQU5ESURBVEVfVFlQRV9TUkZMWBACEhgKFENBTkRJREFURV9UWVBFX1BSRkxYEAMSGAoUQ0FORElEQVRFX1RZUEVfUkVMQVkQBCp9ChFWb2ljZUZvcmNlZEFjdGlvbhIjCh9WT0lDRV9GT1JDRURfQUNUSU9OX1VOU1BFQ0lGSUVEEAASJAogVk9JQ0VfRk9SQ0VEX0FDVElPTl9ESVNDT05ORUNURUQQARIdChlWT0lDRV9GT1JDRURfQUNUSU9OX01PVkVEEAIqtwEKEUd1aWxkRGVsZXRlUmVhc29uEiMKH0dVSUxEX0RFTEVURV9SRUFTT05fVU5TUEVDSUZJRUQQABIfChtHVUlMRF9ERUxFVEVfUkVBU09OX0RFTEVURUQQARIeChpHVUlMRF9ERUxFVEVfUkVBU09OX0tJQ0tFRBACEh4KGkdVSUxEX0RFTEVURV9SRUFTT05fQkFOTkVEEAMSHAoYR1VJTERfREVMRVRFX1JFQVNPTl9MRUZUEARC8AEKGGNvbS5kaXNsYWNrc28uZ2F0ZXdheS52MUIMR2F0ZXdheVByb3RvUAFaVGdpdGh1Yi5jb20vdG9ybmVsbGloZW5yaXF1ZS9kaXNsYWNrc28tcmViaXJ0aC9odWIvZ2VuL2Rpc2xhY2tzby9nYXRld2F5L3YxO2dhdGV3YXl2MaICA0RHWKoCFERpc2xhY2tzby5HYXRld2F5LlYxygIURGlzbGFja3NvXEdhdGV3YXlcVjHiAiBEaXNsYWNrc29cR2F0ZXdheVxWMVxHUEJNZXRhZGF0YeoCFkRpc2xhY2tzbzo6R2F0ZXdheTo6VjFiBnByb3RvMw", [file_dislackso_v1_channel, file_dislackso_v1_common, file_dislackso_v1_connectivity, file_dislackso_v1_guild, file_dislackso_v1_invite, file_dislackso_v1_moderation]);
 
 /**
  * ClientFrame is sent from the client to the hub.
@@ -61,6 +63,12 @@ export type ClientFrame = Message<"dislackso.gateway.v1.ClientFrame"> & {
      */
     value: UpdateVoiceSelfState;
     case: "updateVoiceSelfState";
+  } | {
+    /**
+     * @generated from field: dislackso.gateway.v1.ClientTelemetry client_telemetry = 6;
+     */
+    value: ClientTelemetry;
+    case: "clientTelemetry";
   } | { case: undefined; value?: undefined };
 };
 
@@ -299,6 +307,52 @@ export const UpdateVoiceSelfStateSchema: GenMessage<UpdateVoiceSelfState> = /*@_
   messageDesc(file_dislackso_gateway_v1_gateway, 9);
 
 /**
+ * ClientTelemetry reports a voice connection's path every 30 s, so admins see
+ * how much goes through relays (TURN) and the hub can keep to the budget.
+ *
+ * @generated from message dislackso.gateway.v1.ClientTelemetry
+ */
+export type ClientTelemetry = Message<"dislackso.gateway.v1.ClientTelemetry"> & {
+  /**
+   * Other sessions than the client's current one are ignored.
+   *
+   * @generated from field: string voice_session_id = 1;
+   */
+  voiceSessionId: string;
+
+  /**
+   * The local candidate of the selected ICE pair.
+   *
+   * @generated from field: dislackso.gateway.v1.CandidateType candidate = 2;
+   */
+  candidate: CandidateType;
+
+  /**
+   * Totals since the connection started.
+   *
+   * @generated from field: uint64 bytes_sent = 3;
+   */
+  bytesSent: bigint;
+
+  /**
+   * @generated from field: uint64 bytes_received = 4;
+   */
+  bytesReceived: bigint;
+
+  /**
+   * @generated from field: int32 rtt_ms = 5;
+   */
+  rttMs: number;
+};
+
+/**
+ * Describes the message dislackso.gateway.v1.ClientTelemetry.
+ * Use `create(ClientTelemetrySchema)` to create a new message.
+ */
+export const ClientTelemetrySchema: GenMessage<ClientTelemetry> = /*@__PURE__*/
+  messageDesc(file_dislackso_gateway_v1_gateway, 10);
+
+/**
  * @generated from message dislackso.gateway.v1.InstanceInfo
  */
 export type InstanceInfo = Message<"dislackso.gateway.v1.InstanceInfo"> & {
@@ -357,7 +411,7 @@ export type InstanceInfo = Message<"dislackso.gateway.v1.InstanceInfo"> & {
  * Use `create(InstanceInfoSchema)` to create a new message.
  */
 export const InstanceInfoSchema: GenMessage<InstanceInfo> = /*@__PURE__*/
-  messageDesc(file_dislackso_gateway_v1_gateway, 10);
+  messageDesc(file_dislackso_gateway_v1_gateway, 11);
 
 /**
  * @generated from message dislackso.gateway.v1.Ready
@@ -389,7 +443,7 @@ export type Ready = Message<"dislackso.gateway.v1.Ready"> & {
  * Use `create(ReadySchema)` to create a new message.
  */
 export const ReadySchema: GenMessage<Ready> = /*@__PURE__*/
-  messageDesc(file_dislackso_gateway_v1_gateway, 11);
+  messageDesc(file_dislackso_gateway_v1_gateway, 12);
 
 /**
  * @generated from message dislackso.gateway.v1.Resumed
@@ -402,7 +456,7 @@ export type Resumed = Message<"dislackso.gateway.v1.Resumed"> & {
  * Use `create(ResumedSchema)` to create a new message.
  */
 export const ResumedSchema: GenMessage<Resumed> = /*@__PURE__*/
-  messageDesc(file_dislackso_gateway_v1_gateway, 12);
+  messageDesc(file_dislackso_gateway_v1_gateway, 13);
 
 /**
  * @generated from message dislackso.gateway.v1.InvalidSession
@@ -421,7 +475,7 @@ export type InvalidSession = Message<"dislackso.gateway.v1.InvalidSession"> & {
  * Use `create(InvalidSessionSchema)` to create a new message.
  */
 export const InvalidSessionSchema: GenMessage<InvalidSession> = /*@__PURE__*/
-  messageDesc(file_dislackso_gateway_v1_gateway, 13);
+  messageDesc(file_dislackso_gateway_v1_gateway, 14);
 
 /**
  * @generated from message dislackso.gateway.v1.Dispatch
@@ -443,7 +497,7 @@ export type Dispatch = Message<"dislackso.gateway.v1.Dispatch"> & {
  * Use `create(DispatchSchema)` to create a new message.
  */
 export const DispatchSchema: GenMessage<Dispatch> = /*@__PURE__*/
-  messageDesc(file_dislackso_gateway_v1_gateway, 14);
+  messageDesc(file_dislackso_gateway_v1_gateway, 15);
 
 /**
  * @generated from message dislackso.gateway.v1.Event
@@ -588,6 +642,14 @@ export type Event = Message<"dislackso.gateway.v1.Event"> & {
      */
     value: VoiceForced;
     case: "voiceForced";
+  } | {
+    /**
+     * To instance admins: the exposure provider's state or public URL changed.
+     *
+     * @generated from field: dislackso.v1.ExposureStatus exposure_changed = 21;
+     */
+    value: ExposureStatus;
+    case: "exposureChanged";
   } | { case: undefined; value?: undefined };
 };
 
@@ -596,7 +658,7 @@ export type Event = Message<"dislackso.gateway.v1.Event"> & {
  * Use `create(EventSchema)` to create a new message.
  */
 export const EventSchema: GenMessage<Event> = /*@__PURE__*/
-  messageDesc(file_dislackso_gateway_v1_gateway, 15);
+  messageDesc(file_dislackso_gateway_v1_gateway, 16);
 
 /**
  * @generated from message dislackso.gateway.v1.VoiceForced
@@ -637,7 +699,7 @@ export type VoiceForced = Message<"dislackso.gateway.v1.VoiceForced"> & {
  * Use `create(VoiceForcedSchema)` to create a new message.
  */
 export const VoiceForcedSchema: GenMessage<VoiceForced> = /*@__PURE__*/
-  messageDesc(file_dislackso_gateway_v1_gateway, 16);
+  messageDesc(file_dislackso_gateway_v1_gateway, 17);
 
 /**
  * @generated from message dislackso.gateway.v1.GuildDelete
@@ -659,7 +721,7 @@ export type GuildDelete = Message<"dislackso.gateway.v1.GuildDelete"> & {
  * Use `create(GuildDeleteSchema)` to create a new message.
  */
 export const GuildDeleteSchema: GenMessage<GuildDelete> = /*@__PURE__*/
-  messageDesc(file_dislackso_gateway_v1_gateway, 17);
+  messageDesc(file_dislackso_gateway_v1_gateway, 18);
 
 /**
  * @generated from message dislackso.gateway.v1.MemberAdd
@@ -686,7 +748,7 @@ export type MemberAdd = Message<"dislackso.gateway.v1.MemberAdd"> & {
  * Use `create(MemberAddSchema)` to create a new message.
  */
 export const MemberAddSchema: GenMessage<MemberAdd> = /*@__PURE__*/
-  messageDesc(file_dislackso_gateway_v1_gateway, 18);
+  messageDesc(file_dislackso_gateway_v1_gateway, 19);
 
 /**
  * @generated from message dislackso.gateway.v1.MemberRemove
@@ -708,7 +770,7 @@ export type MemberRemove = Message<"dislackso.gateway.v1.MemberRemove"> & {
  * Use `create(MemberRemoveSchema)` to create a new message.
  */
 export const MemberRemoveSchema: GenMessage<MemberRemove> = /*@__PURE__*/
-  messageDesc(file_dislackso_gateway_v1_gateway, 19);
+  messageDesc(file_dislackso_gateway_v1_gateway, 20);
 
 /**
  * @generated from message dislackso.gateway.v1.ChannelDelete
@@ -730,7 +792,7 @@ export type ChannelDelete = Message<"dislackso.gateway.v1.ChannelDelete"> & {
  * Use `create(ChannelDeleteSchema)` to create a new message.
  */
 export const ChannelDeleteSchema: GenMessage<ChannelDelete> = /*@__PURE__*/
-  messageDesc(file_dislackso_gateway_v1_gateway, 20);
+  messageDesc(file_dislackso_gateway_v1_gateway, 21);
 
 /**
  * @generated from message dislackso.gateway.v1.ChannelsReordered
@@ -754,7 +816,7 @@ export type ChannelsReordered = Message<"dislackso.gateway.v1.ChannelsReordered"
  * Use `create(ChannelsReorderedSchema)` to create a new message.
  */
 export const ChannelsReorderedSchema: GenMessage<ChannelsReordered> = /*@__PURE__*/
-  messageDesc(file_dislackso_gateway_v1_gateway, 21);
+  messageDesc(file_dislackso_gateway_v1_gateway, 22);
 
 /**
  * @generated from message dislackso.gateway.v1.InviteDelete
@@ -776,7 +838,7 @@ export type InviteDelete = Message<"dislackso.gateway.v1.InviteDelete"> & {
  * Use `create(InviteDeleteSchema)` to create a new message.
  */
 export const InviteDeleteSchema: GenMessage<InviteDelete> = /*@__PURE__*/
-  messageDesc(file_dislackso_gateway_v1_gateway, 22);
+  messageDesc(file_dislackso_gateway_v1_gateway, 23);
 
 /**
  * @generated from message dislackso.gateway.v1.BanRemove
@@ -798,7 +860,7 @@ export type BanRemove = Message<"dislackso.gateway.v1.BanRemove"> & {
  * Use `create(BanRemoveSchema)` to create a new message.
  */
 export const BanRemoveSchema: GenMessage<BanRemove> = /*@__PURE__*/
-  messageDesc(file_dislackso_gateway_v1_gateway, 23);
+  messageDesc(file_dislackso_gateway_v1_gateway, 24);
 
 /**
  * CloseCode is the WebSocket close code the hub uses when it ends a connection.
@@ -877,6 +939,42 @@ export const CloseCodeSchema: GenEnum<CloseCode> = /*@__PURE__*/
   enumDesc(file_dislackso_gateway_v1_gateway, 0);
 
 /**
+ * @generated from enum dislackso.gateway.v1.CandidateType
+ */
+export enum CandidateType {
+  /**
+   * @generated from enum value: CANDIDATE_TYPE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: CANDIDATE_TYPE_HOST = 1;
+   */
+  HOST = 1,
+
+  /**
+   * @generated from enum value: CANDIDATE_TYPE_SRFLX = 2;
+   */
+  SRFLX = 2,
+
+  /**
+   * @generated from enum value: CANDIDATE_TYPE_PRFLX = 3;
+   */
+  PRFLX = 3,
+
+  /**
+   * @generated from enum value: CANDIDATE_TYPE_RELAY = 4;
+   */
+  RELAY = 4,
+}
+
+/**
+ * Describes the enum dislackso.gateway.v1.CandidateType.
+ */
+export const CandidateTypeSchema: GenEnum<CandidateType> = /*@__PURE__*/
+  enumDesc(file_dislackso_gateway_v1_gateway, 1);
+
+/**
  * @generated from enum dislackso.gateway.v1.VoiceForcedAction
  */
 export enum VoiceForcedAction {
@@ -902,7 +1000,7 @@ export enum VoiceForcedAction {
  * Describes the enum dislackso.gateway.v1.VoiceForcedAction.
  */
 export const VoiceForcedActionSchema: GenEnum<VoiceForcedAction> = /*@__PURE__*/
-  enumDesc(file_dislackso_gateway_v1_gateway, 1);
+  enumDesc(file_dislackso_gateway_v1_gateway, 2);
 
 /**
  * @generated from enum dislackso.gateway.v1.GuildDeleteReason
@@ -938,5 +1036,5 @@ export enum GuildDeleteReason {
  * Describes the enum dislackso.gateway.v1.GuildDeleteReason.
  */
 export const GuildDeleteReasonSchema: GenEnum<GuildDeleteReason> = /*@__PURE__*/
-  enumDesc(file_dislackso_gateway_v1_gateway, 2);
+  enumDesc(file_dislackso_gateway_v1_gateway, 3);
 

@@ -1,9 +1,11 @@
 import { GuildDeleteReason } from '@dislackso/contracts/gen/dislackso/gateway/v1/gateway_pb';
+import { ExposureState } from '@dislackso/contracts/gen/dislackso/v1/connectivity_pb';
 import type { QueryClient } from '@tanstack/react-query';
 
 import { createGatewayDispatcher } from '@/core/gateway/dispatcher';
 import { GatewayClient } from '@/core/gateway/gateway-client';
 import { browserSocket, gatewayUrl } from '@/core/gateway/socket';
+import { CONNECTIVITY_KEY, INSTANCE_SETTINGS_KEY } from '@/features/admin/queries';
 import { dispatchEntities, entitiesStore } from '@/stores/entities';
 import { pushNotice } from '@/stores/notices';
 import { dispatchPresence } from '@/stores/presence';
@@ -29,6 +31,12 @@ const lostReasons: Partial<Record<GuildDeleteReason, 'kicked' | 'banned' | 'dele
   [GuildDeleteReason.DELETED]: 'deleted',
 };
 
+const exposureNotices: Partial<Record<ExposureState, 'running' | 'needsLogin' | 'failed'>> = {
+  [ExposureState.RUNNING]: 'running',
+  [ExposureState.NEEDS_LOGIN]: 'needsLogin',
+  [ExposureState.FAILED]: 'failed',
+};
+
 /**
  * Runs the gateway while a verified user is signed in, and feeds its frames
  * to the stores. Returns a function that tears everything down.
@@ -52,6 +60,13 @@ export function startRealtime(queryClient: QueryClient, voice: VoiceController):
     },
     listChanged: (kind, guildId) => {
       void queryClient.invalidateQueries({ queryKey: [kind, guildId] });
+    },
+    exposureChanged: (status) => {
+      void queryClient.invalidateQueries({ queryKey: CONNECTIVITY_KEY });
+      // A new public address becomes the instance's public URL.
+      void queryClient.invalidateQueries({ queryKey: INSTANCE_SETTINGS_KEY });
+      const state = exposureNotices[status.state];
+      if (state !== undefined) pushNotice({ kind: 'exposure', state, url: status.url });
     },
     guildLost: (guildId, reason) => {
       const name = entitiesStore.getState().guilds[guildId]?.name;

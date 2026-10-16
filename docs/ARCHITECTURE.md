@@ -114,29 +114,29 @@ Media never passes through the HTTP exposure path. Only signaling, API, chat and
 ### 4.1 Target host experience (linear)
 1. Download the hub release for the OS (zip contains `hub` + `livekit-server`), or click **Host an instance** in the desktop shell.
 2. Run it. The hub opens `http://localhost:7300/setup` (setup is only reachable from localhost and requires the one-time setup token printed in the console/log).
-3. Wizard: instance name → create instance-admin account → choose exposure (Tailscale Funnel recommended: click the login link, approve, done) → connectivity self-test runs → optional TURN credentials → optional SMTP → finish.
-4. Wizard shows the public URL and a first invite link. Copy, send to the team.
-5. Optional toggles: run at login, keep PC awake while hosting, auto-update.
+3. Wizard: instance name → create instance-admin account → optional SMTP → finish. Setup then continues on **Settings → Connectivity**: choose exposure (Tailscale Funnel recommended: click the login link, approve, done) → the connectivity self-test result → optional TURN credentials and a browser relay test.
+4. The Connectivity page shows the public URL; Settings → Instance creates invite links. Copy, send to the team. `docs/HOSTING.md` is the host's step-by-step guide.
+5. Optional toggles on the Connectivity page: run at login, keep PC awake while hosting; auto-update later.
 
 CLI equivalents for headless hosts: `hub run`, `hub setup`, `hub doctor`, `hub backup`, `hub user reset-link <username>`, `hub version`.
 
 ### 4.2 Exposure providers (`ExposureProvider` interface)
 ```go
 type ExposureProvider interface {
-    Name() string
-    Start(ctx context.Context, handler http.Handler) (PublicEndpoint, error) // blocks until reachable or error
-    Status() ExposureStatus                // state, public URL, last error, guidance
-    ClientIP(r *http.Request) netip.Addr   // trusted client-IP extraction for this ingress
-    Stop(ctx context.Context) error
+    Kind() domain.ExposureKind
+    // Run serves handler until ctx ends, reporting every state change
+    // (starting, needs_login + login URL, running + public URL, failed + problem code).
+    Run(ctx context.Context, handler http.Handler, report func(domain.ExposureStatus)) error
 }
 ```
+Every way into the hub is its own listener tagged with an **ingress** (`transport/ingress`): whether it is the hub's own `127.0.0.1` listener (the only one that can be "local": setup, LiveKit webhooks), whether the client used HTTPS (cookie `Secure`, HSTS), and whom to trust for the client IP (the TCP peer, Tailscale's funnel source, Cloudflare's `Cf-Connecting-Ip` on the tunnel's listener). Exposure settings are instance settings in the DB, switched from the admin panel; the Cloudflare tunnel token lives in `secrets.yaml`. The exposure service runs the configured provider, restarts it when settings change, retries failures (5 s to 60 s backoff), makes a running provider's URL the instance's public URL, and pushes each status change to instance admins.
 | Provider | How | URL | Notes |
 |---|---|---|---|
 | `tailscale-funnel` (**default**) | Embedded `tailscale.com/tsnet`, `ListenFunnel("tcp", ":443")` | `https://<hostname>.<tailnet>.ts.net` stable | Host needs a free Tailscale account; first run shows login URL; surface "enable Funnel/HTTPS" guidance from errors. Bandwidth is limited by Tailscale (unspecified) — fine for API/chat, slower for large files. |
-| `cloudflare-tunnel` | `cloudflared tunnel run --token <T>` sidecar (downloaded on demand, pinned version + SHA-256) | Team's domain, stable | Best throughput; prerequisite for multi-host failover (§17.7). Needs a domain on Cloudflare (~US$10/yr). |
-| `cloudflare-quick` | `cloudflared tunnel --url http://127.0.0.1:7300` | Random `*.trycloudflare.com`, changes every start | Trials only: 200 in-flight request cap, no SLA. Hub shows the new URL loudly. |
-| `direct` | Hub listens on `:443` with ACME (CertMagic) or behind user's reverse proxy | Own | For VPS/public IP/port-forward users. |
-| `lan` | Bind on LAN interface, self-signed cert option | `https://<lan-ip>:7300` | Office-only use. `getUserMedia` needs HTTPS outside localhost. |
+| `cloudflare-tunnel` | `cloudflared tunnel run` sidecar with the token in its environment (downloaded on demand, pinned version + SHA-256); the public hostname routes to `http://localhost:7301`, a listener of its own | Team's domain, stable | Best throughput; prerequisite for multi-host failover (§17.7). Needs a domain on Cloudflare (~US$10/yr). |
+| `cloudflare-quick` | `cloudflared tunnel --url http://127.0.0.1:<own port>` | Random `*.trycloudflare.com`, changes every start | Trials only: 200 in-flight request cap, no SLA. Hub shows the new URL loudly. |
+| `direct` | Hub listens on `:443` with a Let's Encrypt certificate (`x/crypto/acme/autocert`, TLS-ALPN challenge on the same port) | Own | For VPS/public IP/port-forward users. |
+| `lan` | Bind on LAN interface with a self-signed certificate for the machine's private addresses | `https://<lan-ip>:7443` | Office-only use. `getUserMedia` needs HTTPS outside localhost. |
 
 `/lk/*` is reverse-proxied to `127.0.0.1:7880` (WebSocket upgrade supported) so LiveKit signaling shares the single public hostname. Client connects LiveKit with `url = wss://<instance>/lk`.
 
@@ -162,7 +162,7 @@ The API key pair is generated once and kept in `secrets.yaml`; the sidecar recei
 Connection paths, in order of preference:
 1. **LAN host candidate** (same office network).
 2. **IPv6** global address (common on Brazilian fiber; stateful firewalls are opened by full-ICE checks from both sides).
-3. **IPv4 direct** — works when the host NAT preserves the mapped port, or after the hub creates a mapping with UPnP-IGD/NAT-PMP/PCP (`tailscale.com/net/portmapper`) for UDP 7882 (+TCP 7881). Mapping is renewed and removed on shutdown.
+3. **IPv4 direct** — works when the host NAT preserves the mapped port, or after the hub creates a mapping for UDP 7882 (+TCP 7881) with PCP, NAT-PMP or UPnP-IGD (`adapter/portmap`, tried in that order). The outside port must equal the inside one, since LiveKit advertises its own port with the STUN-discovered address, so a router offering another port is refused (tailscale's portmapper picks other ports, hence our own). Mapping is renewed and removed on shutdown.
 4. **TURN relay** — clients receive short-lived TURN credentials from the hub at voice join and pass them as `rtcConfig.iceServers` to `Room.connect` (verify livekit-client merge/override semantics). Because LiveKit runs full ICE, it sends checks to the client's relay candidate, which opens the host NAT toward the relay; works even for symmetric host NAT.
 
 `IceServerProvider` interface:
@@ -175,7 +175,7 @@ type IceServerProvider interface {
 Implementations: `cloudflare` (POST `https://rtc.live.cloudflare.com/v1/turn/keys/{keyId}/credentials/generate-ice-servers` with `{"ttl": N}`; drop port-53 URLs), `static` (any provider with fixed username/password, e.g. ExpressTURN free 1 TB/mo), `coturn-rest` (shared-secret REST credentials for a self-hosted coturn), `none` (STUN only).
 
 ### 4.4 Connectivity self-test (`hub doctor` + admin panel)
-Runs at setup, at every start (background) and on demand. Results stored and shown in the admin panel with a **Host suitability** rating:
+Runs at every start (background, after the first forwarding attempt and once LiveKit is up; only when `livekit.external_ip` is on) and on demand from the admin panel; the latest result is kept in memory and shown with a **Host suitability** rating. `hub doctor` runs the network checks from a console, trying port forwarding on a throwaway port so a running hub's mappings stay untouched:
 1. LiveKit up (Twirp `ListRooms`).
 2. Before LiveKit binds 7882: bind UDP 7882, query two STUN servers → public IPv4, mapped ports → classify *port-preserving*, *endpoint-independent*, *endpoint-dependent (symmetric)*.
 3. IPv6: global address present? STUN over udp6.
@@ -183,7 +183,7 @@ Runs at setup, at every start (background) and on demand. Results stored and sho
 5. Relay test (browser, from the admin panel): `livekit-client` joins a diagnostics room with `iceTransportPolicy: 'relay'` through the configured TURN → proves remote relayed clients work.
 6. Rating: **Excellent** (mapping OK or IPv6), **Good** (port-preserving NAT), **Relay-dependent** (symmetric/CGNAT, no IPv6) with actionable advice ("enable UPnP on router", "this host will consume TURN quota", "consider another host").
 
-Runtime telemetry: each client reports its selected ICE candidate-pair type and bytes every 30 s over the gateway. Admin panel shows % relayed and an **estimated monthly TURN usage**. **TURN budget guard:** `turn.monthly_budget_gb` (default 900). Above 90 % the hub warns admins; above 100 % it stops issuing TURN credentials (STUN only) unless an admin overrides.
+Runtime telemetry: each client reports its selected ICE candidate-pair type and bytes every 30 s over the gateway. Admin panel shows % relayed and an **estimated monthly TURN usage**. **TURN budget guard:** `turn.monthly_budget_gb` (default 900). Above 90 % the hub warns admins (log and admin panel); above 100 % it stops issuing TURN credentials (STUN only) unless an admin overrides. Budgets count decimal gigabytes, as providers bill them.
 
 ### 4.5 Host bandwidth guide (shown in admin panel)
 SFU egress ≈ Σ (bitrate each viewer receives). Screen content averages far below caps when mostly static.
@@ -196,7 +196,7 @@ SFU egress ≈ Σ (bitrate each viewer receives). Screen content averages far be
 
 ### 4.6 Host conveniences
 - **Keep awake while hosting** (Windows `SetThreadExecutionState`, macOS `caffeinate`-equivalent IOKit assertion, Linux `systemd-inhibit`).
-- **Run at login** (Windows Startup shortcut or service via `kardianos/service`; macOS LaunchAgent; Linux systemd user unit).
+- **Run at login** (Windows `Run` registry key of the user; macOS LaunchAgent; Linux XDG autostart entry for desktop sessions), repeating the command line the hub was started with.
 - **Firewall helper** (Windows): button that elevates once to add an inbound UDP rule for `livekit-server.exe`.
 - **Self-update**: check GitHub Releases, download, verify SHA-256, swap binary, restart (Phase 11).
 - **Alternative deployment** (documented, not default): run the hub on an always-free cloud VM with a public IP (`direct` exposure, no TURN needed).
@@ -209,7 +209,7 @@ SFU egress ≈ Σ (bitrate each viewer receives). Screen content averages far be
 ```
 transport (rpc, gateway, http)  →  service (use cases)  →  domain (entities, errors, policy)
                                          ↓ depends on interfaces (ports)
-adapters (sqlite, smtp, livekit, ice, tsnet, cloudflared, blob, portmapper) implement ports
+adapters (sqlite, smtp, livekit, ice, exposure/{tailscale,cloudflared,direct}, portmap, stun, hostos, blob) implement ports
 app (composition root) wires everything from config — the only place that knows concrete types
 ```
 - **domain**: entities, value objects, domain errors (`ErrNotFound`, `ErrForbidden`, `ErrConflict`, `ErrRateLimited`, `ErrInvalid`), `Policy` (pure functions over actor/guild/member).
@@ -237,11 +237,11 @@ type MediaProvider interface {
 `url` can point to the embedded sidecar (`wss://<instance>/lk`) or an **external LiveKit** (VPS or LiveKit Cloud) — configurable, same code path.
 
 ### 5.3 Configuration & data directory
-Precedence: defaults < `config.yaml` < env (`DSX_*`) < flags. Only bootstrap settings live in the file (ports, data dir, exposure provider and its secrets). Everything else is runtime instance settings in the DB, editable in the admin panel.
+Precedence: defaults < `config.yaml` < env (`DSX_*`) < flags. Only bootstrap settings live in the file (ports, data dir, media server). Everything else is runtime instance settings in the DB, editable in the admin panel, including exposure, relay (TURN) and email; their secrets live in `secrets.yaml`.
 
 ```
 <data-dir>/                      Windows: %APPDATA%\Dislackso\hub   macOS: ~/Library/Application Support/Dislackso/hub   Linux: ~/.local/share/dislackso/hub
-  config.yaml   secrets.yaml (0600)   data.db (+wal/shm)   files/   backups/   logs/   tsnet/   sidecars/   livekit.yaml (generated)
+  config.yaml   secrets.yaml (0600)   data.db (+wal/shm)   files/   backups/   logs/   tsnet/   sidecars/ (cloudflared)   acme/   tls/   livekit.yaml (generated)
 ```
 
 ### 5.4 Security baseline
@@ -253,7 +253,7 @@ Precedence: defaults < `config.yaml` < env (`DSX_*`) < flags. Only bootstrap set
 - Uploads: magic-byte sniffing, size caps, images re-encoded (metadata stripped), downloads with `X-Content-Type-Options: nosniff`, `Content-Security-Policy: sandbox`, `Content-Disposition: attachment` for non-media types.
 - Headers: strict CSP for the SPA, `Referrer-Policy: same-origin`, HSTS when HTTPS. `style-src` admits a per-response nonce, handed to the page in `<meta name="csp-nonce">`, because UI libraries inject `<style>` elements (scroll locking in modal dialogs); scripts stay `'self'`, plus `'wasm-unsafe-eval'` so the noise suppressor can compile its WebAssembly (it allows no JavaScript eval).
 - Link unfurling (chat phase): SSRF guard (deny private/loopback/link-local, re-check after DNS resolution, size/time limits).
-- Client IP only from the active `ExposureProvider.ClientIP` (never trust forwarded headers from other ingresses).
+- Client IP only from the ingress the request arrived on (§4.2); forwarded headers are trusted only on a tunnel's own listener, and only the hub's own listener can yield a loopback (local) client.
 - Secrets never logged; logs rotate (lumberjack).
 
 ---
@@ -315,14 +315,15 @@ Generated: Go → `hub/gen/...` (connect-go, protobuf-go); TS → `packages/cont
 - Large binaries never go through RPC: `POST /api/uploads` (multipart, streamed to blob store, returns `FileRef`), downloads via `GET /files/{id}/{name}` (auth by session cookie; thumbnails `?size=`).
 
 ### 7.3 Services (v1 scope; chat/social marked *opt*)
-- `AuthService`: Register, VerifyEmail, ResendVerification, Login, Logout, RequestPasswordReset, ResetPassword, GetSetupState.
+- `AuthService`: Register, VerifyEmail, ResendVerification, Login, Logout, RequestPasswordReset, ResetPassword, ConfirmEmailChange, GetSetupState.
 - `AccountService`: GetMe, UpdateProfile(display_name, avatar_file_id), ChangePassword, RequestEmailChange, ListSessions, RevokeSession, RevokeOtherSessions, DeleteAccount, SetStatusPreference.
 - `GuildService`: Create, Update, Delete, Leave, TransferOwnership, SetMemberRole, ListMembers.
 - `ChannelService`: Create, Update, Delete, Reorder.
 - `InviteService`: Create, List, Revoke, Preview(code), Accept(code).
 - `ModerationService`: Kick, Ban, Unban, ListBans, ListAuditLog, DeleteMessage (any).
 - `VoiceService`: Join(channel_id) → {livekit_url, token, ice_servers, voice_session_id, limits}, Leave, Move(user, channel), SetServerMute, SetServerDeafen, Disconnect(user).
-- `InstanceService` (instance admin): GetSettings, UpdateSettings, ListUsers, SetUserDisabled, CreatePasswordResetLink, CreateInstanceInvite, GetDiagnostics, RunSelfTest, SendTestEmail, GetUsage.
+- `InstanceService` (instance admin): GetSettings, UpdateSettings, ListUsers, SetUserDisabled, SetUserInstanceAdmin, CreatePasswordResetLink, CreateInstanceInvite, SendTestEmail.
+- `ConnectivityService` (instance admin): GetConnectivity, SetExposure, SetTurn, RunSelfTest, StartRelayTest, SetHostOptions and AddFirewallRule (both only from the hosting machine).
 - *opt* `MessageService`: List, Send, Edit, Delete, AddReaction, RemoveReaction, Ack (read state), Search, ListPins, Pin/Unpin.
 - *opt* `ThreadService`: Create(from message or blank), List(active/archived), Archive.
 - *opt* `SocialService`: SendFriendRequest, Accept, Remove, Block, Unblock, ListRelationships, OpenDM, CloseDM.
@@ -355,9 +356,9 @@ server → Dispatch{seq, event}  (seq monotonic per session)
 `guild:<id>` (all members), `user:<id>` (all sessions of a user), `channel:<id>` (typing; text viewers), `admins:<guildId>`, `instance-admins`. Gateway subscribes sessions on Identify and updates subscriptions on membership changes.
 
 ### 8.4 Event catalog
-`GUILD_CREATE` (joined/created) · `GUILD_UPDATE` · `GUILD_DELETE{reason: deleted|kicked|banned|left}` · `MEMBER_ADD/UPDATE/REMOVE` · `CHANNEL_CREATE/UPDATE/DELETE` · `CHANNELS_REORDERED` · `USER_UPDATE` (public profile of anyone sharing a guild/relationship) · `PRESENCE_UPDATE` · `VOICE_STATE_UPDATE` · `VOICE_FORCED{action: disconnected|moved|kicked, by}` · `INVITE_CREATE/DELETE` (admins) · `BAN_ADD/REMOVE` (admins) · `AUDIT_ENTRY` (admins) · `ME_UPDATE` (the receiver's own account, for their other sessions) · `INSTANCE_NOTICE` · *opt:* `MESSAGE_CREATE/UPDATE/DELETE`, `REACTION_ADD/REMOVE`, `TYPING_START`, `READ_STATE_UPDATE`, `THREAD_*`, `RELATIONSHIP_*`, `DM_CREATE`.
+`GUILD_CREATE` (joined/created) · `GUILD_UPDATE` · `GUILD_DELETE{reason: deleted|kicked|banned|left}` · `MEMBER_ADD/UPDATE/REMOVE` · `CHANNEL_CREATE/UPDATE/DELETE` · `CHANNELS_REORDERED` · `USER_UPDATE` (public profile of anyone sharing a guild/relationship) · `PRESENCE_UPDATE` · `VOICE_STATE_UPDATE` · `VOICE_FORCED{action: disconnected|moved|kicked, by}` · `INVITE_CREATE/DELETE` (admins) · `BAN_ADD/REMOVE` (admins) · `AUDIT_ENTRY` (admins) · `ME_UPDATE` (the receiver's own account, for their other sessions; it also moves the instance-admins subscription) · `EXPOSURE_CHANGED` (instance admins) · `INSTANCE_NOTICE` · *opt:* `MESSAGE_CREATE/UPDATE/DELETE`, `REACTION_ADD/REMOVE`, `TYPING_START`, `READ_STATE_UPDATE`, `THREAD_*`, `RELATIONSHIP_*`, `DM_CREATE`.
 
-Client → server frames: `UpdatePresence{idle}` (inactivity; the status preference and custom status are set through `AccountService.SetStatusPreference`, so they persist and reach every device), `UpdateVoiceSelfState{self_mute, self_deaf}`, `TypingStart{channel_id}` (≤ 1 per 8 s), `ClientTelemetry{ice_pair_type, bytes_sent, bytes_received, rtt}`.
+Client → server frames: `UpdatePresence{idle}` (inactivity; the status preference and custom status are set through `AccountService.SetStatusPreference`, so they persist and reach every device), `UpdateVoiceSelfState{self_mute, self_deaf}`, `TypingStart{channel_id}` (≤ 1 per 8 s), `ClientTelemetry{voice_session_id, candidate, bytes_sent, bytes_received, rtt_ms}` every 30 s while in a call (bytes summed over the call's peer connections, growing only).
 
 ### 8.5 Presence
 Online while ≥ 1 gateway session; `idle` reported by client after 10 min without input (desktop uses `powerMonitor` idle time); `dnd` and `invisible` are user preferences (invisible = shown offline to others). Presence is broadcast to every guild the user is in.
@@ -439,7 +440,7 @@ Same pipeline; `camera` source; default 720p30, simulcast. Off by default in ins
 - Each share has one `<video>`, owned outside React (`ShareViews`, created by the voice controller so tiles can mount before the media engine loads). A tile shows it through a callback ref that moves the element in; a tile that changes place (grid, focus, filmstrip, fullscreen) gets the same element within one render, so it keeps its last frame instead of starting black: a screen capture sends a new frame only when the screen changes.
 
 ### 10.2 Modes (local, per user; never forced on others)
-- **Grid**: all visible tiles equal size, normalized 16:9, layout chosen to maximize tile area for the container (algorithm below). Share tiles first (this device's own after the others), then people in join order. People keep their place when they speak, so the grid never shifts (§15.5); the speaking ring shows who talks. Toggle "Hide participants without video".
+- **Grid**: all visible tiles equal size, normalized 16:9, layout chosen to maximize tile area for the container (algorithm below). Share tiles first (this device's own after the others), then people, each sorted by name; the speaking ring shows who talks. Toggle "Hide participants without video".
 - **Focus**: one large tile + filmstrip (bottom; collapsible; horizontal scroll). Click any filmstrip tile to swap focus. Double-click a grid tile to focus it.
 - **Fullscreen**: Fullscreen API on the stage container in Focus mode; chrome auto-hides after 3 s idle; Esc exits. Menus and tooltips render inside the stage while it is fullscreen.
 - **Pop-out** (desktop: separate window; browser: Document Picture-in-Picture where supported) — Phase 11.
@@ -507,7 +508,8 @@ Tile action composes the current video frame + visible strokes onto a canvas →
 - **No-SMTP mode**: verification disabled automatically; instance admin can generate a reset link for a user in the admin panel; the hub logs a warning on boot.
 - **Mailer**: `smtp` (STARTTLS/TLS; docs include Gmail app-password steps) and `log` (dev: prints emails). Templates: plain text + simple HTML, localized.
 - **Sessions**: list with device/IP/last seen, revoke one/all others; password change revokes others.
-- **Account deletion**: user becomes "Deleted User" (profile anonymized); owned guilds must be transferred or deleted first.
+- **Email change**: needs the password; a confirmation link (24 h) goes to the new address and opening it moves and verifies the account. Without SMTP the address changes at once.
+- **Account deletion**: needs the password; owned guilds must be transferred or deleted first, and the last instance admin cannot leave. The account leaves every guild, its sessions end, and its row stays anonymized (username and email freed, profile cleared) and hidden from every lookup, so history shows it as a former member.
 - **Instance admin**: created in setup; can promote others.
 
 ---
@@ -729,9 +731,9 @@ VAPID-based push for mentions/DMs when no tab is open (browser push services are
 │   ├─ internal/domain/             entities, errors, policy, snowflake
 │   ├─ internal/ports/              interfaces
 │   ├─ internal/service/<area>/
-│   ├─ internal/adapter/{sqlite,smtp,livekit,ice,exposure,portmapper,blob,ratelimit,password}/
-│   ├─ internal/transport/{rpc,gateway,http}/
-│   ├─ internal/events/  internal/sidecar/  internal/doctor/
+│   ├─ internal/adapter/{sqlite,mail,livekit,ice,exposure,portmap,stun,hostos,blob,ratelimit,password}/
+│   ├─ internal/transport/{rpc,gateway,web,ingress,media,files,wire}/
+│   ├─ internal/events/  internal/sidecar/
 │   └─ webdist/                     embedded web build (gitignored output, embed.go committed)
 ├─ apps/web/        Vite React app
 ├─ apps/desktop/    Electron shell

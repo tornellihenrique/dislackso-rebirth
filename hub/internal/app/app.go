@@ -17,36 +17,44 @@ import (
 
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/blob"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/clock"
-	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/ice"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/hostos"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/imaging"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/mail"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/password"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/portmap"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/ratelimit"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/secrets"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/snowflake"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/sqlite"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/stun"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/adapter/token"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/buildinfo"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/config"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/domain"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/events"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/account"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/auth"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/channel"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/connectivity"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/doctor"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/exposure"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/file"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/guild"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/health"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/host"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/instance"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/invite"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/moderation"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/notify"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/presence"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/relay"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/settings"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/setup"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/snapshot"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/service/voice"
-	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/clientip"
 	filehttp "github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/files"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/gateway"
+	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/ingress"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/media"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/rpc"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/web"
@@ -54,9 +62,7 @@ import (
 )
 
 const (
-	readHeaderTimeout = 10 * time.Second
-	idleTimeout       = 2 * time.Minute
-	shutdownTimeout   = 10 * time.Second
+	shutdownTimeout = 10 * time.Second
 	// Each concurrent password hash holds 64 MiB.
 	maxConcurrentHashes = 4
 )
@@ -70,7 +76,10 @@ type App struct {
 	gateway  *gateway.Server
 	voice    *voice.Service
 	media    *mediaServer
-	server   *http.Server
+	exposure *exposure.Service
+	doctor   *doctor.Service
+	host     *host.Service
+	handler  http.Handler
 	listener net.Listener
 	devMail  bool
 }
@@ -132,9 +141,12 @@ func wire(ctx context.Context, cfg config.Config, logger *slog.Logger, db *sqlit
 	if err != nil {
 		return nil, err
 	}
+	relaySvc := relay.New(relay.Deps{
+		Settings: settingsSvc, Factory: relayProviders(clk), Usage: db, Clock: clk, Logger: logger,
+	})
 	voiceSvc := voice.New(voice.Deps{
 		Guilds: db, Members: db, Channels: db, Users: db, Audit: db, Tx: db, IDs: ids, Tokens: tokens,
-		Clock: clk, Limiter: limiter, Events: publisher, Bus: bus, Media: mediaSrv.provider, ICE: ice.None{},
+		Clock: clk, Limiter: limiter, Events: publisher, Bus: bus, Media: mediaSrv.provider, ICE: relaySvc,
 		Settings: settingsSvc, Presence: tracker, Verification: verification, Logger: logger,
 	})
 
@@ -146,10 +158,10 @@ func wire(ctx context.Context, cfg config.Config, logger *slog.Logger, db *sqlit
 	authSvc = auth.New(auth.Deps{
 		Users: db, Sessions: db, Tokens: db, Tx: db,
 		Hasher: hasher, TokenGen: tokens, IDs: ids, Clock: clk, Limiter: limiter,
-		Mail: mailer, Settings: settingsSvc, Emails: notifier, Invites: invites, Logger: logger,
+		Mail: mailer, Settings: settingsSvc, Emails: notifier, Invites: invites, Events: publisher, Logger: logger,
 	})
 	accountSvc := account.New(account.Deps{
-		Users: db, Sessions: db, Members: db, Files: db, Tx: db, Hasher: hasher, Clock: clk, Limiter: limiter,
+		Users: db, Sessions: db, Members: db, Guilds: db, Files: db, Tx: db, Hasher: hasher, Clock: clk, Limiter: limiter,
 		Events: publisher, Presence: tracker, Verification: authSvc,
 	})
 	guildSvc := guild.New(guild.Deps{
@@ -173,7 +185,7 @@ func wire(ctx context.Context, cfg config.Config, logger *slog.Logger, db *sqlit
 		Presence: tracker, Voice: voiceSvc, Verification: authSvc,
 	})
 	instanceSvc := instance.New(instance.Deps{
-		Users: db, Sessions: db, Tx: db, Clock: clk,
+		Users: db, Sessions: db, Tx: db, Clock: clk, Events: publisher,
 		Settings: settingsSvc, ResetLinks: authSvc, Emails: notifier,
 	})
 	setupToken := cfg.Setup.Token
@@ -188,12 +200,27 @@ func wire(ctx context.Context, cfg config.Config, logger *slog.Logger, db *sqlit
 	})
 	healthSvc := health.NewService(clk, buildinfo.Version(), db, mediaSrv)
 
+	exposureSvc := exposure.New(exposure.Deps{
+		Settings: settingsSvc, Factory: exposureProviders(cfg.DataDir, clk, logger),
+		Events: publisher, Clock: clk, Logger: logger,
+	})
+	doctorSvc := doctor.New(doctor.Deps{
+		STUN: stunProbe, LocalAddrs: stun.LocalAddrs, Mapper: &portmap.Mapper{}, Media: mediaSrv,
+		Exposure: exposureSvc, Settings: settingsSvc, Clock: clk, Logger: logger,
+	})
+	hostSvc := host.New(host.Deps{Settings: settingsSvc, OS: hostMachine(mediaSrv.binary), Logger: logger})
+	connectivitySvc := connectivity.New(connectivity.Deps{
+		Settings: settingsSvc, Exposure: exposureSvc, Relay: relaySvc, Doctor: doctorSvc, Host: hostSvc,
+		Media: mediaSrv.provider, Tokens: tokens,
+	})
+
 	mux := http.NewServeMux()
 	rpc.Mount(mux, rpc.Deps{
 		Health:        healthSvc,
 		Auth:          authSvc,
 		Authenticator: authSvc,
 		Account:       accountSvc,
+		EmailChanges:  authSvc,
 		Instance:      instanceSvc,
 		Invites:       invites,
 		Setup:         setupSvc,
@@ -202,27 +229,23 @@ func wire(ctx context.Context, cfg config.Config, logger *slog.Logger, db *sqlit
 		GuildInvites:  invites,
 		Moderation:    moderationSvc,
 		Voice:         voiceSvc,
-		ClientIP:      clientip.RemoteAddr,
+		Connectivity:  connectivitySvc,
+		ClientIP:      ingress.ClientIP,
 		Logger:        logger,
 	})
 	gw := gateway.New(gateway.Options{
 		Events: bus, Auth: authSvc, Snapshots: snapshotSvc, Presence: tracker, Voice: voiceSvc,
-		Tokens: tokens, Clock: clk, Logger: logger,
+		Telemetry: relaySvc, Tokens: tokens, Clock: clk, Logger: logger,
 	})
 	mux.Handle("GET "+gateway.Path, gw)
 	filehttp.Register(mux, filehttp.Options{Files: fileSvc, Auth: authSvc, Logger: logger})
 	media.Register(mux, media.Options{Target: mediaSrv.apiURL(), Webhooks: mediaSrv.provider, Events: voiceSvc, Logger: logger})
-	web.Register(mux, web.Options{Files: files, Health: healthSvc, Setup: setupSvc, ClientIP: clientip.RemoteAddr})
+	web.Register(mux, web.Options{Files: files, Health: healthSvc, Setup: setupSvc, ClientIP: ingress.ClientIP})
 
-	server := &http.Server{
-		Handler:           web.AccessLog(logger)(web.SecurityHeaders(mux)),
-		ReadHeaderTimeout: readHeaderTimeout,
-		IdleTimeout:       idleTimeout,
-		ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelWarn),
-	}
 	return &App{
 		cfg: cfg, logger: logger, db: db, settings: settingsSvc, setup: setupSvc,
-		gateway: gw, voice: voiceSvc, media: mediaSrv, server: server, devMail: cfg.Mail.DevLog,
+		gateway: gw, voice: voiceSvc, media: mediaSrv, exposure: exposureSvc, doctor: doctorSvc, host: hostSvc,
+		handler: web.AccessLog(logger)(web.SecurityHeaders(mux)), devMail: cfg.Mail.DevLog,
 	}, nil
 }
 
@@ -264,13 +287,18 @@ func (a *App) Serve(ctx context.Context) error {
 		stopBackground()
 		background.Wait()
 	}()
+	a.host.Start(bg)
+	defer a.host.Stop(bg)
 	background.Go(func() { a.voice.Run(bg) })
+	a.probeNetwork(ctx, bg, &background)
 	if err := a.media.start(bg, &background, a.listener.Addr(), a.mediaReady); err != nil {
 		return err
 	}
+	background.Go(func() { a.exposure.Run(bg, a.handler) })
 
+	server := ingress.NewServer(ctx, a.listener, a.handler, ingress.Local, a.logger)
 	serveErr := make(chan error, 1)
-	go func() { serveErr <- a.server.Serve(a.listener) }()
+	go func() { serveErr <- server.Serve() }()
 
 	select {
 	case err := <-serveErr:
@@ -283,13 +311,29 @@ func (a *App) Serve(ctx context.Context) error {
 	defer cancel()
 	// Gateway connections are hijacked, so the HTTP server does not wait for them.
 	a.gateway.Shutdown(shutdownCtx)
-	if err := a.server.Shutdown(shutdownCtx); err != nil {
+	if err := server.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("shut down http: %w", err)
 	}
-	if err := <-serveErr; !errors.Is(err, http.ErrServerClosed) {
+	if err := <-serveErr; err != nil {
 		return fmt.Errorf("serve http: %w", err)
 	}
 	return nil
+}
+
+// probeNetwork checks the media port before the media server binds it, and
+// keeps it forwarded on the router. Hosts told not to look up their public
+// address (offline, LAN only) skip both.
+func (a *App) probeNetwork(ctx, bg context.Context, background *sync.WaitGroup) {
+	lk := a.cfg.LiveKit
+	if a.media.binary == "" || !lk.ExternalIP {
+		return
+	}
+	if p := a.doctor.Probe(ctx, lk.UDPPort); p.NAT == domain.NATNoInternet {
+		// LiveKit refuses to start when it cannot find its public address.
+		a.media.cfg.ExternalIP = false
+		a.logger.WarnContext(ctx, "no internet connection: voice works on this network only until the hub restarts online")
+	}
+	background.Go(func() { a.doctor.Run(bg, lk.UDPPort, lk.TCPPort) })
 }
 
 // mediaReady rebuilds voice state from the media server whenever it comes
@@ -333,8 +377,14 @@ func (a *App) announce(ctx context.Context, addr net.Addr) error {
 		if tcp, ok := addr.(*net.TCPAddr); ok {
 			port = tcp.Port
 		}
-		a.logger.WarnContext(ctx, "setup required: open the setup wizard on this machine",
-			slog.String("url", fmt.Sprintf("http://localhost:%d/setup?token=%s", port, a.setup.Token())))
+		url := fmt.Sprintf("http://localhost:%d/setup?token=%s", port, a.setup.Token())
+		a.logger.WarnContext(ctx, "setup required: open the setup wizard on this machine", slog.String("url", url))
+		// A fixed token means a headless host or a test run.
+		if a.cfg.Setup.Token == "" {
+			if err := hostos.OpenBrowser(ctx, url); err != nil {
+				a.logger.DebugContext(ctx, "open browser", slog.Any("error", err))
+			}
+		}
 		return nil
 	}
 	st, err := a.settings.Get(ctx)

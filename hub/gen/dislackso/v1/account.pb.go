@@ -710,6 +710,192 @@ func (x *RevokeOtherSessionsResponse) GetRevoked() int32 {
 	return 0
 }
 
+type RequestEmailChangeRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NewEmail      string                 `protobuf:"bytes,1,opt,name=new_email,json=newEmail,proto3" json:"new_email,omitempty"`
+	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestEmailChangeRequest) Reset() {
+	*x = RequestEmailChangeRequest{}
+	mi := &file_dislackso_v1_account_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestEmailChangeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestEmailChangeRequest) ProtoMessage() {}
+
+func (x *RequestEmailChangeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_v1_account_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestEmailChangeRequest.ProtoReflect.Descriptor instead.
+func (*RequestEmailChangeRequest) Descriptor() ([]byte, []int) {
+	return file_dislackso_v1_account_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *RequestEmailChangeRequest) GetNewEmail() string {
+	if x != nil {
+		return x.NewEmail
+	}
+	return ""
+}
+
+func (x *RequestEmailChangeRequest) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
+type RequestEmailChangeResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// True when a confirmation email went out; false when the address changed
+	// at once (no email configured).
+	ConfirmationSent bool `protobuf:"varint,1,opt,name=confirmation_sent,json=confirmationSent,proto3" json:"confirmation_sent,omitempty"`
+	Me               *Me  `protobuf:"bytes,2,opt,name=me,proto3" json:"me,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *RequestEmailChangeResponse) Reset() {
+	*x = RequestEmailChangeResponse{}
+	mi := &file_dislackso_v1_account_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestEmailChangeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestEmailChangeResponse) ProtoMessage() {}
+
+func (x *RequestEmailChangeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_v1_account_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestEmailChangeResponse.ProtoReflect.Descriptor instead.
+func (*RequestEmailChangeResponse) Descriptor() ([]byte, []int) {
+	return file_dislackso_v1_account_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *RequestEmailChangeResponse) GetConfirmationSent() bool {
+	if x != nil {
+		return x.ConfirmationSent
+	}
+	return false
+}
+
+func (x *RequestEmailChangeResponse) GetMe() *Me {
+	if x != nil {
+		return x.Me
+	}
+	return nil
+}
+
+type DeleteAccountRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Password      string                 `protobuf:"bytes,1,opt,name=password,proto3" json:"password,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteAccountRequest) Reset() {
+	*x = DeleteAccountRequest{}
+	mi := &file_dislackso_v1_account_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteAccountRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteAccountRequest) ProtoMessage() {}
+
+func (x *DeleteAccountRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_v1_account_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteAccountRequest.ProtoReflect.Descriptor instead.
+func (*DeleteAccountRequest) Descriptor() ([]byte, []int) {
+	return file_dislackso_v1_account_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *DeleteAccountRequest) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
+type DeleteAccountResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteAccountResponse) Reset() {
+	*x = DeleteAccountResponse{}
+	mi := &file_dislackso_v1_account_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteAccountResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteAccountResponse) ProtoMessage() {}
+
+func (x *DeleteAccountResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_dislackso_v1_account_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteAccountResponse.ProtoReflect.Descriptor instead.
+func (*DeleteAccountResponse) Descriptor() ([]byte, []int) {
+	return file_dislackso_v1_account_proto_rawDescGZIP(), []int{18}
+}
+
 var File_dislackso_v1_account_proto protoreflect.FileDescriptor
 
 const file_dislackso_v1_account_proto_rawDesc = "" +
@@ -753,7 +939,16 @@ const file_dislackso_v1_account_proto_rawDesc = "" +
 	"\x15RevokeSessionResponse\"\x1c\n" +
 	"\x1aRevokeOtherSessionsRequest\"7\n" +
 	"\x1bRevokeOtherSessionsResponse\x12\x18\n" +
-	"\arevoked\x18\x01 \x01(\x05R\arevoked2\x9c\x05\n" +
+	"\arevoked\x18\x01 \x01(\x05R\arevoked\"T\n" +
+	"\x19RequestEmailChangeRequest\x12\x1b\n" +
+	"\tnew_email\x18\x01 \x01(\tR\bnewEmail\x12\x1a\n" +
+	"\bpassword\x18\x02 \x01(\tR\bpassword\"k\n" +
+	"\x1aRequestEmailChangeResponse\x12+\n" +
+	"\x11confirmation_sent\x18\x01 \x01(\bR\x10confirmationSent\x12 \n" +
+	"\x02me\x18\x02 \x01(\v2\x10.dislackso.v1.MeR\x02me\"2\n" +
+	"\x14DeleteAccountRequest\x12\x1a\n" +
+	"\bpassword\x18\x01 \x01(\tR\bpassword\"\x17\n" +
+	"\x15DeleteAccountResponse2\xdf\x06\n" +
 	"\x0eAccountService\x12E\n" +
 	"\x05GetMe\x12\x1a.dislackso.v1.GetMeRequest\x1a\x1b.dislackso.v1.GetMeResponse\"\x03\x90\x02\x01\x12X\n" +
 	"\rUpdateProfile\x12\".dislackso.v1.UpdateProfileRequest\x1a#.dislackso.v1.UpdateProfileResponse\x12[\n" +
@@ -761,7 +956,9 @@ const file_dislackso_v1_account_proto_rawDesc = "" +
 	"\x13SetStatusPreference\x12(.dislackso.v1.SetStatusPreferenceRequest\x1a).dislackso.v1.SetStatusPreferenceResponse\x12Z\n" +
 	"\fListSessions\x12!.dislackso.v1.ListSessionsRequest\x1a\".dislackso.v1.ListSessionsResponse\"\x03\x90\x02\x01\x12X\n" +
 	"\rRevokeSession\x12\".dislackso.v1.RevokeSessionRequest\x1a#.dislackso.v1.RevokeSessionResponse\x12j\n" +
-	"\x13RevokeOtherSessions\x12(.dislackso.v1.RevokeOtherSessionsRequest\x1a).dislackso.v1.RevokeOtherSessionsResponseB\xc1\x01\n" +
+	"\x13RevokeOtherSessions\x12(.dislackso.v1.RevokeOtherSessionsRequest\x1a).dislackso.v1.RevokeOtherSessionsResponse\x12g\n" +
+	"\x12RequestEmailChange\x12'.dislackso.v1.RequestEmailChangeRequest\x1a(.dislackso.v1.RequestEmailChangeResponse\x12X\n" +
+	"\rDeleteAccount\x12\".dislackso.v1.DeleteAccountRequest\x1a#.dislackso.v1.DeleteAccountResponseB\xc1\x01\n" +
 	"\x10com.dislackso.v1B\fAccountProtoP\x01ZNgithub.com/tornellihenrique/dislackso-rebirth/hub/gen/dislackso/v1;dislacksov1\xa2\x02\x03DXX\xaa\x02\fDislackso.V1\xca\x02\fDislackso\\V1\xe2\x02\x18Dislackso\\V1\\GPBMetadata\xea\x02\rDislackso::V1b\x06proto3"
 
 var (
@@ -776,7 +973,7 @@ func file_dislackso_v1_account_proto_rawDescGZIP() []byte {
 	return file_dislackso_v1_account_proto_rawDescData
 }
 
-var file_dislackso_v1_account_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_dislackso_v1_account_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_dislackso_v1_account_proto_goTypes = []any{
 	(*GetMeRequest)(nil),                // 0: dislackso.v1.GetMeRequest
 	(*GetMeResponse)(nil),               // 1: dislackso.v1.GetMeResponse
@@ -793,34 +990,43 @@ var file_dislackso_v1_account_proto_goTypes = []any{
 	(*RevokeSessionResponse)(nil),       // 12: dislackso.v1.RevokeSessionResponse
 	(*RevokeOtherSessionsRequest)(nil),  // 13: dislackso.v1.RevokeOtherSessionsRequest
 	(*RevokeOtherSessionsResponse)(nil), // 14: dislackso.v1.RevokeOtherSessionsResponse
-	(*Me)(nil),                          // 15: dislackso.v1.Me
-	(StatusPreference)(0),               // 16: dislackso.v1.StatusPreference
+	(*RequestEmailChangeRequest)(nil),   // 15: dislackso.v1.RequestEmailChangeRequest
+	(*RequestEmailChangeResponse)(nil),  // 16: dislackso.v1.RequestEmailChangeResponse
+	(*DeleteAccountRequest)(nil),        // 17: dislackso.v1.DeleteAccountRequest
+	(*DeleteAccountResponse)(nil),       // 18: dislackso.v1.DeleteAccountResponse
+	(*Me)(nil),                          // 19: dislackso.v1.Me
+	(StatusPreference)(0),               // 20: dislackso.v1.StatusPreference
 }
 var file_dislackso_v1_account_proto_depIdxs = []int32{
-	15, // 0: dislackso.v1.GetMeResponse.me:type_name -> dislackso.v1.Me
-	15, // 1: dislackso.v1.UpdateProfileResponse.me:type_name -> dislackso.v1.Me
-	16, // 2: dislackso.v1.SetStatusPreferenceRequest.status:type_name -> dislackso.v1.StatusPreference
-	15, // 3: dislackso.v1.SetStatusPreferenceResponse.me:type_name -> dislackso.v1.Me
+	19, // 0: dislackso.v1.GetMeResponse.me:type_name -> dislackso.v1.Me
+	19, // 1: dislackso.v1.UpdateProfileResponse.me:type_name -> dislackso.v1.Me
+	20, // 2: dislackso.v1.SetStatusPreferenceRequest.status:type_name -> dislackso.v1.StatusPreference
+	19, // 3: dislackso.v1.SetStatusPreferenceResponse.me:type_name -> dislackso.v1.Me
 	8,  // 4: dislackso.v1.ListSessionsResponse.sessions:type_name -> dislackso.v1.Session
-	0,  // 5: dislackso.v1.AccountService.GetMe:input_type -> dislackso.v1.GetMeRequest
-	2,  // 6: dislackso.v1.AccountService.UpdateProfile:input_type -> dislackso.v1.UpdateProfileRequest
-	4,  // 7: dislackso.v1.AccountService.ChangePassword:input_type -> dislackso.v1.ChangePasswordRequest
-	6,  // 8: dislackso.v1.AccountService.SetStatusPreference:input_type -> dislackso.v1.SetStatusPreferenceRequest
-	9,  // 9: dislackso.v1.AccountService.ListSessions:input_type -> dislackso.v1.ListSessionsRequest
-	11, // 10: dislackso.v1.AccountService.RevokeSession:input_type -> dislackso.v1.RevokeSessionRequest
-	13, // 11: dislackso.v1.AccountService.RevokeOtherSessions:input_type -> dislackso.v1.RevokeOtherSessionsRequest
-	1,  // 12: dislackso.v1.AccountService.GetMe:output_type -> dislackso.v1.GetMeResponse
-	3,  // 13: dislackso.v1.AccountService.UpdateProfile:output_type -> dislackso.v1.UpdateProfileResponse
-	5,  // 14: dislackso.v1.AccountService.ChangePassword:output_type -> dislackso.v1.ChangePasswordResponse
-	7,  // 15: dislackso.v1.AccountService.SetStatusPreference:output_type -> dislackso.v1.SetStatusPreferenceResponse
-	10, // 16: dislackso.v1.AccountService.ListSessions:output_type -> dislackso.v1.ListSessionsResponse
-	12, // 17: dislackso.v1.AccountService.RevokeSession:output_type -> dislackso.v1.RevokeSessionResponse
-	14, // 18: dislackso.v1.AccountService.RevokeOtherSessions:output_type -> dislackso.v1.RevokeOtherSessionsResponse
-	12, // [12:19] is the sub-list for method output_type
-	5,  // [5:12] is the sub-list for method input_type
-	5,  // [5:5] is the sub-list for extension type_name
-	5,  // [5:5] is the sub-list for extension extendee
-	0,  // [0:5] is the sub-list for field type_name
+	19, // 5: dislackso.v1.RequestEmailChangeResponse.me:type_name -> dislackso.v1.Me
+	0,  // 6: dislackso.v1.AccountService.GetMe:input_type -> dislackso.v1.GetMeRequest
+	2,  // 7: dislackso.v1.AccountService.UpdateProfile:input_type -> dislackso.v1.UpdateProfileRequest
+	4,  // 8: dislackso.v1.AccountService.ChangePassword:input_type -> dislackso.v1.ChangePasswordRequest
+	6,  // 9: dislackso.v1.AccountService.SetStatusPreference:input_type -> dislackso.v1.SetStatusPreferenceRequest
+	9,  // 10: dislackso.v1.AccountService.ListSessions:input_type -> dislackso.v1.ListSessionsRequest
+	11, // 11: dislackso.v1.AccountService.RevokeSession:input_type -> dislackso.v1.RevokeSessionRequest
+	13, // 12: dislackso.v1.AccountService.RevokeOtherSessions:input_type -> dislackso.v1.RevokeOtherSessionsRequest
+	15, // 13: dislackso.v1.AccountService.RequestEmailChange:input_type -> dislackso.v1.RequestEmailChangeRequest
+	17, // 14: dislackso.v1.AccountService.DeleteAccount:input_type -> dislackso.v1.DeleteAccountRequest
+	1,  // 15: dislackso.v1.AccountService.GetMe:output_type -> dislackso.v1.GetMeResponse
+	3,  // 16: dislackso.v1.AccountService.UpdateProfile:output_type -> dislackso.v1.UpdateProfileResponse
+	5,  // 17: dislackso.v1.AccountService.ChangePassword:output_type -> dislackso.v1.ChangePasswordResponse
+	7,  // 18: dislackso.v1.AccountService.SetStatusPreference:output_type -> dislackso.v1.SetStatusPreferenceResponse
+	10, // 19: dislackso.v1.AccountService.ListSessions:output_type -> dislackso.v1.ListSessionsResponse
+	12, // 20: dislackso.v1.AccountService.RevokeSession:output_type -> dislackso.v1.RevokeSessionResponse
+	14, // 21: dislackso.v1.AccountService.RevokeOtherSessions:output_type -> dislackso.v1.RevokeOtherSessionsResponse
+	16, // 22: dislackso.v1.AccountService.RequestEmailChange:output_type -> dislackso.v1.RequestEmailChangeResponse
+	18, // 23: dislackso.v1.AccountService.DeleteAccount:output_type -> dislackso.v1.DeleteAccountResponse
+	15, // [15:24] is the sub-list for method output_type
+	6,  // [6:15] is the sub-list for method input_type
+	6,  // [6:6] is the sub-list for extension type_name
+	6,  // [6:6] is the sub-list for extension extendee
+	0,  // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_dislackso_v1_account_proto_init() }
@@ -836,7 +1042,7 @@ func file_dislackso_v1_account_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_dislackso_v1_account_proto_rawDesc), len(file_dislackso_v1_account_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

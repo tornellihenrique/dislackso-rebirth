@@ -8,6 +8,12 @@ export type Notice =
       readonly guildName: string;
       readonly reason: 'kicked' | 'banned' | 'deleted';
     }
+  | {
+      readonly id: number;
+      readonly kind: 'exposure';
+      readonly state: 'running' | 'needsLogin' | 'failed';
+      readonly url: string;
+    }
   | { readonly id: number; readonly kind: 'message'; readonly text: string };
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;

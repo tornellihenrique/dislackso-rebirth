@@ -71,7 +71,7 @@ export function SetupPage() {
     onSuccess: async (res) => {
       await loadInstance(hub);
       signedIn(res.me);
-      await router.navigate({ to: '/' });
+      await router.navigate({ to: '/settings/connectivity' });
     },
     onError: (err) => {
       const invalid = firstInvalidStep(Object.keys(toApiError(err).fields));
@@ -215,7 +215,7 @@ export function SetupPage() {
         {step === 'connectivity' && (
           <>
             <p className="text-sm text-fg-muted">{t('setup.connectivity.body')}</p>
-            <Alert tone="info">{t('setup.connectivity.reachable', { url: form.publicUrl })}</Alert>
+            <Alert tone="info">{t('setup.connectivity.next')}</Alert>
           </>
         )}
 

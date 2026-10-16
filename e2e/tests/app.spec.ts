@@ -33,7 +33,12 @@ test('the setup wizard creates the admin and signs them in', async ({ page }) =>
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Finish setup' }).click();
 
-  await expect(page).toHaveURL('/');
+  // Setup continues with how people reach the hub.
+  await expect(page).toHaveURL('/settings/connectivity');
+  await expect(page.getByText('Only this machine can open the hub.')).toBeVisible();
+  await expect(page.getByLabel('How people reach the hub')).toHaveValue('local');
+
+  await page.goto('/');
   await expect(page.getByRole('heading', { name: `Welcome to ${PRODUCT_NAME}` })).toBeVisible();
   await expect(page.getByTestId('hub-health')).toHaveAttribute('data-state', 'serving');
   await expect(page.getByTestId('user-panel')).toContainText(ADMIN.username);
@@ -106,6 +111,32 @@ test('a deep link survives signing in, and signing out ends the session', async 
   await expect(page).toHaveURL(/\/login/);
   await page.goto('/');
   await expect(page).toHaveURL(/\/login/);
+});
+
+test('without email, an email change applies at once', async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.goto('/settings/account');
+  await signIn(page, MEMBER.username, MEMBER.password);
+  const newEmail = 'ana.new@e2e.test';
+
+  await page.getByLabel('New email').fill(newEmail);
+  await page.getByLabel('Current password').first().fill('not the password');
+  await page.getByRole('button', { name: 'Change email' }).click();
+  await expect(page.getByLabel('Current password').first()).toHaveAccessibleDescription(
+    'Incorrect.',
+  );
+
+  await page.getByLabel('Current password').first().fill(MEMBER.password);
+  await page.getByRole('button', { name: 'Change email' }).click();
+  await expect(page.getByText('Email changed.')).toBeVisible();
+  await expect(page.getByText(newEmail)).toBeVisible();
+
+  // Back to the fixture address the other suites sign in with.
+  await page.getByLabel('New email').fill(MEMBER.email);
+  await page.getByLabel('Current password').first().fill(MEMBER.password);
+  await page.getByRole('button', { name: 'Change email' }).click();
+  await expect(page.getByText(MEMBER.email)).toBeVisible();
+  expect(errors).toEqual([]);
 });
 
 test('Portuguese browsers get pt-BR', async ({ browser }) => {
