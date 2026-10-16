@@ -41,14 +41,17 @@ A free, stable address like `https://dislackso.your-tailnet.ts.net`. Nothing to 
 carries its own Tailscale node.
 
 1. Create a free account at <https://login.tailscale.com/start> (Google or GitHub sign-in works).
-2. In the admin console, open **DNS** and, under **HTTPS Certificates**, choose **Enable HTTPS**.
-3. In the hub, choose **Tailscale Funnel**, keep the machine name (`dislackso`) or pick another,
+2. In the admin console, open **DNS**. Check that **MagicDNS** is on (it is for new accounts), and
+   under **HTTPS Certificates** choose **Enable HTTPS**. Tailscale warns that machine names
+   appear in public certificate logs; that is expected.
+3. Still in the admin console, open **Access controls**, find the **Funnel** section and choose
+   **Add Funnel to policy**. Funnel stays off for every machine until this is done; it lets all
+   members of your tailnet use it.
+4. In the hub, choose **Tailscale Funnel**, keep the machine name (`dislackso`) or pick another,
    and **Save and restart**.
-4. The status shows **Sign in to Tailscale**. Open it, sign in with the account from step 1 and
-   approve the machine. Within a few seconds the status turns green with the address.
-5. If the status says Funnel is not allowed: in the admin console, open **Access controls** and
-   allow Funnel for your machines (the console offers to add the `funnel` attribute). The hub
-   retries on its own; wait a minute.
+5. The status shows **Sign in to Tailscale**. Open it, sign in with the account from step 1 and
+   approve the machine. Within a few seconds the status turns green with the address. The first
+   time, the new address can take up to 10 minutes to work from other networks.
 
 The sign-in is kept in the hub's data folder, so restarts need no new login.
 
@@ -141,7 +144,7 @@ On the Connectivity page, from the hosting machine itself:
 | Status or symptom | Fix |
 |---|---|
 | "Turn on HTTPS certificates for your tailnet" | Tailscale admin console → DNS → HTTPS Certificates → Enable. |
-| "Your tailnet does not allow Funnel" | Admin console → Access controls → allow Funnel; wait a minute. |
+| "Your tailnet does not allow Funnel" | Admin console → Access controls → Funnel → **Add Funnel to policy**; wait a minute. |
 | "Could not download cloudflared" | The hub retries; check that GitHub is reachable from this machine. |
 | "Another program uses that port" | Something else listens on the address (443, 7443 or 7301); stop it or choose another. |
 | Calls connect at home but not for friends | Run the reachability test; add a relay; allow the firewall rule. |
