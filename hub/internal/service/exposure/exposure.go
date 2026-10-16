@@ -8,6 +8,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -203,7 +204,7 @@ func (s *Service) syncPublicURL(ctx context.Context, st domain.ExposureStatus) {
 		s.d.Logger.WarnContext(ctx, "save public url", slog.Any("error", err))
 		return
 	}
-	if cur.PublicURL != "" && st.Kind == domain.ExposureCloudflareQuick {
+	if st.Kind == domain.ExposureCloudflareQuick && strings.HasSuffix(cur.PublicURL, ".trycloudflare.com") {
 		s.d.Logger.WarnContext(ctx, "the public URL changed: links sent before no longer work",
 			slog.String("old", cur.PublicURL), slog.String("new", st.URL))
 	}

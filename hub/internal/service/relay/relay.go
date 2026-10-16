@@ -22,7 +22,7 @@ const (
 	maxDelta = 2 << 30
 	// Above this share of the budget, admins are warned.
 	warnShare = 0.9
-	gb        = 1 << 30
+	gb        = 1_000_000_000
 )
 
 type Settings interface {
