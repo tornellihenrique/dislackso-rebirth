@@ -415,14 +415,16 @@ Room options: `adaptiveStream: true`, `dynacast: true`.
 | `1440p60` (max) | 2560×1440 | 60 | 6 Mbps | 10 Mbps |
 
 - "Optimize for": **Text/Detail** (`contentHint: 'detail'`, `degradationPreference: 'maintain-resolution'`) or **Motion** (UE5 viewport, games: `contentHint: 'motion'`, `maintain-framerate`). Default Text.
-- Codec default **VP9 with SVC (`L3T3_KEY`)** + **VP8 backup codec**; advanced options: H.264 (hardware encoders, lowest CPU at 1440p60, uses simulcast) and AV1 (experimental). Final defaults must be validated with the stats overlay on real machines (Phase 4 acceptance).
-- Low layer for grid/thumbnails comes from SVC/simulcast; adaptive stream subscribes to the layer matching the rendered tile size and pauses off-screen tiles automatically.
+- Codec: **Automatic** picks **AV1 for Text/Detail** (else VP9, else VP8) and **VP9 for Motion** (else VP8), from measurements ([ADR 0002](adr/0002-screen-share-codecs.md)); a **VP8 backup codec** serves viewers that cannot decode the choice. H.264 (hardware encoders), VP8, VP9 and AV1 can be chosen in Settings → Screen share.
+- Every codec is published as **two simulcast layers**: full size and half size (≤ 30 fps, a quarter of the bitrate, at least 300 kbps); VP9 and AV1 use `L1T3` in each layer. Single-stream SVC is not used: LiveKit's client publishes a VP9 *screen share* with one spatial layer (and forces the motion hint) when asked for SVC, and dynacast pauses whole simulcast layers but not SVC layers.
+- Grid tiles and thumbnails get the low layer; adaptive stream subscribes to the layer matching the rendered tile size and pauses off-screen tiles automatically.
 - Capture constraints: `{ width: {ideal: W}, height: {ideal: H}, frameRate: {ideal: F, max: F} }`, cursor always; re-apply with `applyConstraints` after capture (desktop sources ignore some initial constraints).
 - System/tab audio: browser checkbox; desktop via shell (Windows loopback). Request own-audio exclusion (`restrictOwnAudio` or equivalent where supported) so call voices are not re-captured; if unsupported, warn the sharer.
-- One share per user per device; channel cap on simultaneous shares; instance and channel cap on max preset.
+- One share per user per device. Channel cap on simultaneous shares (`max_shares_per_channel`): the client refuses past it, and the hub stops a share the media server reports past it by taking the screen share sources out of the participant's permissions for a moment. Instance and channel caps on the preset apply on the client (the media server cannot cap a publisher's resolution); the instance caps reach clients in `Ready.instance`.
 - Stopping from the browser's native "Stop sharing" ends the share (`ended` event).
 - Streaming flag in voice state is set by the hub from LiveKit `track_published/unpublished` (source `screen_share`), not by the client.
-- Stats overlay (toggle `Ctrl+Shift+S` or tile menu): resolution, fps, codec, scalability layer, bitrate, packet loss, jitter, RTT, candidate type (host/srflx/prflx/relay), quality limitation reason.
+- Stats overlay (toggle `Ctrl+Shift+S` or tile menu): resolution, fps, codec, scalability layer, bitrate, packet loss, jitter, RTT, candidate type (host/srflx/prflx/relay), quality limitation reason. On the sharer's own preview it lists each sent layer and whether dynacast paused it.
+- Measurements and the per-mode codec defaults: [ADR 0002](adr/0002-screen-share-codecs.md); `task bench:share` repeats them.
 
 ### 9.6 Camera (optional, cheap)
 Same pipeline; `camera` source; default 720p30, simulcast. Off by default in instance settings.
@@ -433,21 +435,22 @@ Same pipeline; `camera` source; default 720p30, simulcast. Off by default in ins
 
 ### 10.1 Tiles
 - **User tile**: avatar on tinted background (color from user id), name, mute/deafen/server-mute icons, green speaking border (2 px inset), connection-quality icon on hover. Shows camera video when on.
-- **Share tile**: video (`object-fit: contain`), red **LIVE** badge, sharer name, stream audio volume, hover toolbar: Focus · Fullscreen · Draw (pen) · Snapshot · Stats · Stop watching. Self-share tile shows "You are sharing" preview (can be hidden).
+- **Share tile**: video (`object-fit: contain`), red **LIVE** badge, sharer name, stream audio volume, hover toolbar: Focus · Fullscreen · Draw (pen) · Snapshot · Stats · Stop watching. Self-share tile shows "You are sharing" preview (can be hidden). Draw and Snapshot come with drawing (§11).
+- Each share has one `<video>`, owned outside React (`ShareViews`, created by the voice controller so tiles can mount before the media engine loads). A tile shows it through a callback ref that moves the element in; a tile that changes place (grid, focus, filmstrip, fullscreen) gets the same element within one render, so it keeps its last frame instead of starting black: a screen capture sends a new frame only when the screen changes.
 
 ### 10.2 Modes (local, per user; never forced on others)
-- **Grid**: all visible tiles equal size, normalized 16:9, layout chosen to maximize tile area for the container (algorithm below). Share tiles first, then speaking users, then others. Toggle "Hide participants without video".
+- **Grid**: all visible tiles equal size, normalized 16:9, layout chosen to maximize tile area for the container (algorithm below). Share tiles first (this device's own after the others), then people in join order. People keep their place when they speak, so the grid never shifts (§15.5); the speaking ring shows who talks. Toggle "Hide participants without video".
 - **Focus**: one large tile + filmstrip (bottom; collapsible; horizontal scroll). Click any filmstrip tile to swap focus. Double-click a grid tile to focus it.
-- **Fullscreen**: Fullscreen API on the stage container in Focus mode; chrome auto-hides after 3 s idle; Esc exits.
+- **Fullscreen**: Fullscreen API on the stage container in Focus mode; chrome auto-hides after 3 s idle; Esc exits. Menus and tooltips render inside the stage while it is fullscreen.
 - **Pop-out** (desktop: separate window; browser: Document Picture-in-Picture where supported) — Phase 11.
-- Auto behavior: when the first share starts and the user is in Grid with no manual choice, switch to Focus on it ("auto-focus first share", setting default on). When the focused share ends, fall back to the next share or Grid. Media for a share arriving after the voice-state flag must not break focus (track `intendsShare` vs `hasVideo` separately).
-- Keyboard: `G` grid, `F` focus/fullscreen toggle, `←/→` cycle focus, `Esc` exit fullscreen/draw mode, `D` draw mode on focused share.
+- Auto behavior: when the first share starts and the user is in Grid with no manual choice, switch to Focus on it ("auto-focus first share", setting default on). When the focused share ends, fall back to the next share or Grid. Media for a share arriving after the voice-state flag must not break focus (track `intendsShare` vs `hasVideo` separately): a share tile exists from the hub's streaming flag or from its media, whichever comes first. This device's own share is never focused by itself.
+- Keyboard: `G` grid, `F` focus/fullscreen toggle, `←/→` cycle focus, `Esc` exit fullscreen/draw mode, `D` draw mode on focused share (with drawing), `Ctrl+Shift+S` stats.
 
 ### 10.3 Grid algorithm
 For N tiles, container W×H, gap g, aspect a = 16/9: for each cols c in 1..N, rows r = ceil(N/c); tileW = min((W − (c−1)g)/c, ((H − (r−1)g)/r)·a); pick c maximizing tileW; center the last row. Pure function in `apps/web/src/features/stage/layout.ts` with unit tests.
 
 ### 10.4 Voice channel UI chrome
-Top bar: channel name, participant count, layout toggle, "hide no-video", chat toggle (text-in-voice, chat phase). Bottom floating control bar: mic, deafen, share screen (split button: quality/optimize/audio), camera (opt), drawing settings, disconnect.
+Top bar: channel name, participant count, layout toggle, "hide no-video", chat toggle (text-in-voice, chat phase). Bottom floating control bar: mic, deafen, share screen (split button: quality/optimize/audio; settings apply to the next share), camera (opt), drawing settings, fullscreen, disconnect.
 
 ---
 
