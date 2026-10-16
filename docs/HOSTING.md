@@ -21,8 +21,8 @@ the rest make it reliable.
 4. Your browser opens the setup page. If it does not, open the `http://localhost:…/setup?token=…`
    address printed in the console.
 
-From source instead: `task setup`, then `task build`, then run `bin/hub` with `livekit-server`
-from `.tools/bin` next to it (or pass `--livekit-binary`).
+From source instead: `task setup`, then `task build`, then run `bin/hub`; the build puts the pinned
+`livekit-server` next to it.
 
 ## 2. Set up the instance
 
