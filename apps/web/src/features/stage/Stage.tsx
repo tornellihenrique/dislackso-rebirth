@@ -105,12 +105,16 @@ export function Stage({ guildId, channelId }: StageProps) {
 
   const fullscreenTile = useCallback(
     (key: string) => {
+      if (fullscreen && stage.mode === 'focus' && stage.focused === key) {
+        void document.exitFullscreen();
+        return;
+      }
       dispatchStage({ type: 'focus', channelId, key });
       if (stageEl && document.fullscreenElement !== stageEl) {
         void stageEl.requestFullscreen().catch(() => undefined);
       }
     },
-    [stageEl, channelId],
+    [stageEl, channelId, fullscreen, stage.mode, stage.focused],
   );
 
   useEffect(() => {
@@ -152,6 +156,7 @@ export function Stage({ guildId, channelId }: StageProps) {
       state={states.get(tile.userId)}
       focused={place === 'focus'}
       compact={place === 'strip'}
+      fullscreen={fullscreen && place === 'focus'}
       onFocus={() => {
         focusTile(tile.key);
       }}
@@ -208,11 +213,20 @@ interface TileViewProps {
   state: VoiceState | undefined;
   focused: boolean;
   compact: boolean;
+  fullscreen: boolean;
   onFocus: () => void;
   onFullscreen: () => void;
 }
 
-function TileView({ tile, state, focused, compact, onFocus, onFullscreen }: TileViewProps) {
+function TileView({
+  tile,
+  state,
+  focused,
+  compact,
+  fullscreen,
+  onFocus,
+  onFullscreen,
+}: TileViewProps) {
   const share = useCall((s) => s.shares[tile.userId]);
   if (tile.kind === 'share') {
     return (
@@ -222,6 +236,7 @@ function TileView({ tile, state, focused, compact, onFocus, onFullscreen }: Tile
         state={state}
         focused={focused}
         compact={compact}
+        fullscreen={fullscreen}
         onFocus={onFocus}
         onFullscreen={onFullscreen}
       />

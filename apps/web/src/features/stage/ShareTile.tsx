@@ -6,6 +6,7 @@ import {
   LoaderCircle,
   Maximize,
   Maximize2,
+  Minimize,
   Minimize2,
   ScreenShareOff,
   Volume2,
@@ -44,6 +45,8 @@ interface ShareTileProps {
   focused: boolean;
   /** A small tile in the filmstrip: badges only, no toolbar. */
   compact: boolean;
+  /** The tile fills the stage in fullscreen, so its fullscreen action leaves it. */
+  fullscreen: boolean;
   onFocus: () => void;
   onFullscreen: () => void;
 }
@@ -55,6 +58,7 @@ export function ShareTile({
   state,
   focused,
   compact,
+  fullscreen,
   onFocus,
   onFullscreen,
 }: ShareTileProps) {
@@ -67,6 +71,7 @@ export function ShareTile({
   const [statsHere, setStatsHere] = useState(false);
   const mount = useShareMount(tile.userId, tile.self);
   const sliderId = useId();
+  const fullLabel = fullscreen ? t('stage.tile.exitFullscreen') : t('stage.tile.fullscreen');
 
   const watching = tile.self || (share?.watching ?? true);
   const hasVideo = tile.self || (share?.hasVideo ?? false);
@@ -112,7 +117,7 @@ export function ShareTile({
       <ContextItem onSelect={onFocus}>
         {focused ? t('stage.tile.unfocus') : t('stage.tile.focus')}
       </ContextItem>
-      <ContextItem onSelect={onFullscreen}>{t('stage.tile.fullscreen')}</ContextItem>
+      <ContextItem onSelect={onFullscreen}>{fullLabel}</ContextItem>
       <ContextCheckItem checked={statsAll || statsHere} onCheckedChange={setStatsHere}>
         {t('stage.tile.stats')}
       </ContextCheckItem>
@@ -195,8 +200,12 @@ export function ShareTile({
                 <Maximize2 aria-hidden className="size-4" />
               )}
             </TileButton>
-            <TileButton label={t('stage.tile.fullscreen')} onClick={onFullscreen}>
-              <Maximize aria-hidden className="size-4" />
+            <TileButton label={fullLabel} pressed={fullscreen} onClick={onFullscreen}>
+              {fullscreen ? (
+                <Minimize aria-hidden className="size-4" />
+              ) : (
+                <Maximize aria-hidden className="size-4" />
+              )}
             </TileButton>
             <TileButton
               label={t('stage.tile.stats')}

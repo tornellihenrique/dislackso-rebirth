@@ -252,6 +252,7 @@ export const ptBR: Messages = {
       focus: 'Focar',
       unfocus: 'Voltar para a grade',
       fullscreen: 'Tela cheia',
+      exitFullscreen: 'Sair da tela cheia',
       stats: 'Estatísticas',
       streamVolume: 'Volume da transmissão',
       streamMuted: 'Transmissão silenciada',
