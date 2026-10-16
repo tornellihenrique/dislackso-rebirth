@@ -586,6 +586,11 @@ manual script below are the steps. Next: Phase 6 — Drawing on shares.
 - **The self-test result is kept in memory,** refreshed at every start and on demand, rather than
   stored.
 - **Relay budgets count decimal gigabytes**, as Cloudflare bills them.
+- **The hub gives LiveKit the public IPv4 it found** (`rtc.node_ip`, with LiveKit's own lookup
+  off). LiveKit's STUN lookup prefers IPv6; on a host whose IPv6 route is broken (a second router
+  advertising itself as an IPv6 gateway it cannot serve) it took over a minute, past the
+  supervisor's 30 s health limit, so the media server was restarted forever and voice never came
+  up.
 - **Funnel shows running only once its address works.** A new Funnel name reached public DNS about
   eight minutes after it was enabled, and the certificate used to be issued during the first
   visitor's handshake (about 40 s). The provider now fetches the certificate first, then checks
