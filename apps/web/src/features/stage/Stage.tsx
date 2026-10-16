@@ -4,8 +4,10 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { useTranslation } from 'react-i18next';
 
 import { useServices } from '@/app/services';
+import { displayName } from '@/features/members/member-groups';
 import { useOccupants } from '@/features/voice/hooks';
 import { useCall } from '@/stores/call';
+import { useEntities } from '@/stores/entities';
 import { useSession } from '@/stores/session';
 import { useShareSettings } from '@/stores/share-settings';
 import { dispatchStage, useChannelStage } from '@/stores/stage';
@@ -45,6 +47,7 @@ export function Stage({ guildId, channelId }: StageProps) {
   const shares = useCall((s) => s.shares);
   const selfSharing = useCall((s) => s.localShare?.status === 'live');
   const settings = useShareSettings((s) => s);
+  const users = useEntities((s) => s.users);
   const stage = useChannelStage(channelId);
   const [stageEl, setStageEl] = useState<HTMLDivElement | null>(null);
   const fullscreen = useIsFullscreen(stageEl);
@@ -54,13 +57,14 @@ export function Stage({ guildId, channelId }: StageProps) {
     () =>
       stageTiles({
         occupants,
+        nameOf: (id) => displayName(users[id]),
         shares,
         myId,
         selfSharing,
         selfPreview: settings.selfPreview,
         hideNoVideo: settings.hideNoVideo,
       }),
-    [occupants, shares, myId, selfSharing, settings.selfPreview, settings.hideNoVideo],
+    [occupants, users, shares, myId, selfSharing, settings.selfPreview, settings.hideNoVideo],
   );
   const keys = useMemo(() => tiles.map((tile) => tile.key), [tiles]);
   const keyList = keys.join('|');

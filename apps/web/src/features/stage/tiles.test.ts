@@ -20,8 +20,11 @@ const remote = (identity: string): RemoteShare => ({
 });
 
 describe('stageTiles', () => {
+  const names: Record<string, string> = { me: 'Zed', ana: 'Ana', bo: 'bo', cy: 'Cy' };
   const base = {
-    occupants: [occupant('me'), occupant('ana', true), occupant('bo'), occupant('cy')],
+    // Join order; tiles come out sorted by name.
+    occupants: [occupant('me'), occupant('cy'), occupant('ana', true), occupant('bo')],
+    nameOf: (id: string) => names[id] ?? id,
     shares: { cy: remote('cy') },
     myId: 'me',
     selfSharing: true,
@@ -29,15 +32,15 @@ describe('stageTiles', () => {
     hideNoVideo: false,
   };
 
-  it('puts shares first, mine after the others, then people in join order', () => {
+  it('puts shares first, mine after the others, then people, each sorted by name', () => {
     expect(stageTiles(base).map((t) => t.key)).toEqual([
       'share:ana',
       'share:cy',
       'share:me',
-      'user:me',
       'user:ana',
       'user:bo',
       'user:cy',
+      'user:me',
     ]);
   });
 

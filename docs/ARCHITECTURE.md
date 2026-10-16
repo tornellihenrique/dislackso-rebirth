@@ -439,7 +439,7 @@ Same pipeline; `camera` source; default 720p30, simulcast. Off by default in ins
 - Each share has one `<video>`, owned outside React (`ShareViews`, created by the voice controller so tiles can mount before the media engine loads). A tile shows it through a callback ref that moves the element in; a tile that changes place (grid, focus, filmstrip, fullscreen) gets the same element within one render, so it keeps its last frame instead of starting black: a screen capture sends a new frame only when the screen changes.
 
 ### 10.2 Modes (local, per user; never forced on others)
-- **Grid**: all visible tiles equal size, normalized 16:9, layout chosen to maximize tile area for the container (algorithm below). Share tiles first (this device's own after the others), then people in join order. People keep their place when they speak, so the grid never shifts (§15.5); the speaking ring shows who talks. Toggle "Hide participants without video".
+- **Grid**: all visible tiles equal size, normalized 16:9, layout chosen to maximize tile area for the container (algorithm below). Share tiles first (this device's own after the others), then people, each sorted by name; the speaking ring shows who talks. Toggle "Hide participants without video".
 - **Focus**: one large tile + filmstrip (bottom; collapsible; horizontal scroll). Click any filmstrip tile to swap focus. Double-click a grid tile to focus it.
 - **Fullscreen**: Fullscreen API on the stage container in Focus mode; chrome auto-hides after 3 s idle; Esc exits. Menus and tooltips render inside the stage while it is fullscreen.
 - **Pop-out** (desktop: separate window; browser: Document Picture-in-Picture where supported) — Phase 11.

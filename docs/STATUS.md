@@ -520,8 +520,7 @@ connectivity, the milestone where people on other networks can join.
   menu; 1080p60 keeps a sharer's upload and the host's egress at about 4 Mbps per viewer.
 - **Quality, optimization and audio apply to the next share.** The share menu disables them
   while sharing, rather than restarting the capture behind the user's back.
-- **People keep their place in the grid when they speak,** instead of moving after the shares
-  (§10.2 said "then speaking users"): tiles jumping around broke the no-layout-shift rule (§15.5).
+- **Stage tiles are sorted by name** (shares first, then people), not by who speaks or joined first.
   ARCHITECTURE §10.2 updated.
 - **Fullscreen is the stage element** (§10.2), so tiles never move into a portal; menus and
   tooltips render inside the stage while it is fullscreen. Together with `ShareViews` this keeps
