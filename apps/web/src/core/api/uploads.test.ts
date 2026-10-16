@@ -2,7 +2,7 @@ import { Code } from '@connectrpc/connect';
 import { describe, expect, it } from 'vitest';
 
 import { toApiError } from './errors';
-import { createUploadApi, uploadError } from './uploads';
+import { createUploadApi, MAX_IMAGE_BYTES, uploadError } from './uploads';
 
 describe('uploads', () => {
   it('posts the file and decodes the file reference', async () => {
@@ -29,6 +29,18 @@ describe('uploads', () => {
       height: 100,
     });
     expect(request?.url).toBe('/api/uploads?purpose=avatar&crop=10%2C0%2C100%2C100');
+  });
+
+  it("refuses images over the hub's limit without sending them", async () => {
+    let sent = false;
+    const api = createUploadApi(() => {
+      sent = true;
+      return Promise.resolve(Response.json({}, { status: 201 }));
+    });
+    const big = new Blob([new Uint8Array(MAX_IMAGE_BYTES + 1)]);
+    const err = toApiError(await api.upload('guild_icon', big, 'big.gif').catch((e: unknown) => e));
+    expect(err.reason).toBe('file_too_large');
+    expect(sent).toBe(false);
   });
 
   it('turns hub errors into the same shape as RPC errors', async () => {
