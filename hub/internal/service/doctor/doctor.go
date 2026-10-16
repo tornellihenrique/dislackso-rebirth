@@ -11,6 +11,7 @@ import (
 	"net/netip"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -147,9 +148,17 @@ func Rate(t domain.SelfTest, exposure domain.ExposureStatus) (domain.HostRating,
 	case exposure.State != domain.ExposureRunning:
 		advice = append(advice, domain.AdviceExposureDown)
 	}
+	rating, network := RateNetwork(t)
+	return rating, append(advice, network...)
+}
+
+// RateNetwork rates what the network lets callers do, apart from the hub's
+// own state.
+func RateNetwork(t domain.SelfTest) (domain.HostRating, []string) {
 	if t.NAT == domain.NATNoInternet {
-		return domain.RatingOffline, append(advice, domain.AdviceOffline)
+		return domain.RatingOffline, []string{domain.AdviceOffline}
 	}
+	var advice []string
 	if !t.Mapping.OK && t.NAT != domain.NATOpen {
 		advice = append(advice, domain.AdviceEnableUPnP)
 	}
@@ -194,6 +203,42 @@ func (s *Service) SelfTest(ctx context.Context) domain.SelfTest {
 		slog.String("rating", string(t.Rating)), slog.String("nat", string(t.NAT)),
 		slog.Bool("ipv6", t.IPv6), slog.Bool("port_mapping", t.Mapping.OK))
 	return t
+}
+
+// Check looks at the network alone, for the command line: forwarding is
+// tried on a throwaway port, so a running hub's mappings stay untouched.
+func (s *Service) Check(ctx context.Context) domain.SelfTest {
+	p := s.Probe(ctx, 0)
+	t := domain.SelfTest{RanAt: s.d.Clock.Now(), NAT: p.NAT, IPv6: p.PublicIPv6.IsValid()}
+	if p.PublicIPv4.IsValid() {
+		t.PublicIPv4 = p.PublicIPv4.String()
+	}
+	if t.IPv6 {
+		t.PublicIPv6 = p.PublicIPv6.String()
+	}
+	if port, err := freeUDPPort(ctx); err != nil {
+		t.Mapping.Detail = oneLine(err)
+	} else if m, err := s.d.Mapper.Map(ctx, port, 0); err != nil {
+		t.Mapping.Detail = oneLine(err)
+	} else {
+		t.Mapping = domain.PortMapping{Protocol: m.Protocol, External: m.External.String(), OK: true}
+		s.d.Mapper.Unmap(ctx)
+	}
+	t.Rating, t.Advice = RateNetwork(t)
+	return t
+}
+
+// oneLine joins the lines of a joined error, for a table cell or a log field.
+func oneLine(err error) string { return strings.ReplaceAll(err.Error(), "\n", "; ") }
+
+func freeUDPPort(ctx context.Context) (int, error) {
+	var lc net.ListenConfig
+	conn, err := lc.ListenPacket(ctx, "udp4", ":0")
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = conn.Close() }()
+	return conn.LocalAddr().(*net.UDPAddr).Port, nil
 }
 
 // RunSelfTest is SelfTest for an instance admin.
@@ -256,7 +301,7 @@ func (s *Service) keepMapped(ctx context.Context, udp, tcp int, tried chan<- str
 		wait := retryEvery
 		s.mu.Lock()
 		if err != nil {
-			s.mapping = domain.PortMapping{Detail: err.Error()}
+			s.mapping = domain.PortMapping{Detail: oneLine(err)}
 		} else {
 			s.mapping = domain.PortMapping{Protocol: m.Protocol, External: m.External.String(), OK: true}
 			wait = renewEvery

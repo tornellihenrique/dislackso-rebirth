@@ -1,11 +1,12 @@
 // Package portmap asks the home router to forward the media server's ports,
-// over NAT-PMP or UPnP-IGD. The outside port must equal the inside one: the
+// over PCP, NAT-PMP or UPnP-IGD. The outside port must equal the inside one: the
 // media server advertises its own port with the public address it learns
 // over STUN, so a mapping to any other port would be useless.
 package portmap
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -19,8 +20,10 @@ import (
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/ports"
 )
 
+// routerPort is where PCP and NAT-PMP routers listen; tests move it.
+var routerPort uint16 = 5351
+
 const (
-	pmpPort      = 5351
 	pmpTimeout   = 2 * time.Second
 	description  = "Dislackso media"
 	upnpLifetime = time.Hour
@@ -36,27 +39,28 @@ type Ports struct {
 // Mapping is what the router agreed to.
 type Mapping = ports.MappedPorts
 
-var ErrNoRouter = errors.New("no router answered NAT-PMP or UPnP")
+var ErrNoRouter = errors.New("no router answered PCP, NAT-PMP or UPnP")
 
 // Mapper creates and removes the mappings.
 type Mapper struct {
 	mapping *Mapping
 	unmap   func(ctx context.Context)
+	// nonce identifies this hub's PCP mappings; renewals must repeat it.
+	nonce *[12]byte
 }
 
-// Map forwards the ports, trying NAT-PMP first (one round trip) and then UPnP.
+// Map forwards the ports, trying PCP and NAT-PMP first (one round trip each)
+// and then UPnP.
 func (m *Mapper) Map(ctx context.Context, udp, tcp int) (Mapping, error) {
 	p := Ports{UDP: udp, TCP: tcp}
 	gw, self, ok := netmon.LikelyHomeRouterIP()
 	var errs []error
 	if ok && gw.Is4() {
-		mp, err := mapPMP(ctx, gw, p)
+		mp, err := m.mapGateway(ctx, gw, self, p)
 		if err == nil {
-			m.mapping = &mp
-			m.unmap = func(ctx context.Context) { _ = unmapPMP(ctx, gw, p) }
 			return mp, nil
 		}
-		errs = append(errs, fmt.Errorf("nat-pmp: %w", err))
+		errs = append(errs, err)
 	}
 	mp, unmap, err := mapUPnP(ctx, self, p)
 	if err == nil {
@@ -66,6 +70,31 @@ func (m *Mapper) Map(ctx context.Context, udp, tcp int) (Mapping, error) {
 	}
 	errs = append(errs, fmt.Errorf("upnp: %w", err))
 	return Mapping{}, errors.Join(append([]error{ErrNoRouter}, errs...)...)
+}
+
+// mapGateway asks the gateway over PCP, then over NAT-PMP.
+func (m *Mapper) mapGateway(ctx context.Context, gw, self netip.Addr, p Ports) (Mapping, error) {
+	if m.nonce == nil {
+		m.nonce = new([12]byte)
+		_, _ = rand.Read(m.nonce[:])
+	}
+	mp, unmap, err := mapPCP(ctx, gw, self, *m.nonce, p)
+	if err == nil {
+		m.mapping, m.unmap = &mp, unmap
+		return mp, nil
+	}
+	errs := []error{fmt.Errorf("pcp: %w", err)}
+	// A router that answered PCP and refused will not do better over NAT-PMP.
+	if !errors.Is(err, errPCPRefused) {
+		mp, err := mapPMP(ctx, gw, p)
+		if err == nil {
+			m.mapping = &mp
+			m.unmap = func(ctx context.Context) { _ = unmapPMP(ctx, gw, p) }
+			return mp, nil
+		}
+		errs = append(errs, fmt.Errorf("nat-pmp: %w", err))
+	}
+	return Mapping{}, errors.Join(errs...)
 }
 
 // Unmap removes what Map created.
@@ -102,10 +131,10 @@ func unmapPMP(ctx context.Context, gw netip.Addr, p Ports) error {
 	return err
 }
 
-// pmpRequest sends one NAT-PMP request and reads the answer (RFC 6886).
-func pmpRequest(ctx context.Context, gw netip.Addr, req []byte, respLen int) ([]byte, error) {
+// exchange sends one request to the router's PCP/NAT-PMP port and returns its answer.
+func exchange(ctx context.Context, gw netip.Addr, req []byte) ([]byte, error) {
 	var d net.Dialer
-	conn, err := d.DialContext(ctx, "udp4", netip.AddrPortFrom(gw, pmpPort).String())
+	conn, err := d.DialContext(ctx, "udp4", netip.AddrPortFrom(gw, routerPort).String())
 	if err != nil {
 		return nil, err
 	}
@@ -118,18 +147,27 @@ func pmpRequest(ctx context.Context, gw netip.Addr, req []byte, respLen int) ([]
 	if _, err := conn.Write(req); err != nil {
 		return nil, err
 	}
-	buf := make([]byte, 64)
+	buf := make([]byte, 1100)
 	n, err := conn.Read(buf)
 	if err != nil {
 		return nil, err
 	}
-	if n < respLen || buf[0] != 0 || buf[1] != req[1]+128 {
+	return buf[:n], nil
+}
+
+// pmpRequest sends one NAT-PMP request and reads the answer (RFC 6886).
+func pmpRequest(ctx context.Context, gw netip.Addr, req []byte, respLen int) ([]byte, error) {
+	buf, err := exchange(ctx, gw, req)
+	if err != nil {
+		return nil, err
+	}
+	if len(buf) < respLen || buf[0] != 0 || buf[1] != req[1]+128 {
 		return nil, errors.New("malformed answer")
 	}
 	if code := binary.BigEndian.Uint16(buf[2:4]); code != 0 {
 		return nil, fmt.Errorf("router refused (code %d)", code)
 	}
-	return buf[:n], nil
+	return buf, nil
 }
 
 func pmpExternal(ctx context.Context, gw netip.Addr) (netip.Addr, error) {
