@@ -2,8 +2,32 @@
 
 ## Current phase
 
-**Phase 4 — Screen share & stage: implemented, waiting for review.** Next: Phase 5 — Hosting &
-connectivity, the milestone where people on other networks can join.
+**Phase 5 — Hosting & connectivity: implemented, waiting for review and a test with the team.**
+The first three acceptance items need people on other networks; [HOSTING.md](HOSTING.md) and the
+manual script below are the steps. Next: Phase 6 — Drawing on shares.
+
+### Phase 5 acceptance
+
+- [ ] A teammate on a different ISP joins via the Funnel URL from a browser, hears voice and sees a
+      1080p60 share. Needs the team: manual script steps 2–6. Checked on one PC: a Cloudflare quick
+      tunnel served the app over HTTPS with the public host kept (same-origin checks pass), the
+      client address taken from Cloudflare, and tunnel visitors never treated as local.
+- [ ] With the host's router UPnP disabled and TURN configured, a client forced to `relay` connects
+      (relay test passes) and the admin panel shows the relayed session. Needs a Cloudflare TURN key:
+      manual script step 7. The relay test (a relay-only join of a diagnostics room), credential
+      minting (Cloudflare, coturn, static) and the relayed-session count are built and unit-tested;
+      this PC's router answers none of PCP, NAT-PMP or UPnP, so it is the right place to try.
+- [x] Switching exposure provider in the admin panel works without data loss; quick-tunnel URL
+      change is surfaced. Checked in the browser: local → Cloudflare quick tunnel → local from
+      Settings → Connectivity; the status and the public URL followed live over the gateway,
+      admins get a notice with the new address, and the hub warns when a quick tunnel's address
+      replaces an earlier one. Unit tests cover the service with a fake provider.
+- [x] TURN budget guard stops issuing credentials past the budget (test with a tiny budget): the
+      relay service's tests spend a 1 GB budget, check that no relay is issued, then override it.
+- [ ] Release artifacts run on a clean Windows machine by double-click → wizard opens. The release
+      workflow builds the archives on a tag; a Windows zip built locally holds `hub.exe`,
+      `livekit-server.exe` and a README, and the hub opens the setup page in the browser on first
+      run. A clean machine is manual script step 1.
 
 ### Phase 4 acceptance
 
@@ -121,6 +145,52 @@ connectivity, the milestone where people on other networks can join.
       typecheck + tests, build + Playwright smoke).
 
 ## Done
+
+### Phase 5 — Hosting & connectivity
+
+- **Ingresses.** Each way into the hub is its own listener tagged with an ingress
+  (`transport/ingress`): local or not, HTTPS or not, and whom to trust for the client address.
+  Setup, LiveKit webhooks and host options accept only the hub's own listener; cookies are
+  `Secure` and HSTS is sent whenever the client used HTTPS, even through a tunnel
+  ([ADR 0003](adr/0003-hosting-ingress-and-reachability.md)).
+- **Exposure.** Tailscale Funnel through an embedded tsnet node (login link in the admin panel,
+  guidance for HTTPS and Funnel permissions, log upload off), Cloudflare quick and named tunnels
+  (cloudflared downloaded on first use, pinned and checksummed, named tunnels on
+  `localhost:7301`), direct with Let's Encrypt (autocert, TLS-ALPN), LAN with a self-signed
+  certificate, and local. Settings live in the DB; the exposure service restarts the provider on
+  save, retries failures with backoff, keeps the public URL in step and pushes status changes to
+  instance admins.
+- **Relays (TURN).** Cloudflare Realtime TURN (credentials minted per join, port-53 URLs dropped),
+  coturn REST secrets and static credentials; the relay service is the voice ICE provider. Voice
+  clients report their connection path and relayed bytes every 30 s; the hub counts them per
+  month, projects the month, and stops issuing relays past the budget unless overridden.
+- **Doctor.** STUN from the media port before LiveKit binds it classifies the NAT (no internet
+  turns LiveKit's external IP lookup off instead of crash-looping), IPv6 over STUN, port forwarding
+  over PCP, NAT-PMP or UPnP kept up and removed on stop, and a rating with advice. Runs at start
+  and on demand; `hub doctor` runs the network checks from a console.
+- **Host options.** Keep awake (on by default), run at login and the Windows firewall rule
+  (elevation prompt), changeable only from the hosting machine. The hub opens the setup page in the
+  browser on first run, and a Windows console it was double-clicked into waits for Enter after an
+  error.
+- **Connectivity page** (Settings → Connectivity, instance admins): public address chooser and
+  live status, the self-test, relay settings with usage and a browser relay test, and the host
+  options. Setup finishes there. The public URL on the Instance page is read-only while a provider
+  sets it.
+- **Accounts.** Email change (password, then a link to the new address; immediate without SMTP)
+  and account deletion (password; owners and the last instance admin are refused; the account is
+  anonymized and hidden, leaving every server). The instance-admin flag now reaches a user's
+  sessions live (`ME_UPDATE`).
+- **Release.** `.github/workflows/release.yml` builds, on a `v*` tag, archives for Windows, macOS
+  and Linux on amd64 and arm64 with the pinned livekit-server, plus `checksums.txt`, into a draft
+  release. `task release:archive GOOS=… GOARCH=…` builds one locally.
+- **Docs.** [HOSTING.md](HOSTING.md): run, set up, Tailscale or Cloudflare, relay, Gmail, host
+  options, troubleshooting, ports and bandwidth.
+- **Tests.** Go: ingress client IP and locality, exposure service with a fake provider, relay
+  issuing, usage and budget, NAT classification and rating, port forwarding against a fake PCP and
+  NAT-PMP router, the doctor loop, host options, TURN providers against a fake Cloudflare, the
+  cloudflared installer, email change and deletion (service and SQLite). Web: transport meter,
+  telemetry reports, connectivity forms, dispatcher. Playwright: setup lands on Connectivity, email
+  change without SMTP (22 tests in all).
 
 ### Phase 4 — Screen share & stage
 
@@ -433,7 +503,7 @@ connectivity, the milestone where people on other networks can join.
   accident.
 - **Deferred:** email change and account deletion (`RequestEmailChange`, `DeleteAccount`).
   Deletion needs guild-ownership rules from Phase 2. Opening the browser on first run (§4.1) moves
-  to Phase 5's host experience.
+  to Phase 5's host experience. All three were done in Phase 5.
 - **Settings are a full-screen route** (`/settings/...`) rather than a modal over the app, so deep
   links and the back button work. Phase 2 can render it as a modal over the shell.
 
@@ -507,6 +577,28 @@ connectivity, the milestone where people on other networks can join.
 - **New dependencies:** github.com/livekit/protocol v1.52.1 (hub), github.com/livekit/server-sdk-go
   v2.19.0 (integration tests only), livekit-client 2.22.4, @sapphi-red/web-noise-suppressor 0.4.1.
 
+### Phase 5
+
+- No ledger decision was changed; [ADR 0003](adr/0003-hosting-ingress-and-reachability.md)
+  records the hosting design. ARCHITECTURE §4, §5, §7.3, §8.4 and §12 updated.
+- **Setup continues on the Connectivity page** instead of adding exposure, relay and test steps
+  to the wizard: the same page serves later changes, and the self-test needs the media server up.
+- **The self-test result is kept in memory,** refreshed at every start and on demand, rather than
+  stored.
+- **Relay budgets count decimal gigabytes**, as Cloudflare bills them.
+- **Rating "Excellent" with IPv6 alone** follows §4.4, though friends without IPv6 then depend on
+  the host's NAT; HOSTING.md recommends the free relay anyway.
+- **Account deletion anonymizes the row** (`deleted_at` was already in the schema) so audit
+  entries and bans keep their references; lookups skip deleted accounts, so history shows them as
+  "Someone".
+- **Run at login repeats the command line** the hub was started with (Windows `Run` key, macOS
+  LaunchAgent, Linux XDG autostart), not a service install.
+- **livekit-server for macOS is built from the pinned source on a Mac:** its CPU stats need cgo,
+  so the release jobs for macOS run on a macOS runner, and `task tools` keeps cgo on for native
+  source builds.
+- **New dependencies:** tailscale.com v1.104.1 (tsnet), github.com/huin/goupnp v1.3.0, github.com/pion/stun/v3 v3.1.7,
+  golang.org/x/crypto/acme/autocert (already a module), actions/download-artifact v8.0.2 (release).
+
 ### Phase 4
 
 - No ledger decision was changed.
@@ -532,12 +624,15 @@ connectivity, the milestone where people on other networks can join.
 
 ## Known issues
 
-- **Client IP is the TCP peer.** That is correct for direct connections. A tunnel or reverse proxy
-  on the same machine would make every client look local, though, which collapses per-IP rate
-  limits and makes setup "local" (the setup token still protects it). Each exposure provider must
-  supply its own `clientip.Resolver` in Phase 5.
-- **The session cookie is `Secure` only when the request arrived over TLS.** Phase 5 must set it
-  from the exposure provider, since tunnels terminate TLS before the hub.
+- **The release binaries are unsigned:** Windows SmartScreen and macOS Gatekeeper warn on first
+  run (HOSTING.md says how to proceed). The macOS release jobs have not run yet; the first tag
+  will show whether livekit-server builds there as expected.
+- **Run at login on Windows opens a console window** at sign-in (the hub is a console program);
+  a tray host comes with the desktop shell (Phase 7).
+- **The Cloudflare TURN API is called on every voice join;** credentials are not cached yet.
+- **A public URL left by a stopped provider stays** until the admin edits it or another provider
+  runs, so invite links may point at a dead quick tunnel.
+- **Advice and rating text in `hub doctor` are English only** (like the rest of the CLI).
 - Expired sessions and used or expired email tokens are never purged yet; a periodic cleanup job
   is still to come.
 - Replaced avatars and icons stay on disk, like expired sessions; the cleanup job will cover
@@ -550,17 +645,17 @@ connectivity, the milestone where people on other networks can join.
   (settings, server settings) is the next easy win.
 - Go's `Server.Shutdown` waits up to 5 s for connections a client opened but never used (for
   example a browser preconnect), so stopping the hub can take a few seconds.
-- **Browsers allow the microphone and screen sharing only on HTTPS or localhost.** Until Phase 5
-  gives the instance an HTTPS address, people on other machines cannot talk or share (they can
-  still open the app over the LAN with `http.addr` on a LAN address, and watch).
+- **Browsers allow the microphone and screen sharing only on HTTPS or localhost,** so people on
+  other machines need an exposure provider (any of them gives HTTPS; LAN uses a self-signed
+  certificate).
 - A client that dies without leaving stays in voice for ~20 s, until LiveKit gives up on it.
 - The sidecar stops with the hub, so restarting the hub also empties LiveKit's rooms. Clients
   reconnect on their own within LiveKit's retry window (~40 s) and the hub adopts them; after a
   longer outage people rejoin by hand.
 - Disabling or deleting an account ends its sessions but not a voice connection already up
   (LiveKit keeps refreshing its token); the next join is refused.
-- An offline host must run with `--livekit-external-ip=false`; otherwise LiveKit exits at start
-  and the supervisor keeps restarting it (the log says why). The Phase 5 doctor will detect this.
+- A host that loses internet after starting keeps LiveKit's last external address until the hub
+  restarts.
 - livekit-client logs some of its own races and data channel closings as console errors; the
   e2e error tracker ignores lines tagged with a LiveKit room.
 - **The codec numbers come from one PC** (Core Ultra 9, RTX 5070 laptop) with synthetic screens
@@ -574,6 +669,46 @@ connectivity, the milestone where people on other networks can join.
 - The stage shortcuts (G, F, arrows, Ctrl+Shift+S) are fixed until the Keybinds page.
 
 ## Manual test script
+
+### Phase 5
+
+Prerequisites: a Tailscale account (HOSTING.md step 3), optionally a Cloudflare account for the
+relay, and one or two people on other networks with Chrome or Edge.
+
+1. **Release.** Push a tag such as `v0.5.0` after merging; the Release workflow drafts a release
+   with six archives and `checksums.txt`. On a Windows PC that never ran the hub, download the
+   Windows zip, extract it and double-click `hub.exe` (SmartScreen: More info → Run anyway). The
+   browser opens the setup page.
+2. **Setup.** Finish the wizard; the Connectivity page opens and says only this machine can open
+   the hub.
+3. **Funnel.** Choose Tailscale Funnel, Save and restart, click Sign in to Tailscale and approve.
+   The status turns green with `https://….ts.net`, and Settings → Instance shows it as the public
+   URL (read-only). If it says HTTPS or Funnel is off, follow the message and wait a minute.
+4. **Invite.** Settings → Instance → Create invite link; send it to a teammate on another network.
+   They register and land in the app.
+5. **Voice.** Both join a voice channel: you hear each other. The voice panel's signal icon shows
+   Direct or Relayed.
+6. **Share.** Share a 1080p60 window; the teammate's stats overlay (Ctrl+Shift+S) shows 1920×1080
+   near 60 fps.
+7. **Relay.** Create a Cloudflare TURN key (HOSTING.md step 4), save it, press Test the relay: "The
+   relay works". With the teammate in a call, the usage box counts relayed connections when their
+   network needs the relay. Run the reachability test: with no port forwarding it suggests UPnP.
+8. **Budget.** Set the monthly budget to 1 GB on a test instance and have someone relay a few
+   minutes of a share: past 1 GB new joins get no relay and the panel says the budget is spent;
+   ticking "Keep the relay on" brings it back.
+9. **Switching.** Switch to Cloudflare quick tunnel: the address changes to `….trycloudflare.com`,
+   admins see a notice, and nothing else is lost (servers, members, settings). Switch back to
+   Funnel.
+10. **Host options.** On the hosting PC: untick and tick Keep awake, tick Start the hub when I
+   sign in and sign out and in again, and press Allow voice through Windows Firewall (Windows asks
+   to confirm). From another PC the page says these change only on the hosting machine.
+11. **Doctor.** In a console in the hub's folder, `hub doctor` prints the router type, addresses,
+   port forwarding and the rating.
+12. **Email (Gmail).** Set up Gmail (HOSTING.md step 5), send a test email; Settings → My account →
+   Change email sends a link to the new address, and opening it changes the address.
+13. **Delete.** A test account deletes itself from My account (password asked): it leaves every
+   server and cannot sign in again; its username can be registered anew.
+14. **Language.** In pt-BR every Connectivity text, notice and email is in Portuguese.
 
 ### Phase 4
 
