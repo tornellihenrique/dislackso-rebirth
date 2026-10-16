@@ -655,7 +655,7 @@ export const ptBR: Messages = {
       stats: 'Mostrar estatísticas em todas as telas (Ctrl+Shift+S)',
       advanced: 'Avançado',
       codecHint:
-        'O automático usa o codec que se saiu melhor nas medições. Quem não consegue decodificar a escolha recebe VP8.',
+        'O automático usa AV1 para texto e VP9 para movimento, que se saíram melhor nas medições. Quem não consegue decodificar a escolha recebe VP8.',
       codec: 'Codec de vídeo',
       codecs: {
         auto: 'Automático (recomendado)',

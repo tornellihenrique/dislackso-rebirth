@@ -649,7 +649,7 @@ export const en = {
       stats: 'Show stream stats on every screen (Ctrl+Shift+S)',
       advanced: 'Advanced',
       codecHint:
-        'Automatic uses the codec measured to work best. Viewers whose browser cannot decode the choice get VP8.',
+        'Automatic uses AV1 for text and VP9 for motion, which worked best in our measurements. Viewers whose browser cannot decode the choice get VP8.',
       codec: 'Video codec',
       codecs: {
         auto: 'Automatic (recommended)',

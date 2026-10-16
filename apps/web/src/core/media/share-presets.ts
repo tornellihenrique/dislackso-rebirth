@@ -65,22 +65,23 @@ export function presetsUpTo(cap: string): SharePreset[] {
 }
 
 /**
- * The codec 'auto' stands for, per optimization. Chosen from measurements
- * (docs/adr/0002-screen-share-codecs.md).
+ * The codecs 'auto' tries, per optimization, best first. Chosen from
+ * measurements (docs/adr/0002-screen-share-codecs.md): AV1 keeps text at the
+ * full frame rate where VP9 drops frames, and VP9 holds motion at less CPU.
  */
-export const DEFAULT_CODECS: Readonly<Record<OptimizeFor, ShareCodec>> = {
-  text: 'vp9',
-  motion: 'vp9',
+export const AUTO_CODECS: Readonly<Record<OptimizeFor, readonly ShareCodec[]>> = {
+  text: ['av1', 'vp9'],
+  motion: ['vp9'],
 };
 
-/** The codec to publish with: the choice when the browser can send it, else VP8. */
+/** The codec to publish with: the first wanted one the browser can send, else VP8. */
 export function pickCodec(
   choice: CodecChoice,
   optimize: OptimizeFor,
   canSend: (codec: ShareCodec) => boolean,
 ): ShareCodec {
-  const wanted = choice === 'auto' ? DEFAULT_CODECS[optimize] : choice;
-  return canSend(wanted) ? wanted : 'vp8';
+  const wanted = choice === 'auto' ? AUTO_CODECS[optimize] : [choice];
+  return wanted.find(canSend) ?? 'vp8';
 }
 
 /**

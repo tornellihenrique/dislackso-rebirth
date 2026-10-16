@@ -2,11 +2,22 @@ import { LayoutGrid, RectangleHorizontal, VideoOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { useServices } from '@/app/services';
+import { useOccupants } from '@/features/voice/hooks';
 import { useCall } from '@/stores/call';
 import { useShareSettings } from '@/stores/share-settings';
 import { dispatchStage, stageStore, useChannelStage } from '@/stores/stage';
 import { IconButton } from '@/ui/IconButton';
 import { Tooltip } from '@/ui/Tooltip';
+
+/** How many are in a voice channel, for its header. */
+export function VoiceCount({ guildId, channelId }: { guildId: string; channelId: string }) {
+  const { t } = useTranslation();
+  const count = useOccupants(guildId, channelId).length;
+  if (count === 0) return null;
+  return (
+    <span className="shrink-0 text-sm text-fg-muted">{t('voice.stage.inCount', { count })}</span>
+  );
+}
 
 /** Layout and "only video" toggles in the voice channel's header, while in its call. */
 export function StageHeaderActions({ channelId }: { channelId: string }) {

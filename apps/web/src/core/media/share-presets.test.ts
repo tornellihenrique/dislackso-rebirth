@@ -32,7 +32,15 @@ describe('pickCodec', () => {
   it('uses the choice the browser can send, and VP8 otherwise', () => {
     expect(pickCodec('h264', 'text', only('h264', 'vp8'))).toBe('h264');
     expect(pickCodec('av1', 'motion', only('vp8'))).toBe('vp8');
-    expect(pickCodec('auto', 'text', only('vp8'))).toBe('vp8');
+  });
+
+  it('picks AV1 for text and VP9 for motion by default, stepping down to what the browser has', () => {
+    const all = only('av1', 'vp9', 'vp8', 'h264');
+    expect(pickCodec('auto', 'text', all)).toBe('av1');
+    expect(pickCodec('auto', 'motion', all)).toBe('vp9');
+    // Safari sends VP9 but not AV1; Firefox neither.
+    expect(pickCodec('auto', 'text', only('vp9', 'vp8', 'h264'))).toBe('vp9');
+    expect(pickCodec('auto', 'text', only('vp8', 'h264'))).toBe('vp8');
   });
 });
 

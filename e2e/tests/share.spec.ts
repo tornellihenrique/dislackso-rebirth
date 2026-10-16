@@ -124,7 +124,8 @@ test('the video stays live across grid, focus and fullscreen', async () => {
 
   await page.keyboard.press('Control+Shift+S');
   await expect(page.getByTestId('share-stats')).toContainText('Resolution', CONNECT);
-  await expect(page.getByTestId('share-stats')).toContainText('VP9');
+  // Text optimization picks AV1 where the browser can send it.
+  await expect(page.getByTestId('share-stats')).toContainText('AV1');
   await page.keyboard.press('Control+Shift+S');
   await expect(page.getByTestId('share-stats')).toBeHidden();
 });
