@@ -192,6 +192,13 @@ manual script below are the steps. Next: Phase 6 — Drawing on shares.
   telemetry reports, connectivity forms, dispatcher. Playwright: setup lands on Connectivity, email
   change without SMTP (22 tests in all).
 
+- **After the first test with a friend:** the hub gives LiveKit its public IPv4 (voice never came
+  up on a host with broken IPv6), `task build` puts livekit-server next to the hub, images over
+  10 MB are refused before uploading (the hub's early refusal could reach the browser as a dropped
+  connection), the share tile's fullscreen button toggles, and dragging a server icon no longer
+  drags the link itself: dropping it used to make the browser open it, reloading the app and
+  ending the call. A page-wide guard keeps any other dropped link or file from doing the same.
+
 ### Phase 4 — Screen share & stage
 
 - **Hub.** The instance's share limits (`max_shares_per_channel`, `max_share_preset`) reach
