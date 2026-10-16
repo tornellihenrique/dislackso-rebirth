@@ -89,15 +89,27 @@ const (
 type ExposureStatus struct {
 	Kind  ExposureKind
 	State ExposureState
-	// URL is the public address while running.
+	// URL is the public address while running, and while waiting for it to answer.
 	URL string
 	// LoginURL is where the host signs the hub in (Tailscale).
 	LoginURL string
 	// Problem is one of the Problem* codes; Detail is the error text.
 	Problem string
 	Detail  string
-	Since   time.Time
+	// Stage is one of the Stage* codes, or empty.
+	Stage string
+	Since time.Time
 }
+
+// Stages of an address on its way up, so the admin panel can say what it waits for.
+const (
+	// StageCertificate: the HTTPS certificate is being issued.
+	StageCertificate = "certificate"
+	// StagePublishing: the address does not answer from the internet yet.
+	StagePublishing = "publishing"
+	// StageUnverified: serving, but the hub never reached the address from outside.
+	StageUnverified = "unverified"
+)
 
 // Hostname labels: letters, digits and dashes, as Tailscale accepts them.
 var hostnameRe = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`)

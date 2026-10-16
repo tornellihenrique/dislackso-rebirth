@@ -586,6 +586,12 @@ manual script below are the steps. Next: Phase 6 — Drawing on shares.
 - **The self-test result is kept in memory,** refreshed at every start and on demand, rather than
   stored.
 - **Relay budgets count decimal gigabytes**, as Cloudflare bills them.
+- **Funnel shows running only once its address works.** A new Funnel name reached public DNS about
+  eight minutes after it was enabled, and the certificate used to be issued during the first
+  visitor's handshake (about 40 s). The provider now fetches the certificate first, then checks
+  the address from outside (public DNS-over-HTTPS at Google, then Cloudflare, since the local
+  resolver may keep a cached "no such name"), reporting each stage; after 15 minutes it serves
+  anyway, marked unverified.
 - **Rating "Excellent" with IPv6 alone** follows §4.4, though friends without IPv6 then depend on
   the host's NAT; HOSTING.md recommends the free relay anyway.
 - **Account deletion anonymizes the row** (`deleted_at` was already in the schema) so audit

@@ -821,6 +821,13 @@ export const ptBR: Messages = {
         running: 'Acessível pelo {{provider}}.',
         failed: '{{provider}} não está funcionando.',
       },
+      stages: {
+        certificate: 'Obtendo um certificado HTTPS para o endereço…',
+        publishing:
+          'Esperando {{url}} funcionar pela internet. Na primeira vez, o Tailscale leva até 10 minutos para publicá-lo.',
+        unverified:
+          'O hub ainda não conseguiu abrir este endereço pela internet. Talvez ele ainda esteja a caminho; teste num celular com dados móveis.',
+      },
       choices: {
         tailscale: {
           label: 'Tailscale Funnel (recomendado)',

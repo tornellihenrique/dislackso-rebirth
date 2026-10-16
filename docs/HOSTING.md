@@ -59,8 +59,9 @@ carries its own Tailscale node.
 4. In the hub, choose **Tailscale Funnel**, keep the machine name (`dislackso`) or pick another,
    and **Save and restart**.
 5. The status shows **Sign in to Tailscale**. Open it, sign in with the account from step 1 and
-   approve the machine. Within a few seconds the status turns green with the address. The first
-   time, the new address can take up to 10 minutes to work from other networks.
+   approve the machine. The status then says it is getting a certificate, then that it waits for
+   the address to work from the internet: the first time, Tailscale takes up to 10 minutes to
+   publish it. It turns green once the hub has opened the address from outside itself.
 
 The sign-in is kept in the hub's data folder, so restarts need no new login.
 

@@ -26,6 +26,11 @@ import (
 const (
 	pollInterval = time.Second
 	drainTimeout = 5 * time.Second
+	certTimeout  = 3 * time.Minute
+	// Tailscale publishes a new Funnel name in public DNS within about ten
+	// minutes; past this the hub stops waiting and serves unverified.
+	publishWait = 15 * time.Minute
+	probeEvery  = 15 * time.Second
 )
 
 // Provider runs a tsnet node whose state lives in Dir, so it stays signed in
@@ -33,8 +38,11 @@ const (
 type Provider struct {
 	Dir      string
 	Hostname string
-	Logger   *slog.Logger
-	Clock    ports.Clock
+	// Probe confirms the address works from the internet before it is
+	// reported running; nil reports it at once.
+	Probe  ports.PublicProbe
+	Logger *slog.Logger
+	Clock  ports.Clock
 }
 
 func (p *Provider) Kind() domain.ExposureKind { return domain.ExposureTailscaleFunnel }
@@ -102,9 +110,7 @@ func (p *Provider) Run(ctx context.Context, handler http.Handler, report func(do
 		_ = ln.Close()
 		return &ports.ExposureError{Problem: domain.ProblemTailscaleHTTPS, Err: errors.New("no certificate domain")}
 	}
-	s := p.status(domain.ExposureRunning)
-	s.URL = "https://" + domains[0]
-	report(s)
+	url := "https://" + domains[0]
 	info := ingress.Info{
 		Name:        string(domain.ExposureTailscaleFunnel),
 		Secure:      true,
@@ -112,10 +118,69 @@ func (p *Provider) Run(ctx context.Context, handler http.Handler, report func(do
 		ClientIP:    clientIP,
 		ConnContext: connContext,
 	}
-	if err := ingress.Serve(ctx, ln, handler, info, p.Logger, drainTimeout); err != nil && ctx.Err() == nil {
+	serveCtx, stopServing := context.WithCancel(ctx)
+	defer stopServing()
+	served := make(chan error, 1)
+	go func() { served <- ingress.Serve(serveCtx, ln, handler, info, p.Logger, drainTimeout) }()
+	stop := func(err error) error {
+		stopServing()
+		<-served
+		if ctx.Err() == nil {
+			return err
+		}
+		return nil
+	}
+
+	// The certificate is otherwise issued during the first visitor's
+	// handshake, which then waits about a minute.
+	report(p.stage(domain.ExposureStarting, domain.StageCertificate, url))
+	certCtx, cancel := context.WithTimeout(serveCtx, certTimeout)
+	_, _, err = lc.CertPair(certCtx, domains[0])
+	cancel()
+	if err != nil {
+		return stop(&ports.ExposureError{Problem: domain.ProblemCertificate, Err: err})
+	}
+
+	running := p.stage(domain.ExposureRunning, "", url)
+	if p.Probe != nil {
+		report(p.stage(domain.ExposureStarting, domain.StagePublishing, url))
+		if !awaitPublished(serveCtx, p.Probe, url+"/", probeEvery, publishWait) {
+			if ctx.Err() != nil {
+				return stop(nil)
+			}
+			running.Stage = domain.StageUnverified
+		}
+	}
+	report(running)
+	if err := <-served; err != nil && ctx.Err() == nil {
 		return &ports.ExposureError{Problem: domain.ProblemExposureFailed, Err: err}
 	}
 	return nil
+}
+
+func (p *Provider) stage(state domain.ExposureState, stage, url string) domain.ExposureStatus {
+	s := p.status(state)
+	s.Stage, s.URL = stage, url
+	return s
+}
+
+// awaitPublished tries url every interval until it answers from the
+// internet or limit passes, and reports whether it answered.
+func awaitPublished(ctx context.Context, probe ports.PublicProbe, url string, interval, limit time.Duration) bool {
+	deadline := time.Now().Add(limit)
+	for {
+		if probe.Reachable(ctx, url) == nil {
+			return true
+		}
+		if time.Now().After(deadline) {
+			return false
+		}
+		select {
+		case <-ctx.Done():
+			return false
+		case <-time.After(interval):
+		}
+	}
 }
 
 // funnelProblem tells the admin what to change in Tailscale.

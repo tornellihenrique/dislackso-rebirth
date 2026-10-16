@@ -812,6 +812,13 @@ export const en = {
         running: 'Reachable through {{provider}}.',
         failed: '{{provider}} is not working.',
       },
+      stages: {
+        certificate: 'Getting an HTTPS certificate for the address…',
+        publishing:
+          'Waiting for {{url}} to work from the internet. The first time, Tailscale takes up to 10 minutes to publish it.',
+        unverified:
+          'The hub could not open this address from the internet yet. It may still be on its way; try it from a phone on mobile data.',
+      },
       choices: {
         tailscale: {
           label: 'Tailscale Funnel (recommended)',

@@ -168,7 +168,8 @@ func (s *Service) report(ctx context.Context, st domain.ExposureStatus) {
 	s.mu.Lock()
 	prev := s.status
 	if prev.Kind == st.Kind && prev.State == st.State && prev.URL == st.URL &&
-		prev.LoginURL == st.LoginURL && prev.Problem == st.Problem && prev.Detail == st.Detail {
+		prev.LoginURL == st.LoginURL && prev.Problem == st.Problem && prev.Detail == st.Detail &&
+		prev.Stage == st.Stage {
 		s.mu.Unlock()
 		return
 	}
