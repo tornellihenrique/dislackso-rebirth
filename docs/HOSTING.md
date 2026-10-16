@@ -44,9 +44,18 @@ carries its own Tailscale node.
 2. In the admin console, open **DNS**. Check that **MagicDNS** is on (it is for new accounts), and
    under **HTTPS Certificates** choose **Enable HTTPS**. Tailscale warns that machine names
    appear in public certificate logs; that is expected.
-3. Still in the admin console, open **Access controls**, find the **Funnel** section and choose
-   **Add Funnel to policy**. Funnel stays off for every machine until this is done; it lets all
-   members of your tailnet use it.
+3. Allow Funnel in the tailnet policy; Funnel stays off for every machine until you do. In the
+   admin console, open **Access controls → JSON editor**. Just after the first `{`, add:
+
+   ```json
+   "nodeAttrs": [
+     { "target": ["autogroup:member"], "attr": ["funnel"] },
+   ],
+   ```
+
+   If the policy already has a `"nodeAttrs": [` line, add only the middle line inside that list.
+   Leave the existing access rules as they are and **Save**; the editor refuses to save a policy
+   with a mistake in it.
 4. In the hub, choose **Tailscale Funnel**, keep the machine name (`dislackso`) or pick another,
    and **Save and restart**.
 5. The status shows **Sign in to Tailscale**. Open it, sign in with the account from step 1 and
@@ -144,7 +153,7 @@ On the Connectivity page, from the hosting machine itself:
 | Status or symptom | Fix |
 |---|---|
 | "Turn on HTTPS certificates for your tailnet" | Tailscale admin console → DNS → HTTPS Certificates → Enable. |
-| "Your tailnet does not allow Funnel" | Admin console → Access controls → Funnel → **Add Funnel to policy**; wait a minute. |
+| "Your tailnet does not allow Funnel" | Add the `funnel` node attribute in Access controls → JSON editor (step 3 of the Tailscale path); wait a minute. |
 | "Could not download cloudflared" | The hub retries; check that GitHub is reachable from this machine. |
 | "Another program uses that port" | Something else listens on the address (443, 7443 or 7301); stop it or choose another. |
 | Calls connect at home but not for friends | Run the reachability test; add a relay; allow the firewall rule. |
