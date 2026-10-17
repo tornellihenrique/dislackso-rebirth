@@ -1040,8 +1040,10 @@ type InstanceInfo struct {
 	MaxSharesPerChannel int32 `protobuf:"varint,8,opt,name=max_shares_per_channel,json=maxSharesPerChannel,proto3" json:"max_shares_per_channel,omitempty"`
 	// The highest screen share preset ("1440p60"); a channel may set a lower one.
 	MaxSharePreset string `protobuf:"bytes,9,opt,name=max_share_preset,json=maxSharePreset,proto3" json:"max_share_preset,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// The longest a drawn stroke may stay before it fades.
+	StrokeHoldMaxMs int32 `protobuf:"varint,10,opt,name=stroke_hold_max_ms,json=strokeHoldMaxMs,proto3" json:"stroke_hold_max_ms,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *InstanceInfo) Reset() {
@@ -1135,6 +1137,13 @@ func (x *InstanceInfo) GetMaxSharePreset() string {
 		return x.MaxSharePreset
 	}
 	return ""
+}
+
+func (x *InstanceInfo) GetStrokeHoldMaxMs() int32 {
+	if x != nil {
+		return x.StrokeHoldMaxMs
+	}
+	return 0
 }
 
 type Ready struct {
@@ -2233,7 +2242,7 @@ const file_dislackso_gateway_v1_gateway_proto_rawDesc = "" +
 	"\n" +
 	"bytes_sent\x18\x03 \x01(\x04R\tbytesSent\x12%\n" +
 	"\x0ebytes_received\x18\x04 \x01(\x04R\rbytesReceived\x12\x15\n" +
-	"\x06rtt_ms\x18\x05 \x01(\x05R\x05rttMs\"\xa7\x03\n" +
+	"\x06rtt_ms\x18\x05 \x01(\x05R\x05rttMs\"\xd4\x03\n" +
 	"\fInstanceInfo\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12,\n" +
 	"\x12members_can_invite\x18\x02 \x01(\bR\x10membersCanInvite\x128\n" +
@@ -2243,7 +2252,9 @@ const file_dislackso_gateway_v1_gateway_proto_rawDesc = "" +
 	"\x18default_voice_user_limit\x18\x06 \x01(\x05R\x15defaultVoiceUserLimit\x12\"\n" +
 	"\rmax_upload_mb\x18\a \x01(\x05R\vmaxUploadMb\x123\n" +
 	"\x16max_shares_per_channel\x18\b \x01(\x05R\x13maxSharesPerChannel\x12(\n" +
-	"\x10max_share_preset\x18\t \x01(\tR\x0emaxSharePreset\"\xba\x01\n" +
+	"\x10max_share_preset\x18\t \x01(\tR\x0emaxSharePreset\x12+\n" +
+	"\x12stroke_hold_max_ms\x18\n" +
+	" \x01(\x05R\x0fstrokeHoldMaxMs\"\xba\x01\n" +
 	"\x05Ready\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12 \n" +

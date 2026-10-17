@@ -136,6 +136,8 @@ message InstanceInfo {
   int32 max_shares_per_channel = 8;
   // The highest screen share preset ("1440p60"); a channel may set a lower one.
   string max_share_preset = 9;
+  // The longest a drawn stroke may stay before it fades.
+  int32 stroke_hold_max_ms = 10;
 }
 
 message Ready {
