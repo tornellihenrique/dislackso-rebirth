@@ -184,6 +184,17 @@ mode. Phase 6 (drawing) is merged and in use.
 
 ## Done
 
+### Phase 7 — After the first evening with the desktop app
+
+- **Laser color:** the laser packet carries its color (`Laser.color_rgba`); it used to borrow the
+  author's last stroke color.
+- **Picker quality:** the desktop picker has the quality preset next to the sound checkbox; the
+  share reads the preset once the user picked, so a change there applies to that share.
+- **Closing settings** (and server settings, within the same server) goes back to the page they
+  were opened from instead of home.
+- **Strokes fade per author:** an author's strokes on a share hold while they keep drawing and fade
+  together after their last line.
+
 ### Phase 7 — Desktop shell (part 2: installers and updates)
 
 - **Installers** (electron-builder 26.17, `task desktop:dist`): Windows NSIS one-click for the
@@ -709,6 +720,10 @@ mode. Phase 6 (drawing) is merged and in use.
   into the main process: preloads can load no other file, and workspace packages ship TypeScript.
 - **The desktop e2e runs locally, not in CI:** it shares and draws on the real screen, and capture
   protection is a Windows (and macOS) feature.
+- **Strokes fade per author and share,** at the team's request: lines drawn one after another stay
+  until their author stops drawing, then fade together after the hold.
+- **Settings return to the last app page** (home or a channel), remembered from the router's
+  resolved locations; sign-in and settings pages are never return targets.
 - **electron-builder 26.17.0 and electron-updater 6.8.10.** The updater is bundled into the main
   process with everything else, so packaging never walks pnpm's `node_modules`.
   electron-winstaller's install script (Squirrel.Windows, unused by NSIS) is denied in

@@ -279,3 +279,39 @@ describe('laser', () => {
     expect(bob.active(BOB_SHARE)).toBe(false);
   });
 });
+
+describe('fading', () => {
+  it('holds every stroke of an author while they keep drawing, then fades them together', () => {
+    drawLine(BOB_SHARE, 3);
+    now += 2500;
+    deliver(ana, bob, ana.begin(BOB_SHARE, pen, { x: 0.2, y: 0.8 }));
+    deliver(ana, bob, ana.flush());
+    // The first line's own hold is over, but its author is drawing again.
+    now += 1000;
+    expect(bob.scene(BOB_SHARE).strokes.map((s) => s.alpha)).toEqual([1, 1]);
+    deliver(ana, bob, ana.end());
+    now += 3000;
+    expect(bob.scene(BOB_SHARE).strokes.map((s) => s.alpha)).toEqual([1, 1]);
+    now += FADE_MS;
+    expect(bob.scene(BOB_SHARE).strokes).toHaveLength(0);
+  });
+
+  it("lets each author's strokes fade on their own", () => {
+    drawLine(BOB_SHARE, 3);
+    now += 2500;
+    deliver(bob, ana, bob.begin(BOB_SHARE, pen, { x: 0.9, y: 0.9 }));
+    deliver(bob, ana, bob.flush());
+    now += 1000 + FADE_MS;
+    expect(ana.scene(BOB_SHARE).strokes.map((s) => s.author)).toEqual(['bob']);
+  });
+});
+
+describe('laser color', () => {
+  it('travels with the laser, whatever color the last stroke had', () => {
+    drawLine(BOB_SHARE, 2);
+    ana.laser(BOB_SHARE, { x: 0.5, y: 0.5 }, 0x00ff00ff);
+    deliver(ana, bob, ana.flush());
+    expect(bob.scene(BOB_SHARE).lasers[0]?.color).toBe(0x00ff00ff);
+    expect(ana.scene(BOB_SHARE).lasers[0]?.color).toBe(0x00ff00ff);
+  });
+});

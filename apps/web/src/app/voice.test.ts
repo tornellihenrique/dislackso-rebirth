@@ -81,11 +81,13 @@ class FakeSession {
   setStreamVolume(identity: string, volume: number) {
     this.calls.push(`streamVolume ${identity}=${String(volume)}`);
   }
-  startShare(req: { preset: string }) {
-    this.calls.push(`startShare ${req.preset}`);
+  startShare(req: { preset: () => string }) {
+    const preset = req.preset();
+    this.calls.push(`startShare ${preset}`);
     return Promise.resolve({
       trackSid: 'TR_self',
       codec: 'vp9',
+      preset,
       audio: false,
       ownAudioWarning: false,
     });

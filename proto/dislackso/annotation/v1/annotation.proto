@@ -80,6 +80,8 @@ message Laser {
   uint32 x = 2;
   uint32 y = 3;
   bool ended = 4;
+  // 0 from older clients, which draw in the author's last stroke color.
+  fixed32 color_rgba = 5;
 }
 
 // Whether others may draw on a share; only its owner may send it.

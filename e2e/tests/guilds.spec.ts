@@ -238,3 +238,19 @@ test('servers reorder by dragging in the rail without leaving the page', async (
   expect(await page.evaluate(() => (window as unknown as { stayed?: boolean }).stayed)).toBe(true);
   expect(admin.errors).toEqual([]);
 });
+
+test('closing settings goes back to the channel they were opened from', async () => {
+  const { page } = admin;
+  await channels(page).getByRole('link', { name: 'general', exact: true }).click();
+  await expect(page).toHaveURL(/\/channels\/\d+\/\d+$/);
+  const channel = page.url();
+  await page.getByRole('link', { name: 'User settings' }).click();
+  await page.getByRole('link', { name: 'Voice & audio' }).click();
+  await expect(page).toHaveURL('/settings/voice');
+  await page.keyboard.press('Escape');
+  await expect(page).toHaveURL(channel);
+
+  await page.getByRole('link', { name: 'User settings' }).click();
+  await page.getByRole('button', { name: 'Close settings' }).click();
+  await expect(page).toHaveURL(channel);
+});

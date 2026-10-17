@@ -463,7 +463,7 @@ Top bar: channel name, participant count, layout toggle, "hide no-video", chat t
 - Anyone in the channel can draw on **any** share in that channel, including the sharer on their own share (desktop: overlay draw mode; browser: on their self-preview tile).
 - The **sharer** can disable drawing for their share ("Allow drawing" toggle, default from their settings, default on). Channel setting `drawing_allowed` can disable it channel-wide (admins).
 - Activate: pen button on a share tile (or `D` on the focused share). Cursor becomes a pen; left-drag draws; `Esc` or right-click exits. A compact toolbar replaces the tile's hover toolbar: tool, color, size, "undo my last", "clear mine", snapshot (sharer also sees "clear all" and "stop others from drawing").
-- **Lifespan (never infinite):** a stroke stays fully opaque while drawn and for `hold` after pointer-up, then fades over 800 ms. `hold` options 2/3/5/8 s (default 3 s), capped by instance setting (max 10 s). The author's choice travels with the stroke so every viewer sees the same timing.
+- **Lifespan (never infinite):** an author's strokes on a share stay fully opaque while they draw and for `hold` after their last pointer-up there, then fade together over 800 ms; drawing a new line keeps the earlier ones. `hold` options 2/3/5/8 s (default 3 s), capped by instance setting (max 10 s). The author's choice travels with the stroke so every viewer sees the same timing.
 - **Name tag**: author display name in a pill (author color) next to the pen tip while drawing and 1.5 s after.
 - **Customization (per user)**: color (8 presets + custom hex; default auto-assigned from user id), size S/M/L, tool, hold time, "show name tags" on/off.
 - Tools: **Pen** (smoothed freehand), **Highlighter** (3× width, 35 % alpha), **Arrow** (drag start→end, arrowhead), **Laser** (glowing dot + 600 ms trail while the button is held, no persistence; repeated every second while held still, dropped after 2.5 s without news).
@@ -482,7 +482,7 @@ AnnotationPacket { oneof {
   StrokeEnd   { stroke_id, total_points, packed_points (full set, repairs lossy gaps) }       // reliable
   Undo        { stroke_id }                                                                  // reliable
   Clear       { target_track_sid, scope: MINE|ALL }                                         // reliable; ALL only from sharer
-  Laser       { target_track_sid, x, y, ended }                                             // lossy
+  Laser       { target_track_sid, x, y, ended, color_rgba }                                 // lossy
   ShareDrawingPolicy { target_track_sid, allowed }                                          // reliable, from sharer
 }}
 ```
@@ -657,7 +657,7 @@ interface DesktopBridge {
 ```
 
 ### 16.4 Screen picker & system audio
-`session.setDisplayMediaRequestHandler` → bridge emits `onPickRequested` → web app renders its own picker (screens/windows tabs with thumbnails from `desktopCapturer`, refreshed every 2 s, "share your computer's sound" checkbox) → `choose(id, {audio})`. An unanswered request is refused after 2 minutes; only the instance's origin may ask. Windows: `audio: 'loopback'` for system audio (screen sources). macOS/Linux system audio: best effort per current Electron capabilities; otherwise hide the checkbox. On macOS 15+, optionally use the system picker.
+`session.setDisplayMediaRequestHandler` → bridge emits `onPickRequested` → web app renders its own picker (screens/windows tabs with thumbnails from `desktopCapturer`, refreshed every 2 s, the quality preset, "share your computer's sound" checkbox; the share reads the preset after the choice) → `choose(id, {audio})`. An unanswered request is refused after 2 minutes; only the instance's origin may ask. Windows: `audio: 'loopback'` for system audio (screen sources). macOS/Linux system audio: best effort per current Electron capabilities; otherwise hide the checkbox. On macOS 15+, optionally use the system picker.
 
 ### 16.5 Drawing overlay (sharer's real screen)
 - One transparent, frameless, non-focusable, always-on-top (`screen-saver` level), click-through (`setIgnoreMouseEvents(true, {forward: true})`) window covering the shared display; `setContentProtection(true)` so it is excluded from capture (verify per OS; macOS 15+ capture may ignore it — acceptable).

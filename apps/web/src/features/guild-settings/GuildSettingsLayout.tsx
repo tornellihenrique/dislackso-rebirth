@@ -1,9 +1,10 @@
 import { Link, Navigate, Outlet, useNavigate, useParams } from '@tanstack/react-router';
 import { X } from 'lucide-react';
-import { useEffect, type ReactNode } from 'react';
+import { useCallback, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useCan, useGuild } from '@/features/guild/hooks';
+import { navigationStore } from '@/stores/navigation';
 import { useRealtime } from '@/stores/realtime';
 
 type Section = 'overview' | 'channels' | 'members' | 'invites' | 'bans' | 'audit-log' | 'danger';
@@ -39,15 +40,25 @@ export function GuildSettingsLayout() {
   const allowed = useCan(guildId, 'updateGuild');
   const owner = useCan(guildId, 'deleteGuild');
 
+  // Back to the channel settings were opened from, when it is in this guild.
+  const close = useCallback(() => {
+    const back = navigationStore.getState().returnTo;
+    if (back === `/channels/${guildId}` || back.startsWith(`/channels/${guildId}/`)) {
+      void navigate({ href: back });
+    } else {
+      void navigate({ to: '/channels/$guildId', params: { guildId } });
+    }
+  }, [navigate, guildId]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') void navigate({ to: '/channels/$guildId', params: { guildId } });
+      if (e.key === 'Escape') close();
     };
     window.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('keydown', onKey);
     };
-  }, [navigate, guildId]);
+  }, [close]);
 
   if (!guild || !allowed) {
     if (!loaded) return null;
@@ -101,15 +112,15 @@ export function GuildSettingsLayout() {
         </div>
       </main>
       <div className="shrink-0 bg-main p-6">
-        <Link
-          to="/channels/$guildId"
-          params={{ guildId }}
+        <button
+          type="button"
+          onClick={close}
           aria-label={t('settings.close')}
           title={t('settings.close')}
           className="flex size-9 items-center justify-center rounded-full border-2 border-fg-muted text-fg-muted hover:border-fg hover:text-fg"
         >
           <X aria-hidden className="size-5" />
-        </Link>
+        </button>
       </div>
     </div>
   );

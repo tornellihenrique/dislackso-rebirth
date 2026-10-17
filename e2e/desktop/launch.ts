@@ -1,4 +1,5 @@
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdtempSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,11 +34,8 @@ export function launchDesktop(env: Record<string, string>): Promise<ElectronAppl
       env: withEnv(env),
     });
   }
-  const electronPath = join(
-    desktopDir,
-    'node_modules/electron/dist',
-    readFileSync(join(desktopDir, 'node_modules/electron/path.txt'), 'utf8'),
-  );
+  // The electron package downloads its binary on first use and returns its path.
+  const electronPath = createRequire(join(desktopDir, 'package.json'))('electron') as string;
   return electron.launch({
     executablePath: electronPath,
     args: [join(desktopDir, 'out/main/index.js'), lang],

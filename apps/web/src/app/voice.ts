@@ -396,11 +396,12 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
     }
     const s = shareSettingsStore.getState();
     const channel = entitiesStore.getState().channels[call.channelId];
-    const preset = capPreset(
-      s.preset,
-      instance?.maxSharePreset ?? '',
-      channel?.maxShareQuality ?? '',
-    );
+    const preset = () =>
+      capPreset(
+        shareSettingsStore.getState().preset,
+        instance?.maxSharePreset ?? '',
+        channel?.maxShareQuality ?? '',
+      );
     const gen = this.generation;
     dispatchCall({ type: 'localShare', share: { status: 'starting' } });
     try {
@@ -411,7 +412,7 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
         share: {
           status: 'live',
           trackSid: info.trackSid,
-          preset,
+          preset: info.preset,
           codec: info.codec,
           audio: info.audio,
         },
