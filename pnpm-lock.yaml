@@ -331,6 +331,9 @@ importers:
       '@connectrpc/connect-web':
         specifier: 'catalog:'
         version: 2.2.0(@bufbuild/protobuf@2.16.0)(@connectrpc/connect@2.2.0(@bufbuild/protobuf@2.16.0))
+      '@dislackso/annotation':
+        specifier: workspace:*
+        version: link:../../packages/annotation
       '@dislackso/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -449,6 +452,25 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
+
+  packages/annotation:
+    dependencies:
+      '@bufbuild/protobuf':
+        specifier: 'catalog:'
+        version: 2.16.0
+      '@dislackso/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+    devDependencies:
+      '@dislackso/config':
+        specifier: workspace:*
+        version: link:../config
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.4(@types/node@26.6.5)(jsdom@30.1.2)(vite@8.3.4(@types/node@26.6.5)(jiti@2.7.0))
 
   packages/config:
     dependencies:
