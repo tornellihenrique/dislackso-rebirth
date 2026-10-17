@@ -21,7 +21,7 @@ import { MicProcessor, type MicLevel, type MicSettings } from './mic-processor';
 import { RemoteAudio } from './remote-audio';
 import { startShare, stopShare, type LocalShare, type ShareRequest } from './screen-share';
 import { ShareError } from './share-error';
-import type { ShareCodec } from './share-presets';
+import type { ShareCodec, SharePreset } from './share-presets';
 import { SELF_SHARE, type ShareViews } from './share-views';
 import {
   readConnection,
@@ -59,6 +59,7 @@ export interface LocalShareInfo {
   /** The published track's SID: drawing on the share names it. */
   readonly trackSid: string;
   readonly codec: ShareCodec;
+  readonly preset: SharePreset;
   readonly audio: boolean;
   readonly ownAudioWarning: boolean;
 }
@@ -323,6 +324,7 @@ export class VoiceSession {
     return {
       trackSid: share.video.sid ?? '',
       codec: share.codec,
+      preset: share.preset,
       audio: share.audio !== undefined,
       ownAudioWarning: share.ownAudioWarning,
     };

@@ -21,7 +21,8 @@ import {
 } from './share-presets';
 
 export interface ShareRequest {
-  readonly preset: SharePreset;
+  /** Read again once the user picked what to share: a picker may change it. */
+  readonly preset: () => SharePreset;
   readonly codec: CodecChoice;
 }
 
@@ -29,6 +30,7 @@ export interface LocalShare {
   readonly video: LocalVideoTrack;
   readonly audio: LocalAudioTrack | undefined;
   readonly codec: ShareCodec;
+  readonly preset: SharePreset;
   /** Audio is shared but the browser cannot keep this call's voices out of it. */
   readonly ownAudioWarning: boolean;
   /** The user ended it with the browser's own "Stop sharing". */
@@ -76,7 +78,7 @@ export async function startShare(room: Room, req: ShareRequest): Promise<LocalSh
   };
   const restrictOwnAudio = supported.restrictOwnAudio === true;
   const options: DisplayOptions = {
-    video: captureConstraints(req.preset),
+    video: captureConstraints(req.preset()),
     audio: {
       echoCancellation: false,
       noiseSuppression: false,
@@ -111,10 +113,11 @@ export async function startShare(room: Room, req: ShareRequest): Promise<LocalSh
     },
     { once: true },
   );
-  const enc = shareEncoding(req.preset, pickCodec(req.codec, tuningFor(req.preset), canSend));
+  const preset = req.preset();
+  const enc = shareEncoding(preset, pickCodec(req.codec, tuningFor(preset), canSend));
   videoTrack.contentHint = enc.contentHint;
   // Desktop sources ignore some constraints given at capture time.
-  await videoTrack.applyConstraints(captureConstraints(req.preset)).catch(() => undefined);
+  await videoTrack.applyConstraints(captureConstraints(preset)).catch(() => undefined);
   const video = new LocalVideoTrack(videoTrack, undefined, false);
   video.source = Track.Source.ScreenShare;
   const audio = audioTrack ? new LocalAudioTrack(audioTrack, undefined, false) : undefined;
@@ -162,6 +165,7 @@ export async function startShare(room: Room, req: ShareRequest): Promise<LocalSh
     video,
     audio,
     codec: enc.codec,
+    preset,
     ownAudioWarning: audio !== undefined && !restrictOwnAudio,
     stoppedInBrowser: () => stoppedInBrowser,
   };

@@ -9,7 +9,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { desktopBridge } from '@/core/platform/desktop';
-import { renderWithProviders } from '@/test/render';
+import { renderWithProviders, stubVoice } from '@/test/render';
 
 import { ScreenPicker } from './ScreenPicker';
 
@@ -78,6 +78,19 @@ describe('ScreenPicker', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(cancel).toHaveBeenCalledOnce();
     expect(choose).not.toHaveBeenCalled();
+  });
+
+  it('changes the quality of the share being started', async () => {
+    const user = userEvent.setup();
+    const { bridge, request } = fakeBridge();
+    const setShareSettings = vi.fn();
+    await renderWithProviders(<ScreenPicker desktop={bridge} />, {
+      services: { voice: { ...stubVoice(), setShareSettings } },
+    });
+    request({ audioRequested: true, systemAudio: true });
+    await screen.findByRole('button', { name: 'Screen 1' });
+    await user.selectOptions(screen.getByLabelText('Quality'), '1440p60');
+    expect(setShareSettings).toHaveBeenCalledWith({ preset: '1440p60' });
   });
 });
 

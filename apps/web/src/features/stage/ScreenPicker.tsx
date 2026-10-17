@@ -2,9 +2,15 @@ import type { CaptureSource, DesktopBridge, PickRequest } from '@dislackso/deskt
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useServices } from '@/app/services';
+import { capPreset, isSharePreset, presetsUpTo } from '@/core/media/share-presets';
+import { useCall } from '@/stores/call';
+import { useShareSettings } from '@/stores/share-settings';
 import { Button } from '@/ui/Button';
 import { Dialog, DialogFooter } from '@/ui/Dialog';
-import { CheckboxField } from '@/ui/Fields';
+import { CheckboxField, SelectField } from '@/ui/Fields';
+
+import { useShareCap } from './hooks';
 
 interface ScreenPickerProps {
   desktop: DesktopBridge;
@@ -15,11 +21,18 @@ const REFRESH_MS = 2000;
 
 /**
  * Chooses what to share in the desktop app, which has no browser picker
- * (ARCHITECTURE §16.4): screens and windows with live thumbnails, and the
- * system's audio where the app can capture it.
+ * (ARCHITECTURE §16.4): screens and windows with live thumbnails, the
+ * quality, and the system's audio where the app can capture it.
  */
 export function ScreenPicker({ desktop }: ScreenPickerProps) {
   const { t } = useTranslation();
+  const { voice } = useServices();
+  const channelId = useCall((s) => s.channelId);
+  const cap = useShareCap(channelId);
+  const preset = capPreset(
+    useShareSettings((s) => s.preset),
+    cap,
+  );
   const [request, setRequest] = useState<PickRequest | null>(null);
   const [sources, setSources] = useState<readonly CaptureSource[] | null>(null);
   const [kind, setKind] = useState<'screen' | 'window'>('screen');
@@ -126,15 +139,31 @@ export function ScreenPicker({ desktop }: ScreenPickerProps) {
           ))}
         </ul>
       )}
-      {withAudio && (
-        <CheckboxField
-          label={t('desktop.picker.audio')}
-          checked={audio}
+      <div className="grid items-end gap-4 sm:grid-cols-2">
+        <SelectField
+          label={t('stage.share.quality')}
+          value={preset}
           onChange={(e) => {
-            setAudio(e.target.checked);
+            const v = e.target.value;
+            if (isSharePreset(v)) voice.setShareSettings({ preset: v });
           }}
-        />
-      )}
+        >
+          {presetsUpTo(cap).map((p) => (
+            <option key={p} value={p}>
+              {t(`stage.presets.${p}`)}
+            </option>
+          ))}
+        </SelectField>
+        {withAudio && (
+          <CheckboxField
+            label={t('desktop.picker.audio')}
+            checked={audio}
+            onChange={(e) => {
+              setAudio(e.target.checked);
+            }}
+          />
+        )}
+      </div>
       <DialogFooter>
         <Button
           variant="secondary"
