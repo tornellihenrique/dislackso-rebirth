@@ -3,6 +3,10 @@ packages:
   - packages/*
   - e2e
 
+allowBuilds:
+  # electron-builder's Squirrel.Windows support; the NSIS installer does not use it.
+  electron-winstaller: false
+
 catalog:
   '@bufbuild/protobuf': 2.16.0
   '@bufbuild/protoc-gen-es': 2.16.0
@@ -28,6 +32,8 @@ catalog:
   '@types/react-dom': 19.3.0
   '@vitejs/plugin-react': 6.1.2
   electron: 44.8.0
+  electron-builder: 26.17.0
+  electron-updater: 6.8.10
   electron-vite: 6.0.0
   eslint: 10.12.0
   eslint-plugin-react-hooks: 7.1.1

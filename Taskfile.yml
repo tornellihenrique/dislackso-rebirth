@@ -154,6 +154,16 @@ tasks:
       - task: build:desktop
       - pnpm --filter @dislackso/desktop start
 
+  desktop:dist:
+    desc: 'Build the desktop installer for this OS into apps/desktop/dist/ (VERSION=0.6.0 to set its version)'
+    vars:
+      DESCRIBED:
+        sh: git describe --tags --always --dirty --match "v*" 2>/dev/null | sed 's/^v//'
+      VERSION: '{{.VERSION | default .DESCRIBED}}'
+    cmds:
+      - task: build:desktop
+      - pnpm --filter @dislackso/desktop exec electron-builder --publish never --config.extraMetadata.version={{.VERSION}}
+
   build:web:
     cmds:
       - pnpm --filter @dislackso/web build

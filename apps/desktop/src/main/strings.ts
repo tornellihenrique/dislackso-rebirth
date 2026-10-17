@@ -17,6 +17,11 @@ const en: ShellStrings = {
   menuSwitch: 'Switch server…',
   menuView: 'View',
   menuEdit: 'Edit',
+  updateReady: 'Dislackso {version} is ready. Restart now to update?',
+  updateAvailable: 'Dislackso {version} is available. Download it from the releases page.',
+  restart: 'Restart now',
+  download: 'Download',
+  later: 'Later',
 };
 
 const ptBR: ShellStrings = {
@@ -37,6 +42,11 @@ const ptBR: ShellStrings = {
   menuSwitch: 'Trocar de servidor…',
   menuView: 'Exibir',
   menuEdit: 'Editar',
+  updateReady: 'O Dislackso {version} está pronto. Reiniciar agora para atualizar?',
+  updateAvailable: 'O Dislackso {version} está disponível. Baixe na página de versões.',
+  restart: 'Reiniciar agora',
+  download: 'Baixar',
+  later: 'Depois',
 };
 
 /** Portuguese for any pt locale, English otherwise. */
