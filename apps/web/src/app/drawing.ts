@@ -177,7 +177,8 @@ export class DrawingController implements DrawingActions {
   }
 
   laser(target: string, at: Point | undefined): void {
-    this.engine?.laser(target, at);
+    const e = this.engine;
+    if (e) e.laser(target, at, this.style(e.self).color);
     this.laserAt = at ? { target, point: at, sentAt: performance.now() } : undefined;
   }
 

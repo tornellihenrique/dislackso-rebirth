@@ -609,8 +609,10 @@ type Laser struct {
 	X              uint32                 `protobuf:"varint,2,opt,name=x,proto3" json:"x,omitempty"`
 	Y              uint32                 `protobuf:"varint,3,opt,name=y,proto3" json:"y,omitempty"`
 	Ended          bool                   `protobuf:"varint,4,opt,name=ended,proto3" json:"ended,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// 0 from older clients, which draw in the author's last stroke color.
+	ColorRgba     uint32 `protobuf:"fixed32,5,opt,name=color_rgba,json=colorRgba,proto3" json:"color_rgba,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Laser) Reset() {
@@ -669,6 +671,13 @@ func (x *Laser) GetEnded() bool {
 		return x.Ended
 	}
 	return false
+}
+
+func (x *Laser) GetColorRgba() uint32 {
+	if x != nil {
+		return x.ColorRgba
+	}
+	return 0
 }
 
 // Whether others may draw on a share; only its owner may send it.
@@ -760,12 +769,14 @@ const file_dislackso_annotation_v1_annotation_proto_rawDesc = "" +
 	"\tstroke_id\x18\x01 \x01(\rR\bstrokeId\"l\n" +
 	"\x05Clear\x12(\n" +
 	"\x10target_track_sid\x18\x01 \x01(\tR\x0etargetTrackSid\x129\n" +
-	"\x05scope\x18\x02 \x01(\x0e2#.dislackso.annotation.v1.ClearScopeR\x05scope\"c\n" +
+	"\x05scope\x18\x02 \x01(\x0e2#.dislackso.annotation.v1.ClearScopeR\x05scope\"\x82\x01\n" +
 	"\x05Laser\x12(\n" +
 	"\x10target_track_sid\x18\x01 \x01(\tR\x0etargetTrackSid\x12\f\n" +
 	"\x01x\x18\x02 \x01(\rR\x01x\x12\f\n" +
 	"\x01y\x18\x03 \x01(\rR\x01y\x12\x14\n" +
-	"\x05ended\x18\x04 \x01(\bR\x05ended\"X\n" +
+	"\x05ended\x18\x04 \x01(\bR\x05ended\x12\x1d\n" +
+	"\n" +
+	"color_rgba\x18\x05 \x01(\aR\tcolorRgba\"X\n" +
 	"\x12ShareDrawingPolicy\x12(\n" +
 	"\x10target_track_sid\x18\x01 \x01(\tR\x0etargetTrackSid\x12\x18\n" +
 	"\aallowed\x18\x02 \x01(\bR\aallowed*P\n" +

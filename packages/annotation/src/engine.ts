@@ -34,7 +34,7 @@ export interface TrailPoint extends Point {
 
 export interface LaserView {
   readonly author: string;
-  /** The color of the author's latest stroke, when one was seen. */
+  /** The laser's own color, else the author's latest stroke color, when either is known. */
   readonly color: number | undefined;
   readonly trail: readonly TrailPoint[];
 }
@@ -106,6 +106,7 @@ interface StrokeState {
 interface LaserState {
   readonly author: string;
   readonly target: string;
+  color: number | undefined;
   trail: TrailPoint[];
 }
 
@@ -143,7 +144,8 @@ export class AnnotationEngine {
   private readonly limits: Limits;
   private readonly budget: PointBudget;
   private local: LocalStroke | undefined;
-  private pendingLaser: { target: string; point: Point | undefined } | undefined;
+  private pendingLaser:
+    { target: string; point: Point | undefined; color: number | undefined } | undefined;
   private nextId: number;
   private holdMax = DEFAULT_HOLD_MAX_MS;
   readonly dropped: Dropped = { points: 0, strokes: 0, packets: 0 };
@@ -310,6 +312,7 @@ export class AnnotationEngine {
             x: laser.point ? quantize(laser.point.x) : 0,
             y: laser.point ? quantize(laser.point.y) : 0,
             ended: laser.point === undefined,
+            colorRgba: laser.color ?? 0,
           },
         }),
         reliable: false,
@@ -399,10 +402,10 @@ export class AnnotationEngine {
   }
 
   /** Moves this client's laser pointer; undefined puts it away. It leaves with the next flush. */
-  laser(target: string, point: Point | undefined): void {
+  laser(target: string, point: Point | undefined, color?: number): void {
     if (point !== undefined && !this.canDraw(target)) return;
-    this.pendingLaser = { target, point };
-    this.moveLaser(this.o.self, target, point, this.o.now());
+    this.pendingLaser = { target, point, color };
+    this.moveLaser(this.o.self, target, point, this.o.now(), color);
   }
 
   /** Applies a packet from sender (its LiveKit identity). */
@@ -443,7 +446,13 @@ export class AnnotationEngine {
         const v = k.value;
         if (!v.ended && !this.accepts(v.targetTrackSid, sender)) return this.rejected('packets');
         const point = v.ended ? undefined : { x: dequantize(v.x), y: dequantize(v.y) };
-        this.moveLaser(sender, v.targetTrackSid, point, now);
+        this.moveLaser(
+          sender,
+          v.targetTrackSid,
+          point,
+          now,
+          v.colorRgba ? v.colorRgba >>> 0 : undefined,
+        );
         return false;
       }
       case 'policy': {
@@ -513,6 +522,7 @@ export class AnnotationEngine {
     this.prune(now);
     const strokes: StrokeView[] = [];
     const latest = new Map<string, StrokeState>();
+    const until = this.drawingUntil();
     for (const s of this.strokes.values()) {
       if (s.target !== target || s.points.length === 0) continue;
       strokes.push({
@@ -520,7 +530,7 @@ export class AnnotationEngine {
         author: s.author,
         ...s.style,
         points: s.points,
-        alpha: strokeAlpha(s.endedAt, s.style.holdMs, now),
+        alpha: strokeAlpha(until.get(laserKey(s.author, s.target)), s.style.holdMs, now),
       });
       const prev = latest.get(s.author);
       if (!prev || s.lastPointAt >= prev.lastPointAt) latest.set(s.author, s);
@@ -536,11 +546,10 @@ export class AnnotationEngine {
     const lasers: LaserView[] = [];
     for (const l of this.lasers.values()) {
       if (l.target !== target) continue;
-      lasers.push({ author: l.author, color: this.colors.get(l.author), trail: l.trail });
+      const color = l.color ?? this.colors.get(l.author);
+      lasers.push({ author: l.author, color, trail: l.trail });
       const tip = l.trail.at(-1);
-      if (tip && !latest.has(l.author)) {
-        tags.push({ author: l.author, at: tip, color: this.colors.get(l.author) });
-      }
+      if (tip && !latest.has(l.author)) tags.push({ author: l.author, at: tip, color });
     }
     return { strokes, lasers, tags };
   }
@@ -613,24 +622,51 @@ export class AnnotationEngine {
     return removed;
   }
 
-  private moveLaser(author: string, target: string, point: Point | undefined, now: number): void {
+  private moveLaser(
+    author: string,
+    target: string,
+    point: Point | undefined,
+    now: number,
+    color: number | undefined,
+  ): void {
     const key = laserKey(author, target);
     if (point === undefined) {
       if (this.lasers.delete(key)) this.emit();
       return;
     }
-    const l = this.lasers.get(key) ?? { author, target, trail: [] };
+    const l = this.lasers.get(key) ?? { author, target, color, trail: [] };
+    l.color = color ?? l.color;
     l.trail = [...l.trail.filter((p) => now - p.at <= LASER_TRAIL_MS), { ...point, at: now }];
     this.lasers.set(key, l);
     this.emit();
   }
 
+  /**
+   * When each author last drew on each share, by author/target: undefined
+   * while a stroke of theirs is still being drawn. Their strokes hold until
+   * then, so lines drawn one after another fade together once they stop.
+   */
+  private drawingUntil(): Map<string, number | undefined> {
+    const until = new Map<string, number | undefined>();
+    for (const s of this.strokes.values()) {
+      const key = laserKey(s.author, s.target);
+      if (until.has(key) && until.get(key) === undefined) continue;
+      const end = s.endedAt;
+      until.set(key, end === undefined ? undefined : Math.max(end, until.get(key) ?? end));
+    }
+    return until;
+  }
+
   private prune(now: number): void {
-    for (const [k, s] of this.strokes) {
+    for (const s of this.strokes.values()) {
       if (s.endedAt === undefined && s !== this.local?.stroke) {
         if (now - s.lastPointAt > STALE_STROKE_MS) s.endedAt = s.lastPointAt;
       }
-      if (strokeAlpha(s.endedAt, s.style.holdMs, now) === 0) this.strokes.delete(k);
+    }
+    const until = this.drawingUntil();
+    for (const [k, s] of this.strokes) {
+      const end = until.get(laserKey(s.author, s.target));
+      if (strokeAlpha(end, s.style.holdMs, now) === 0) this.strokes.delete(k);
     }
     for (const [k, l] of this.lasers) {
       const tip = l.trail.at(-1);
