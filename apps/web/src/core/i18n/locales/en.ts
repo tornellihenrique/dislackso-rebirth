@@ -310,6 +310,25 @@ export const en = {
     snapshotCopied: 'Snapshot copied to the clipboard.',
     snapshotSaved: 'Snapshot saved.',
   },
+  desktop: {
+    picker: {
+      title: 'Share your screen',
+      screens: 'Screens',
+      windows: 'Windows',
+      audio: "Share your computer's sound",
+      share: 'Share',
+      loading: 'Looking for screens…',
+      none: 'Nothing to share here.',
+    },
+    overlay: {
+      draw: 'Draw on your screen',
+      stopDrawing: 'Stop drawing (Esc)',
+      clearAll: "Clear everyone's strokes",
+      stopOthers: 'Stop others from drawing',
+      letOthers: 'Let others draw',
+      stopSharing: 'Stop sharing',
+    },
+  },
   members: {
     title: 'Members',
     groupCount: '{{group}} — {{count}}',

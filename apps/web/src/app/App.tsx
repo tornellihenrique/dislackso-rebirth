@@ -4,6 +4,7 @@ import type { i18n } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
 
 import { Notices } from '@/features/shell/Notices';
+import { ScreenPicker } from '@/features/stage/ScreenPicker';
 import { TooltipProvider } from '@/ui/Tooltip';
 
 import type { AppRouter } from './router';
@@ -24,6 +25,7 @@ export function App({ i18n, queryClient, router, services }: AppProps) {
           <TooltipProvider delayDuration={300}>
             <RouterProvider router={router} />
             <Notices />
+            {services.desktop && <ScreenPicker desktop={services.desktop} />}
           </TooltipProvider>
         </ServicesContext>
       </QueryClientProvider>

@@ -2,9 +2,26 @@
 
 ## Current phase
 
-**Phase 6 — Drawing on shares: implemented, waiting for review and an evening with the team.**
-Phase 5 is in use (a clean-machine run of the release is still open). Next: Phase 7 — Desktop
-shell.
+**Phase 7 — Desktop shell: in progress.** The first part is built: the desktop app, its screen
+picker and the drawing overlay on the shared screen. Next in this phase: window-share overlay,
+global hotkeys and push-to-talk, tray, auto-update, host mode and installers. Phase 6 (drawing) is
+merged and in use.
+
+### Phase 7 acceptance
+
+- [x] Sharer on Windows sees teammates' strokes on the real screen in real time, and viewers do not
+      see the overlay duplicated in the video. Playwright drives the desktop app (`task
+      e2e:desktop`): a viewer in a browser draws on the app's screen share, the overlay window
+      (always on top, protected from capture, not focusable) shows the stroke, and the viewer's
+      received video has none of the stroke's pixels where the overlay draws it. With capture
+      protection turned off the same check finds 1,152 of them.
+- [ ] Global PTT works while another app is focused (Windows; macOS with Accessibility
+      permission). Not built yet.
+- [ ] System audio share on Windows does not include other participants' voices (or the warning is
+      shown when exclusion is unsupported). The picker offers the computer's sound (loopback) on
+      Windows; excluding the call's voices is not built yet.
+- [ ] Host mode from a fresh install brings a working instance online without a terminal. Not built
+      yet.
 
 ### Phase 6 acceptance
 
@@ -166,6 +183,32 @@ shell.
       typecheck + tests, build + Playwright smoke).
 
 ## Done
+
+### Phase 7 — Desktop shell (part 1)
+
+- **`apps/desktop`** (Electron 44.8, electron-vite 6): a launcher that takes a server's address
+  (https, or http on this computer only), checks `/healthz` and remembers up to ten servers, each in
+  its own `persist:` partition. The server opens in a sandboxed window with context isolation that
+  keeps navigation on the server (other links open in the system browser, no webviews) and grants
+  only media, display capture, notifications, fullscreen, clipboard writes and speaker selection,
+  only to the server's origin. Menu: switch server, edit, view.
+- **Bridge** (`packages/desktop-bridge`, `window.desktop`, version 1): the preload asks the main
+  process whether the page is the window's own server before exposing anything; every call is
+  checked in the main process (sender, frame, origin) and its arguments validated.
+- **Screen picker:** the app answers `getDisplayMedia` with the web app's own dialog: Screens and
+  Windows tabs with thumbnails refreshed every 2 s, and on Windows "Share your computer's sound"
+  (loopback).
+- **Drawing overlay:** sharing a whole screen opens a transparent window over that display: on top
+  of everything, left out of the capture, click-through except its toolbar. It draws every stroke
+  on the share with `@dislackso/annotation` from the packets the web app relays. Its toolbar: draw
+  on the screen (the overlay then takes the mouse until Esc; the pen goes to the web app, which
+  draws it as the sharer's stroke), clear everyone's strokes, stop or allow others drawing, stop
+  sharing. The overlay closes when the share ends.
+- **Tests.** Unit: the bridge's validation, server addresses and partitions, security rules, shell
+  strings, the picker dialog, the drawing controller with a fake overlay. Playwright with Electron
+  (`task e2e:desktop`, Windows): the launcher, sharing through the picker, the overlay's window
+  properties, a viewer's stroke on the real screen and not in the video, the sharer drawing on the
+  overlay, and stopping the share from it.
 
 ### Phase 6 — Drawing on shares
 
@@ -636,6 +679,23 @@ shell.
 - **New dependencies:** github.com/livekit/protocol v1.52.1 (hub), github.com/livekit/server-sdk-go
   v2.19.0 (integration tests only), livekit-client 2.22.4, @sapphi-red/web-noise-suppressor 0.4.1.
 
+### Phase 7
+
+- No ledger decision was changed (D10: a thin Electron shell loading the instance). ARCHITECTURE
+  §16.3–16.5 updated with what was built.
+- **Electron 44.8.0 and electron-vite 6.0.0**, the newest releases at least a day old. Electron
+  downloads its binary on first use, not at install, so pnpm's blocked install scripts do not get
+  in the way.
+- **The overlay sends the sharer's pen to the web app instead of packets.** The web app's engine
+  stays the one author of this user's strokes (packets, undo, clear); the overlay only renders and
+  takes input.
+- **The overlay's toolbar has no color picker;** it draws with the color and size from Settings →
+  Drawing, which the web app applies.
+- **Sandboxed preloads are built as one CommonJS file each,** and workspace packages are bundled
+  into the main process: preloads can load no other file, and workspace packages ship TypeScript.
+- **The desktop e2e runs locally, not in CI:** it shares and draws on the real screen, and capture
+  protection is a Windows (and macOS) feature.
+
 ### Phase 6
 
 - No ledger decision was changed. ARCHITECTURE §11 updated with what was built.
@@ -762,8 +822,13 @@ shell.
   OpenH264. Real machines, real content and hardware H.264 are steps of the manual script; the
   defaults may change after the team uses them (Phase 5).
 - Pop-out (Picture-in-Picture) comes in Phase 11.
-- **A sharer sees drawings only on their own tile in the browser;** strokes on the real screen
-  need the desktop overlay (Phase 7).
+- **A sharer sees drawings on the real screen only in the desktop app,** and only when sharing a
+  whole screen; sharing one window shows them on the tile, until the window-share overlay.
+- **The desktop app has no installer yet:** it runs from the repo with `task desktop`. Installers
+  and auto-update come later in Phase 7.
+- **The computer's sound shared from the desktop app includes the call's voices** on Windows; the
+  exclusion is still to come.
+- **The desktop app is tested on Windows only;** macOS and Linux builds are not made yet.
 - **Someone who joins mid-stroke sees strokes only from then on** (no history, by design); a
   stroke whose end was lost ends by itself 5 s after its last point.
 - Without `restrictOwnAudio` (older Chromium, other browsers) shared system audio can carry the
@@ -771,6 +836,24 @@ shell.
 - The stage shortcuts (G, F, arrows, Ctrl+Shift+S) are fixed until the Keybinds page.
 
 ## Manual test script
+
+### Phase 7 (part 1)
+
+Prerequisites: the repo updated on the Windows PC, and a friend in a call.
+
+1. **Open.** Run `task desktop`. The first time it asks for the server's address: paste the Funnel
+   address and press Connect. Sign in. Next time it opens the server by itself (Server → Switch
+   server to change it).
+2. **Share.** Join a voice channel and share: the app shows its own picker with your screens and
+   windows. Pick a screen, tick "Share your computer's sound" if you want it, press Share.
+3. **Overlay.** A small toolbar appears at the top of the shared screen. Your friend draws on your
+   screen in their browser: the strokes appear on your real monitor, with their name, and fade.
+   Their view of your screen does not show each stroke twice.
+4. **Draw yourself.** Press the pen on the toolbar: a blue frame shows you are drawing. Draw on your
+   screen; your friend sees it. Esc stops.
+5. **Toolbar.** Try "Clear everyone's strokes", the lock (stops others drawing; press again to
+   allow), and drag the toolbar by its dots. Stop sharing from it: the toolbar goes away.
+6. **Window share.** Share one window instead: no overlay appears (drawings show on the tile only).
 
 ### Phase 6
 

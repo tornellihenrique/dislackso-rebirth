@@ -16,6 +16,7 @@
     "@connectrpc/connect-web": "catalog:",
     "@dislackso/annotation": "workspace:*",
     "@dislackso/contracts": "workspace:*",
+    "@dislackso/desktop-bridge": "workspace:*",
     "@dnd-kit/core": "catalog:",
     "@dnd-kit/sortable": "catalog:",
     "@dnd-kit/utilities": "catalog:",

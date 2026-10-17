@@ -635,18 +635,19 @@ Smooth 60 fps interactions, no layout shift when voice states change, skeletons 
 ## 16. Desktop shell (`apps/desktop`, Electron + TypeScript, electron-vite)
 
 ### 16.1 Responsibilities
-Instance launcher (saved instances, each in its own `persist:` partition) → loads `https://<instance>/` in the main window. Native features via a typed preload bridge exposed **only to saved instance origins**.
+Instance launcher (saved instances, each in its own `persist:` partition; https, or http for this computer only; reachability checked on `/healthz`) → loads `https://<instance>/` in the main window. Native features via a typed preload bridge exposed **only to the window's instance origin**: the preload asks the main process (sync IPC) before exposing anything, and the main process checks the sender, the top frame and its origin on every call. `DSX_INSTANCE_URL` opens an instance directly and `DSX_USER_DATA` moves the app's data (tests, side-by-side runs).
 
 ### 16.2 Security
 `contextIsolation: true`, `sandbox: true`, `nodeIntegration: false`, strict navigation guard (external links → OS browser), permission handler grants media/display-capture/notifications only to instance origins, no remote module, CSP for local shell pages, bridge methods validate arguments.
 
 ### 16.3 Bridge (`window.desktop`, versioned `bridgeVersion`)
+Types and argument validation live in `packages/desktop-bridge`, shared by the web app and the shell. The web app uses the bridge only when its version is the one it knows. Built so far: `screen` and `overlay` (version 1); the rest is planned.
 ```ts
 interface DesktopBridge {
   bridgeVersion: number;
   platform: 'win32' | 'darwin' | 'linux';
-  screen: { getSources(): Promise<CaptureSource[]>; choose(sourceId: string, opts: { audio: boolean }): void; cancel(): void; onPickRequested(cb: () => void): Unsubscribe; };
-  overlay: { open(target: OverlayTarget): Promise<void>; close(): Promise<void>; send(packet: Uint8Array): void; setDrawMode(on: boolean): void; onLocalPacket(cb: (p: Uint8Array) => void): Unsubscribe; };
+  screen: { getSources(): Promise<CaptureSource[]>; choose(sourceId: string, opts: { audio: boolean }): void; cancel(): void; onPickRequested(cb: (r: PickRequest) => void): Unsubscribe; };
+  overlay: { open(o: OverlayOpen): Promise<boolean>; close(): Promise<void>; send(packet: Uint8Array, sender: string): void; update(state: Partial<OverlayState>): void; onInput(cb: (i: OverlayInput) => void): Unsubscribe; onAction(cb: (a: 'clearAll' | 'toggleOthers' | 'stopShare') => void): Unsubscribe; };
   hotkeys: { register(binding: HotkeyBinding[]): Promise<void>; onAction(cb: (a: HotkeyAction, pressed: boolean) => void): Unsubscribe; };
   notify(n: NativeNotification): void; setBadge(count: number): void; flashFrame(): void;
   idle: { onIdleChange(cb: (idle: boolean) => void): Unsubscribe };
@@ -656,12 +657,12 @@ interface DesktopBridge {
 ```
 
 ### 16.4 Screen picker & system audio
-`session.setDisplayMediaRequestHandler` → bridge emits `onPickRequested` → web app renders its own picker (screens/windows tabs with live thumbnails from `desktopCapturer`, "share audio" checkbox) → `choose(id, {audio})`. Windows: `audio: 'loopback'` for system audio (screen sources). macOS/Linux system audio: best effort per current Electron capabilities; otherwise hide the checkbox. On macOS 15+, optionally use the system picker.
+`session.setDisplayMediaRequestHandler` → bridge emits `onPickRequested` → web app renders its own picker (screens/windows tabs with thumbnails from `desktopCapturer`, refreshed every 2 s, "share your computer's sound" checkbox) → `choose(id, {audio})`. An unanswered request is refused after 2 minutes; only the instance's origin may ask. Windows: `audio: 'loopback'` for system audio (screen sources). macOS/Linux system audio: best effort per current Electron capabilities; otherwise hide the checkbox. On macOS 15+, optionally use the system picker.
 
 ### 16.5 Drawing overlay (sharer's real screen)
 - One transparent, frameless, non-focusable, always-on-top (`screen-saver` level), click-through (`setIgnoreMouseEvents(true, {forward: true})`) window covering the shared display; `setContentProtection(true)` so it is excluded from capture (verify per OS; macOS 15+ capture may ignore it — acceptable).
-- Renders with `@dislackso/annotation` from packets relayed via IPC by the main renderer.
-- Floating mini-toolbar (draggable, auto-hide): draw mode toggle, color, clear all, allow-drawing toggle, stop sharing. Draw mode makes the overlay capture the mouse until `Esc`/toggle; the sharer's strokes are sent back through the bridge to the room.
+- Opens when this device's share of a **whole display** goes live (`overlay.open` answers false for a window share) and closes when it ends. Renders with `@dislackso/annotation` from every drawing packet the web app relays via IPC (others' and this user's own), with the share's policy sent right after it opens; the share fills the window, so the content rect is the window.
+- Floating mini-toolbar (draggable by its grip, fades when idle): draw mode toggle, clear all, allow-drawing toggle, stop sharing. Color and size come from Settings → Drawing. Draw mode makes the overlay take the mouse and keyboard until `Esc`/toggle (a frame marks it); the pen's points go to the web app as `overlay.onInput`, which draws them as the sharer's own strokes, so its engine stays their only author.
 - Window shares: overlay follows the target window bounds (polling via `get-windows`, 10 Hz); hidden when the window is minimized (Phase 7b).
 
 ### 16.6 Other native features

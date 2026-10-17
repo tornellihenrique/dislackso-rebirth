@@ -138,10 +138,21 @@ tasks:
       - task: gen:check
 
   build:
-    desc: Build the web client and embed it into a single hub binary at bin/, with livekit-server next to it
+    desc: Build the web client and embed it into a single hub binary at bin/, with livekit-server next to it, and the desktop app
     cmds:
       - task: build:web
       - task: build:hub
+      - task: build:desktop
+
+  build:desktop:
+    cmds:
+      - pnpm --filter @dislackso/desktop build
+
+  desktop:
+    desc: Build and open the desktop app; it asks for the server's address the first time
+    cmds:
+      - task: build:desktop
+      - pnpm --filter @dislackso/desktop start
 
   build:web:
     cmds:
@@ -194,6 +205,13 @@ tasks:
     cmds:
       - pnpm --filter @dislackso/e2e exec playwright install chromium
       - pnpm --filter @dislackso/e2e e2e
+
+  e2e:desktop:
+    desc: The desktop app against a fresh hub (Windows; it captures and draws on this machine's screen)
+    deps: [build]
+    cmds:
+      - pnpm --filter @dislackso/e2e exec playwright install chromium
+      - pnpm --filter @dislackso/e2e exec playwright test -c playwright.desktop.config.ts
 
   bench:share:
     desc: Measure screen share codecs and layers (writes e2e/bench-results/); takes ~10 minutes

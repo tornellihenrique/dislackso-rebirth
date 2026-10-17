@@ -73,6 +73,7 @@ export async function renderWithProviders(
     uploads: { upload: () => Promise.reject(new Error('uploads are not stubbed')) },
     voice: stubVoice(),
     drawing: stubDrawing(),
+    desktop: undefined,
     ...services,
   };
   return render(

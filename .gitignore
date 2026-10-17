@@ -8,6 +8,7 @@ node_modules/
 /bin/
 /dist/
 apps/*/dist/
+apps/desktop/out/
 packages/*/dist/
 hub/webdist/dist/*
 !hub/webdist/dist/.gitkeep

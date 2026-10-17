@@ -5,8 +5,11 @@ import { createRoot } from 'react-dom/client';
 
 import { createI18n, detectLanguage } from '@/core/i18n/i18n';
 import { createSoundPlayer } from '@/core/media/sounds';
+import { desktopBridge } from '@/core/platform/desktop';
+import { displayName } from '@/features/members/member-groups';
 import { loadSession } from '@/features/auth/session-actions';
 import { appearanceStore, applyAppearance } from '@/stores/appearance';
+import { entitiesStore } from '@/stores/entities';
 import { dispatchSession, sessionStore } from '@/stores/session';
 
 import { App } from './App';
@@ -49,8 +52,30 @@ export async function startApp(container: HTMLElement): Promise<void> {
     },
     (hub) => {
       voice = new VoiceController({ hub, sounds: createSoundPlayer(), t: i18n.t, host: audioHost });
-      drawing = new DrawingController(voice);
-      return { voice, drawing };
+      const v = voice;
+      const desktop = desktopBridge();
+      drawing = new DrawingController(
+        v,
+        desktop && {
+          overlay: desktop.overlay,
+          labels: () => ({
+            draw: i18n.t('desktop.overlay.draw'),
+            stopDrawing: i18n.t('desktop.overlay.stopDrawing'),
+            clearAll: i18n.t('desktop.overlay.clearAll'),
+            stopOthers: i18n.t('desktop.overlay.stopOthers'),
+            letOthers: i18n.t('desktop.overlay.letOthers'),
+            stopSharing: i18n.t('desktop.overlay.stopSharing'),
+          }),
+          names: () =>
+            Object.fromEntries(
+              Object.entries(entitiesStore.getState().users).map(([id, u]) => [id, displayName(u)]),
+            ),
+          stopShare: () => {
+            void v.stopShare();
+          },
+        },
+      );
+      return { voice, drawing, desktop };
     },
   );
   try {

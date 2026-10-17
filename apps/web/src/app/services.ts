@@ -1,4 +1,5 @@
 import type { Interceptor } from '@connectrpc/connect';
+import type { DesktopBridge } from '@dislackso/desktop-bridge';
 import { createContext, useContext } from 'react';
 
 import { AUTH_SERVICE_NAME, createHubClients, type HubClients } from '@/core/api/clients';
@@ -17,6 +18,8 @@ export interface Services {
   readonly uploads: UploadApi;
   readonly voice: VoiceActions;
   readonly drawing: DrawingActions;
+  /** The desktop shell's bridge; undefined in a browser. */
+  readonly desktop: DesktopBridge | undefined;
 }
 
 /**
@@ -26,7 +29,7 @@ export interface Services {
  */
 export function createServices(
   onSessionLost: () => void,
-  media: (hub: HubClients) => Pick<Services, 'voice' | 'drawing'>,
+  media: (hub: HubClients) => Pick<Services, 'voice' | 'drawing' | 'desktop'>,
 ): Services {
   const sessionGuard: Interceptor = (next) => async (req) => {
     try {

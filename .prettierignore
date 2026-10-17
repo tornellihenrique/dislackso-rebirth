@@ -5,6 +5,7 @@ bin/
 hub/
 proto/
 **/dist/
+apps/desktop/out/
 packages/contracts/src/gen/
 e2e/test-results/
 e2e/playwright-report/
