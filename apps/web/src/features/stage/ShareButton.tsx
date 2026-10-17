@@ -3,22 +3,10 @@ import { ChevronUp, ScreenShare, ScreenShareOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { useServices } from '@/app/services';
-import {
-  capPreset,
-  presetsUpTo,
-  type OptimizeFor,
-  type SharePreset,
-} from '@/core/media/share-presets';
+import { capPreset, presetsUpTo, type SharePreset } from '@/core/media/share-presets';
 import { useCall } from '@/stores/call';
 import { useShareSettings } from '@/stores/share-settings';
-import {
-  Menu,
-  MenuCheckItem,
-  MenuLabel,
-  MenuRadioGroup,
-  MenuRadioItem,
-  MenuSeparator,
-} from '@/ui/Menu';
+import { Menu, MenuLabel, MenuRadioGroup, MenuRadioItem, MenuSeparator } from '@/ui/Menu';
 import { Tooltip } from '@/ui/Tooltip';
 
 import { useShareCap } from './hooks';
@@ -31,21 +19,18 @@ interface ShareButtonProps {
 
 const roundClass = 'flex h-12 items-center justify-center bg-floating text-fg hover:bg-hover';
 
-/**
- * Starts or stops this device's share; the arrow opens quality, optimization
- * and audio. Settings apply to the next share.
- */
+/** Starts or stops this device's share; the arrow opens the quality for the next share. */
 export function ShareButton({ channelId, round = false }: ShareButtonProps) {
   const { t } = useTranslation();
   const { voice } = useServices();
   const local = useCall((s) => s.localShare);
   const connected = useCall((s) => s.status === 'connected' || s.status === 'reconnecting');
-  const s = useShareSettings((v) => v);
+  const preset = useShareSettings((v) => v.preset);
   const cap = useShareCap(channelId);
   const live = local?.status === 'live';
   const starting = local?.status === 'starting';
   const label = live ? t('stage.controls.stopShare') : t('stage.controls.share');
-  const effective = capPreset(s.preset, cap);
+  const effective = capPreset(preset, cap);
 
   const toggle = () => {
     void (live ? voice.stopShare() : voice.startShare());
@@ -65,31 +50,6 @@ export function ShareButton({ channelId, round = false }: ShareButtonProps) {
           </MenuRadioItem>
         ))}
       </MenuRadioGroup>
-      <MenuSeparator />
-      <MenuLabel>{t('stage.share.optimize')}</MenuLabel>
-      <MenuRadioGroup<OptimizeFor>
-        value={s.optimize}
-        onValueChange={(optimize) => {
-          voice.setShareSettings({ optimize });
-        }}
-      >
-        <MenuRadioItem value="text" checked={s.optimize === 'text'} disabled={live}>
-          {t('stage.share.text')}
-        </MenuRadioItem>
-        <MenuRadioItem value="motion" checked={s.optimize === 'motion'} disabled={live}>
-          {t('stage.share.motion')}
-        </MenuRadioItem>
-      </MenuRadioGroup>
-      <MenuSeparator />
-      <MenuCheckItem
-        checked={s.audio}
-        disabled={live}
-        onCheckedChange={(audio) => {
-          voice.setShareSettings({ audio });
-        }}
-      >
-        {t('stage.share.audio')}
-      </MenuCheckItem>
       {live && (
         <p className="max-w-56 px-2 py-1.5 text-xs text-fg-muted">{t('stage.share.whileLive')}</p>
       )}

@@ -14,18 +14,15 @@ import {
   captureConstraints,
   pickCodec,
   shareEncoding,
+  tuningFor,
   type CodecChoice,
-  type OptimizeFor,
   type ShareCodec,
   type SharePreset,
 } from './share-presets';
 
 export interface ShareRequest {
   readonly preset: SharePreset;
-  readonly optimize: OptimizeFor;
   readonly codec: CodecChoice;
-  /** Share tab or system audio when the browser offers it. */
-  readonly audio: boolean;
 }
 
 export interface LocalShare {
@@ -67,7 +64,8 @@ interface DisplayOptions extends DisplayMediaStreamOptions {
 /**
  * Asks the user what to share and publishes it to the room: the video in
  * two simulcast layers with the preset's caps, and tab or system audio as a
- * stereo track of its own (ARCHITECTURE §9.5).
+ * stereo track of its own (ARCHITECTURE §9.5). Audio is always asked for: the
+ * browser's picker has its own checkbox for it, which decides.
  */
 export async function startShare(room: Room, req: ShareRequest): Promise<LocalShare> {
   if (typeof navigator.mediaDevices.getDisplayMedia !== 'function') {
@@ -79,16 +77,14 @@ export async function startShare(room: Room, req: ShareRequest): Promise<LocalSh
   const restrictOwnAudio = supported.restrictOwnAudio === true;
   const options: DisplayOptions = {
     video: captureConstraints(req.preset),
-    audio: req.audio
-      ? {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-          channelCount: 2,
-          ...(restrictOwnAudio ? { restrictOwnAudio: true } : {}),
-        }
-      : false,
-    systemAudio: req.audio ? 'include' : 'exclude',
+    audio: {
+      echoCancellation: false,
+      noiseSuppression: false,
+      autoGainControl: false,
+      channelCount: 2,
+      ...(restrictOwnAudio ? { restrictOwnAudio: true } : {}),
+    },
+    systemAudio: 'include',
     selfBrowserSurface: 'exclude',
     surfaceSwitching: 'include',
     monitorTypeSurfaces: 'include',
@@ -115,7 +111,7 @@ export async function startShare(room: Room, req: ShareRequest): Promise<LocalSh
     },
     { once: true },
   );
-  const enc = shareEncoding(req.preset, req.optimize, pickCodec(req.codec, req.optimize, canSend));
+  const enc = shareEncoding(req.preset, pickCodec(req.codec, tuningFor(req.preset), canSend));
   videoTrack.contentHint = enc.contentHint;
   // Desktop sources ignore some constraints given at capture time.
   await videoTrack.applyConstraints(captureConstraints(req.preset)).catch(() => undefined);

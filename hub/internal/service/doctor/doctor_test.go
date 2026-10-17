@@ -73,6 +73,12 @@ func TestRate(t *testing.T) {
 			wantAdvice: []string{domain.AdviceEnableUPnP},
 		},
 		{
+			name: "endpoint independent", exposure: running,
+			test:       domain.SelfTest{MediaUp: true, NAT: domain.NATEndpointIndependent, RelayConfigured: true},
+			want:       domain.RatingGood,
+			wantAdvice: []string{domain.AdviceEnableUPnP},
+		},
+		{
 			name: "symmetric without relay", exposure: running,
 			test:       domain.SelfTest{MediaUp: true, NAT: domain.NATSymmetric},
 			want:       domain.RatingRelayDependent,

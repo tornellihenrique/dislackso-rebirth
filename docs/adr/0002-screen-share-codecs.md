@@ -82,3 +82,11 @@ only; the other two stayed paused.
 - The numbers come from one fast PC with synthetic screens. The defaults are one constant
   (`AUTO_CODECS` in `apps/web/src/core/media/share-presets.ts`); revisit them after the team
   shares real screens over the internet (Phase 5), with the stats overlay and `task bench:share`.
+
+## Update (2026-10-17)
+
+The team's first real use asked for one choice less: a quality preset already names a resolution
+and a frame rate, so "Optimize for" went away. The preset's frame rate sets the tuning: 30 fps
+presets get Text (and AV1 under Automatic), 60 fps presets get Motion (and VP9), each with the
+bitrate of that column above. `task bench:share` now shares every scene at 1440p60, as people
+pick it.

@@ -215,10 +215,6 @@ export const ptBR: Messages = {
     share: {
       options: 'Opções de compartilhamento de tela',
       quality: 'Qualidade',
-      optimize: 'Otimizar para',
-      text: 'Texto e detalhes',
-      motion: 'Movimento (jogos, 3D)',
-      audio: 'Compartilhar áudio',
       whileLive: 'Pare de compartilhar para mudar isto.',
       more: 'Mais configurações de compartilhamento',
     },
@@ -659,9 +655,11 @@ export const ptBR: Messages = {
       qualityHint:
         'Usada ao começar a compartilhar. O servidor ou o canal podem permitir menos; mais qualidade pede mais upload.',
       textHint:
-        'Mantém texto e código nítidos; os quadros por segundo caem primeiro quando a rede aperta.',
+        'A 30 fps, texto e código ficam nítidos; os quadros por segundo caem primeiro quando a rede aperta.',
       motionHint:
-        'Mantém os quadros por segundo para jogos e viewports 3D; os detalhes caem primeiro.',
+        'A 60 fps, o movimento fica fluido; os detalhes caem primeiro quando a rede aperta.',
+      audioHint:
+        'Para compartilhar o som, ative o áudio na janela de compartilhamento do navegador.',
       stage: 'Palco',
       autoFocus: 'Focar a primeira tela que alguém compartilhar enquanto estou na grade',
       selfPreview: 'Mostrar minha própria tela enquanto compartilho',
@@ -669,7 +667,7 @@ export const ptBR: Messages = {
       stats: 'Mostrar estatísticas em todas as telas (Ctrl+Shift+S)',
       advanced: 'Avançado',
       codecHint:
-        'O automático usa AV1 para texto e VP9 para movimento, que se saíram melhor nas medições. Quem não consegue decodificar a escolha recebe VP8.',
+        'O automático usa AV1 a 30 fps e VP9 a 60 fps, que se saíram melhor nas medições. Quem não consegue decodificar a escolha recebe VP8.',
       codec: 'Codec de vídeo',
       codecs: {
         auto: 'Automático (recomendado)',
@@ -913,7 +911,7 @@ export const ptBR: Messages = {
         noInternet: 'Sem conexão com a internet',
         open: 'Nenhum no caminho (endereço público)',
         portPreserving: 'Mantém as portas, as chamadas costumam conectar direto',
-        endpointIndependent: 'NAT comum',
+        endpointIndependent: 'NAT comum, a maioria das chamadas conecta direto',
         symmetric: 'NAT restrito, as chamadas precisam de retransmissão',
       },
     },

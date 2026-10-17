@@ -83,9 +83,7 @@ async function join(
   await context.addInitScript(installFakeScreen, scene);
   const settings = {
     preset: '1080p60',
-    optimize: 'text',
     codec: 'auto',
-    audio: false,
     autoFocus: true,
     selfPreview: false,
     hideNoVideo: false,
@@ -153,7 +151,7 @@ test('codec and optimization at 1440p60, one sharer and one viewer in focus', as
   report.push(
     '## 1440p60, one sharer, one viewer in focus',
     '',
-    `Measured ${String(WINDOW_MS / 1000)} s after ${String(WARMUP_MS / 1000)} s of warm-up, in full Chromium with the GPU. CPU is the whole browser (all its processes) in cores; the sharer's includes drawing the synthetic screen. "scroll" scrolls the whole editor every frame (the worst case for text), "edit" types with a short scroll every 3 s; both use Text optimization, "motion" uses Motion.`,
+    `Measured ${String(WINDOW_MS / 1000)} s after ${String(WARMUP_MS / 1000)} s of warm-up, in full Chromium with the GPU. CPU is the whole browser (all its processes) in cores; the sharer's includes drawing the synthetic screen. "scroll" scrolls the whole editor every frame (the worst case for text), "edit" types with a short scroll every 3 s; the 1440p60 preset tunes every scene for motion.`,
     '',
     '| Content | Codec | Encoder | Captured | Bandwidth estimate | Sent: full layer | Sent: low layer | Encode busy | Sharer CPU | Received in focus | Decoder | Freezes | Viewer CPU | Limited by |',
     '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|',
@@ -165,11 +163,7 @@ test('codec and optimization at 1440p60, one sharer and one viewer in focus', as
         account(1),
         scene,
         { width: 1280, height: 720 },
-        {
-          preset: '1440p60',
-          optimize: scene === 'motion' ? 'motion' : 'text',
-          codec,
-        },
+        { preset: '1440p60', codec },
       );
       await startShare(sharer.page);
       await expect(viewer.page.getByTestId('share-tile')).toHaveAttribute('data-video', 'true', {
@@ -206,7 +200,7 @@ test('codec and optimization at 1440p60, one sharer and one viewer in focus', as
 test('three shares and five viewers in the grid: low layers, and dynacast pauses the full ones', async () => {
   test.setTimeout(10 * 60_000);
   const { browser, close } = await launch();
-  const share = { preset: '1080p30', optimize: 'text', codec: 'auto', autoFocus: false };
+  const share = { preset: '1080p30', codec: 'auto', autoFocus: false };
   const viewport = { width: 1280, height: 800 };
   const sharers: Joined[] = [];
   for (const i of [1, 2, 3]) sharers.push(await join(browser, account(i), 'edit', viewport, share));

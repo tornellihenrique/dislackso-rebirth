@@ -81,8 +81,8 @@ type LiveKit struct {
 	Port    int `yaml:"port"`
 	UDPPort int `yaml:"udp_port"`
 	TCPPort int `yaml:"tcp_port"`
-	// ExternalIP discovers the public address over STUN at start so clients
-	// outside the LAN can connect. It needs internet access at start.
+	// ExternalIP probes the router at start and keeps the media ports
+	// forwarded on it, for callers outside the LAN.
 	ExternalIP bool `yaml:"external_ip"`
 }
 
@@ -106,7 +106,7 @@ var settings = []setting{
 	{key: "livekit.port", usage: "LiveKit signaling and API port on localhost"},
 	{key: "livekit.udp_port", usage: "LiveKit UDP port for media"},
 	{key: "livekit.tcp_port", usage: "LiveKit TCP port for media when UDP is blocked"},
-	{key: "livekit.external_ip", usage: "false to skip discovering the public IP over STUN (offline or LAN-only hosts)"},
+	{key: "livekit.external_ip", usage: "false to skip probing the router and forwarding the media ports (offline or LAN-only hosts)"},
 }
 
 func (s setting) envName() string {

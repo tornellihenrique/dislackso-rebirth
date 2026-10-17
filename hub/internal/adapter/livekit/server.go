@@ -16,12 +16,10 @@ type ServerOptions struct {
 	APIKey  string
 	// WebhookURL is the hub's webhook endpoint on localhost.
 	WebhookURL string
-	// ExternalIP discovers the public address over STUN; LiveKit refuses to
-	// start when STUN is unreachable.
-	ExternalIP bool
-	// NodeIP is a public address the hub already found. LiveKit then skips its
-	// own lookup, which prefers IPv6 and on a host with broken IPv6 takes
-	// about a minute, longer than the supervisor waits for it to be healthy.
+	// NodeIP is the public address at which the router keeps UDPPort's
+	// number. Without it LiveKit asks STUN for the outside port of each
+	// connection, which also works behind routers that change port numbers;
+	// given a node IP it stops doing that.
 	NodeIP   string
 	LogLevel string
 }
@@ -41,14 +39,15 @@ type serverConfig struct {
 }
 
 type rtcConfig struct {
-	UDPPort       int    `yaml:"udp_port"`
-	TCPPort       int    `yaml:"tcp_port"`
-	UseExternalIP bool   `yaml:"use_external_ip"`
-	NodeIP        string `yaml:"node_ip,omitempty"`
-	// Hosts behind NAT usually cannot reach their own public address.
-	SkipExternalIPValidation bool     `yaml:"skip_external_ip_validation"`
-	AdvertiseInternalIP      bool     `yaml:"advertise_internal_ip"`
-	STUNServers              []string `yaml:"stun_servers"`
+	UDPPort int `yaml:"udp_port"`
+	TCPPort int `yaml:"tcp_port"`
+	// LiveKit's own lookup keeps the local port, which a router that changes
+	// port numbers does not forward, and on a host with broken IPv6 it takes
+	// longer than the supervisor waits for LiveKit to be healthy.
+	UseExternalIP       bool     `yaml:"use_external_ip"`
+	NodeIP              string   `yaml:"node_ip,omitempty"`
+	AdvertiseInternalIP bool     `yaml:"advertise_internal_ip"`
+	STUNServers         []string `yaml:"stun_servers"`
 }
 
 type roomConfig struct {
@@ -79,13 +78,11 @@ func ServerConfig(o ServerOptions) ([]byte, error) {
 		// Signaling stays private; clients reach it through the hub's /lk proxy.
 		BindAddresses: []string{"127.0.0.1"},
 		RTC: rtcConfig{
-			UDPPort:                  o.UDPPort,
-			TCPPort:                  o.TCPPort,
-			UseExternalIP:            o.ExternalIP && o.NodeIP == "",
-			NodeIP:                   o.NodeIP,
-			SkipExternalIPValidation: o.ExternalIP && o.NodeIP == "",
-			AdvertiseInternalIP:      o.ExternalIP || o.NodeIP != "",
-			STUNServers:              STUNServers,
+			UDPPort:             o.UDPPort,
+			TCPPort:             o.TCPPort,
+			NodeIP:              o.NodeIP,
+			AdvertiseInternalIP: o.NodeIP != "",
+			STUNServers:         STUNServers,
 		},
 		Room:    roomConfig{AutoCreate: true, EmptyTimeout: 30, DepartureTimeout: 20},
 		Webhook: webhookConfig{APIKey: o.APIKey, URLs: []string{o.WebhookURL}},

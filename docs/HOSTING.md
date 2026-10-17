@@ -100,7 +100,7 @@ people outside your network connect to calls:
 | Rating | Meaning | What to do |
 |---|---|---|
 | Excellent | The router forwards the media ports, the machine has a public address, or it has IPv6 | Nothing. A relay still helps friends whose own network is strict. |
-| Good | The router keeps ports, so most calls connect directly | Turn on UPnP (see below) or add a relay. |
+| Good | The router keeps one outside port per inside port, so most calls connect directly | Turn on UPnP (see below) or add a relay for strict networks. |
 | Needs a relay | The router changes ports per destination (strict NAT, CGNAT) | Add a relay (below). |
 | Offline | No internet at start | Connect and restart the hub. |
 
