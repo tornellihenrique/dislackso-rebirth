@@ -5,8 +5,9 @@ import { defineConfig } from 'electron-vite';
 export default defineConfig({
   main: {
     build: {
-      // Workspace packages ship TypeScript source, so they go in the bundle.
-      externalizeDeps: { exclude: ['@dislackso/desktop-bridge'] },
+      // The package holds no node_modules: workspace packages (TypeScript
+      // source) and the updater go into the bundle.
+      externalizeDeps: false,
       rollupOptions: { input: { index: resolve('src/main/index.ts') } },
     },
   },

@@ -149,6 +149,20 @@ On the Connectivity page, from the hosting machine itself:
 - **Allow voice through Windows Firewall**: if calls from outside fail on Windows, this adds an
   inbound rule for `livekit-server.exe`; Windows asks you to confirm.
 
+## 7. The desktop app (optional)
+
+Everyone can use Dislackso in Chrome or Edge. The desktop app adds one thing for now: whoever
+shares their screen from it sees the drawings on their real monitor.
+
+1. Open the project's latest release on GitHub and download the installer: `Dislackso-Setup-….exe`
+   on Windows, the `.dmg` on macOS (`arm64` for Apple chips), the `.AppImage` or `.deb` on Linux.
+2. Windows: run it. SmartScreen says it protected your PC: click **More info** → **Run anyway**. It
+   installs for you only and opens. macOS: open the dmg, drag Dislackso to Applications, then
+   right-click it → **Open** the first time.
+3. Paste the hub's address (the one you open in the browser) and press **Connect**, then sign in.
+
+The app updates itself from new releases (on macOS it shows where to download the new one).
+
 ## Troubleshooting
 
 | Status or symptom | Fix |

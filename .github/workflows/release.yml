@@ -39,9 +39,37 @@ jobs:
           path: dist/dislackso-hub-*
           if-no-files-found: error
 
+  desktop:
+    name: Desktop ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows, runner: windows-latest }
+          - { os: macos, runner: macos-latest }
+          - { os: linux, runner: ubuntu-latest }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+        run: task desktop:dist VERSION="${TAG#v}"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: desktop-${{ matrix.os }}
+          # The installers, and what the app's updater reads: latest*.yml and blockmaps.
+          path: |
+            apps/desktop/dist/Dislackso-*
+            apps/desktop/dist/latest*.yml
+          if-no-files-found: error
+
   publish:
     name: Draft the release
-    needs: hub
+    needs: [hub, desktop]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -51,9 +79,14 @@ jobs:
           pattern: hub-*
           path: dist
           merge-multiple: true
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: desktop-*
+          path: dist
+          merge-multiple: true
       - name: Checksums
         working-directory: dist
-        run: sha256sum dislackso-hub-* > checksums.txt
+        run: sha256sum dislackso-hub-* Dislackso-* > checksums.txt
       # A draft: the owner reads it over and publishes it.
       - name: Create the draft
         env:

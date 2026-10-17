@@ -36,6 +36,7 @@ import { OverlayWindow } from './overlay';
 import { ScreenPicker } from './picker';
 import { allowPermission, externalLink, sameOrigin } from './security';
 import { shellStrings } from './strings';
+import { watchForUpdates } from './updates';
 
 const here = import.meta.dirname;
 const preloadPath = (name: string) => join(here, '..', 'preload', `${name}.cjs`);
@@ -369,6 +370,10 @@ if (!app.requestSingleInstanceLock()) {
     strings = shellStrings(app.getLocale());
     registerIpc();
     buildMenu();
+    watchForUpdates(
+      () => strings,
+      () => instance?.win ?? launcher,
+    );
     const forced = process.env.DSX_INSTANCE_URL;
     const direct = forced === undefined ? undefined : normalizeAddress(forced);
     if (direct && 'origin' in direct) {

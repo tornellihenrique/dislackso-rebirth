@@ -1,0 +1,52 @@
+# Installers for the desktop app (task desktop:dist, and the release workflow).
+# Everything the app runs is bundled into out/ by electron-vite, so no
+# node_modules go into the package.
+appId: io.github.tornellihenrique.dislackso
+productName: Dislackso
+copyright: Dislackso
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**
+  - package.json
+asar: true
+npmRebuild: false
+publish:
+  provider: github
+  owner: tornellihenrique
+  repo: dislackso-rebirth
+  releaseType: release
+
+win:
+  target: nsis
+  artifactName: Dislackso-Setup-${version}.${ext}
+nsis:
+  # Installs for the current user, without asking for admin rights, and starts
+  # the app when done.
+  oneClick: true
+  perMachine: false
+  runAfterFinish: true
+  shortcutName: Dislackso
+  deleteAppDataOnUninstall: false
+
+mac:
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+  category: public.app-category.social-networking
+  # No Apple certificate: an ad-hoc signature, which Apple Silicon needs to open
+  # the app at all. Hardened runtime would reject Electron's own signed frameworks.
+  identity: '-'
+  hardenedRuntime: false
+  artifactName: Dislackso-${version}-${arch}.${ext}
+  extendInfo:
+    NSMicrophoneUsageDescription: Dislackso uses the microphone for voice calls.
+    NSCameraUsageDescription: Dislackso uses the camera for video in calls.
+
+linux:
+  target: [AppImage, deb]
+  category: Network
+  executableName: dislackso
+  maintainer: Dislackso
+  artifactName: Dislackso-${version}-${arch}.${ext}

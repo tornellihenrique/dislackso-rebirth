@@ -2,25 +2,29 @@
   "name": "@dislackso/desktop",
   "version": "0.0.0",
   "private": true,
+  "description": "Dislackso desktop app",
+  "author": "Dislackso",
+  "homepage": "https://github.com/tornellihenrique/dislackso-rebirth",
   "type": "module",
   "main": "out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "start": "electron-vite preview",
+    "dist": "electron-vite build && electron-builder --publish never",
     "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.web.json",
     "test": "vitest run"
   },
-  "dependencies": {
+  "devDependencies": {
     "@bufbuild/protobuf": "catalog:",
     "@dislackso/annotation": "workspace:*",
-    "@dislackso/contracts": "workspace:*",
-    "@dislackso/desktop-bridge": "workspace:*"
-  },
-  "devDependencies": {
     "@dislackso/config": "workspace:*",
+    "@dislackso/contracts": "workspace:*",
+    "@dislackso/desktop-bridge": "workspace:*",
     "@types/node": "catalog:",
     "electron": "catalog:",
+    "electron-builder": "catalog:",
+    "electron-updater": "catalog:",
     "electron-vite": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",

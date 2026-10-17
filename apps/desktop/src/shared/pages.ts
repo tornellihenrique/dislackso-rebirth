@@ -18,6 +18,12 @@ export interface ShellStrings {
   readonly menuSwitch: string;
   readonly menuView: string;
   readonly menuEdit: string;
+  /** {version} is replaced. */
+  readonly updateReady: string;
+  readonly updateAvailable: string;
+  readonly restart: string;
+  readonly download: string;
+  readonly later: string;
 }
 
 export type ConnectProblem = 'invalid' | 'insecure' | 'unreachable';

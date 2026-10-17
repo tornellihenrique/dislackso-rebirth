@@ -1,10 +1,4 @@
-import { mkdtempSync, readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
 import {
-  _electron as electron,
   expect,
   test,
   type BrowserContext,
@@ -15,6 +9,8 @@ import {
 
 import { ADMIN, MEMBER, signIn, trackErrors } from '../tests/fixtures';
 
+import { launchDesktop, newUserData } from './launch';
+
 // The admin shares this machine's screen from the desktop app; Ana watches
 // in a browser and draws on it.
 test.describe.configure({ mode: 'serial' });
@@ -23,13 +19,6 @@ const CONNECT = { timeout: 15_000 };
 const SERVER = 'Desk Lab';
 /** Ana's ink: a color a desktop rarely shows, so the video can be searched for it. */
 const INK = '#ff00ff';
-
-const desktopDir = fileURLToPath(new URL('../../apps/desktop/', import.meta.url));
-const electronPath = join(
-  desktopDir,
-  'node_modules/electron/dist',
-  readFileSync(join(desktopDir, 'node_modules/electron/path.txt'), 'utf8'),
-);
 
 const channels = (page: Page) => page.getByRole('navigation', { name: 'Channels' });
 const stage = (page: Page) => page.getByTestId('stage');
@@ -89,16 +78,7 @@ let desk: Page;
 let ana: { context: BrowserContext; page: Page; errors: string[] };
 
 test.beforeAll(async ({ browser, baseURL }) => {
-  app = await electron.launch({
-    executablePath: electronPath,
-    // The test reads English labels, whatever this machine's language.
-    args: [join(desktopDir, 'out/main/index.js'), '--lang=en-US'],
-    env: {
-      ...process.env,
-      DSX_INSTANCE_URL: baseURL ?? '',
-      DSX_USER_DATA: mkdtempSync(join(tmpdir(), 'dislackso-desktop-')),
-    },
-  });
+  app = await launchDesktop({ DSX_INSTANCE_URL: baseURL ?? '', DSX_USER_DATA: newUserData() });
   desk = await app.firstWindow();
   await expect(desk).toHaveURL(/\/login/, CONNECT);
   await signIn(desk, ADMIN.username, ADMIN.password);
