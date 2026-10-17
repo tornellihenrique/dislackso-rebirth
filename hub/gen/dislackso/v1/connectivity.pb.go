@@ -88,6 +88,57 @@ func (ExposureKind) EnumDescriptor() ([]byte, []int) {
 	return file_dislackso_v1_connectivity_proto_rawDescGZIP(), []int{0}
 }
 
+// Keeps the direct domain pointed at this machine's public address.
+type DynamicDnsKind int32
+
+const (
+	DynamicDnsKind_DYNAMIC_DNS_KIND_UNSPECIFIED DynamicDnsKind = 0
+	DynamicDnsKind_DYNAMIC_DNS_KIND_NONE        DynamicDnsKind = 1
+	// A free <name>.duckdns.org, updated with a DuckDNS token.
+	DynamicDnsKind_DYNAMIC_DNS_KIND_DUCKDNS DynamicDnsKind = 2
+)
+
+// Enum value maps for DynamicDnsKind.
+var (
+	DynamicDnsKind_name = map[int32]string{
+		0: "DYNAMIC_DNS_KIND_UNSPECIFIED",
+		1: "DYNAMIC_DNS_KIND_NONE",
+		2: "DYNAMIC_DNS_KIND_DUCKDNS",
+	}
+	DynamicDnsKind_value = map[string]int32{
+		"DYNAMIC_DNS_KIND_UNSPECIFIED": 0,
+		"DYNAMIC_DNS_KIND_NONE":        1,
+		"DYNAMIC_DNS_KIND_DUCKDNS":     2,
+	}
+)
+
+func (x DynamicDnsKind) Enum() *DynamicDnsKind {
+	p := new(DynamicDnsKind)
+	*p = x
+	return p
+}
+
+func (x DynamicDnsKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (DynamicDnsKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_dislackso_v1_connectivity_proto_enumTypes[1].Descriptor()
+}
+
+func (DynamicDnsKind) Type() protoreflect.EnumType {
+	return &file_dislackso_v1_connectivity_proto_enumTypes[1]
+}
+
+func (x DynamicDnsKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use DynamicDnsKind.Descriptor instead.
+func (DynamicDnsKind) EnumDescriptor() ([]byte, []int) {
+	return file_dislackso_v1_connectivity_proto_rawDescGZIP(), []int{1}
+}
+
 type ExposureState int32
 
 const (
@@ -131,11 +182,11 @@ func (x ExposureState) String() string {
 }
 
 func (ExposureState) Descriptor() protoreflect.EnumDescriptor {
-	return file_dislackso_v1_connectivity_proto_enumTypes[1].Descriptor()
+	return file_dislackso_v1_connectivity_proto_enumTypes[2].Descriptor()
 }
 
 func (ExposureState) Type() protoreflect.EnumType {
-	return &file_dislackso_v1_connectivity_proto_enumTypes[1]
+	return &file_dislackso_v1_connectivity_proto_enumTypes[2]
 }
 
 func (x ExposureState) Number() protoreflect.EnumNumber {
@@ -144,7 +195,7 @@ func (x ExposureState) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ExposureState.Descriptor instead.
 func (ExposureState) EnumDescriptor() ([]byte, []int) {
-	return file_dislackso_v1_connectivity_proto_rawDescGZIP(), []int{1}
+	return file_dislackso_v1_connectivity_proto_rawDescGZIP(), []int{2}
 }
 
 type TurnKind int32
@@ -189,11 +240,11 @@ func (x TurnKind) String() string {
 }
 
 func (TurnKind) Descriptor() protoreflect.EnumDescriptor {
-	return file_dislackso_v1_connectivity_proto_enumTypes[2].Descriptor()
+	return file_dislackso_v1_connectivity_proto_enumTypes[3].Descriptor()
 }
 
 func (TurnKind) Type() protoreflect.EnumType {
-	return &file_dislackso_v1_connectivity_proto_enumTypes[2]
+	return &file_dislackso_v1_connectivity_proto_enumTypes[3]
 }
 
 func (x TurnKind) Number() protoreflect.EnumNumber {
@@ -202,7 +253,7 @@ func (x TurnKind) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use TurnKind.Descriptor instead.
 func (TurnKind) EnumDescriptor() ([]byte, []int) {
-	return file_dislackso_v1_connectivity_proto_rawDescGZIP(), []int{2}
+	return file_dislackso_v1_connectivity_proto_rawDescGZIP(), []int{3}
 }
 
 type NatType int32
@@ -252,11 +303,11 @@ func (x NatType) String() string {
 }
 
 func (NatType) Descriptor() protoreflect.EnumDescriptor {
-	return file_dislackso_v1_connectivity_proto_enumTypes[3].Descriptor()
+	return file_dislackso_v1_connectivity_proto_enumTypes[4].Descriptor()
 }
 
 func (NatType) Type() protoreflect.EnumType {
-	return &file_dislackso_v1_connectivity_proto_enumTypes[3]
+	return &file_dislackso_v1_connectivity_proto_enumTypes[4]
 }
 
 func (x NatType) Number() protoreflect.EnumNumber {
@@ -265,7 +316,7 @@ func (x NatType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use NatType.Descriptor instead.
 func (NatType) EnumDescriptor() ([]byte, []int) {
-	return file_dislackso_v1_connectivity_proto_rawDescGZIP(), []int{3}
+	return file_dislackso_v1_connectivity_proto_rawDescGZIP(), []int{4}
 }
 
 type HostRating int32
@@ -307,11 +358,11 @@ func (x HostRating) String() string {
 }
 
 func (HostRating) Descriptor() protoreflect.EnumDescriptor {
-	return file_dislackso_v1_connectivity_proto_enumTypes[4].Descriptor()
+	return file_dislackso_v1_connectivity_proto_enumTypes[5].Descriptor()
 }
 
 func (HostRating) Type() protoreflect.EnumType {
-	return &file_dislackso_v1_connectivity_proto_enumTypes[4]
+	return &file_dislackso_v1_connectivity_proto_enumTypes[5]
 }
 
 func (x HostRating) Number() protoreflect.EnumNumber {
@@ -320,7 +371,7 @@ func (x HostRating) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use HostRating.Descriptor instead.
 func (HostRating) EnumDescriptor() ([]byte, []int) {
-	return file_dislackso_v1_connectivity_proto_rawDescGZIP(), []int{4}
+	return file_dislackso_v1_connectivity_proto_rawDescGZIP(), []int{5}
 }
 
 type ExposureSettings struct {
@@ -336,9 +387,14 @@ type ExposureSettings struct {
 	// Write-only. Empty keeps the stored token.
 	TunnelToken string `protobuf:"bytes,8,opt,name=tunnel_token,json=tunnelToken,proto3" json:"tunnel_token,omitempty"`
 	// Read-only: whether a token is stored.
-	TunnelTokenSet bool `protobuf:"varint,9,opt,name=tunnel_token_set,json=tunnelTokenSet,proto3" json:"tunnel_token_set,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	TunnelTokenSet bool           `protobuf:"varint,9,opt,name=tunnel_token_set,json=tunnelTokenSet,proto3" json:"tunnel_token_set,omitempty"`
+	DynamicDns     DynamicDnsKind `protobuf:"varint,10,opt,name=dynamic_dns,json=dynamicDns,proto3,enum=dislackso.v1.DynamicDnsKind" json:"dynamic_dns,omitempty"`
+	// Write-only: the dynamic DNS provider's token. Empty keeps the stored one.
+	DnsToken string `protobuf:"bytes,11,opt,name=dns_token,json=dnsToken,proto3" json:"dns_token,omitempty"`
+	// Read-only: whether a dynamic DNS token is stored.
+	DnsTokenSet   bool `protobuf:"varint,12,opt,name=dns_token_set,json=dnsTokenSet,proto3" json:"dns_token_set,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ExposureSettings) Reset() {
@@ -430,6 +486,27 @@ func (x *ExposureSettings) GetTunnelToken() string {
 func (x *ExposureSettings) GetTunnelTokenSet() bool {
 	if x != nil {
 		return x.TunnelTokenSet
+	}
+	return false
+}
+
+func (x *ExposureSettings) GetDynamicDns() DynamicDnsKind {
+	if x != nil {
+		return x.DynamicDns
+	}
+	return DynamicDnsKind_DYNAMIC_DNS_KIND_UNSPECIFIED
+}
+
+func (x *ExposureSettings) GetDnsToken() string {
+	if x != nil {
+		return x.DnsToken
+	}
+	return ""
+}
+
+func (x *ExposureSettings) GetDnsTokenSet() bool {
+	if x != nil {
+		return x.DnsTokenSet
 	}
 	return false
 }
@@ -1687,7 +1764,7 @@ var File_dislackso_v1_connectivity_proto protoreflect.FileDescriptor
 
 const file_dislackso_v1_connectivity_proto_rawDesc = "" +
 	"\n" +
-	"\x1fdislackso/v1/connectivity.proto\x12\fdislackso.v1\x1a\x18dislackso/v1/voice.proto\"\xe1\x02\n" +
+	"\x1fdislackso/v1/connectivity.proto\x12\fdislackso.v1\x1a\x18dislackso/v1/voice.proto\"\xe1\x03\n" +
 	"\x10ExposureSettings\x12.\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x1a.dislackso.v1.ExposureKindR\x04kind\x12-\n" +
 	"\x12tailscale_hostname\x18\x02 \x01(\tR\x11tailscaleHostname\x12\x1d\n" +
@@ -1699,7 +1776,12 @@ const file_dislackso_v1_connectivity_proto_rawDesc = "" +
 	"directAddr\x12\x19\n" +
 	"\blan_addr\x18\a \x01(\tR\alanAddr\x12!\n" +
 	"\ftunnel_token\x18\b \x01(\tR\vtunnelToken\x12(\n" +
-	"\x10tunnel_token_set\x18\t \x01(\bR\x0etunnelTokenSet\"\x85\x02\n" +
+	"\x10tunnel_token_set\x18\t \x01(\bR\x0etunnelTokenSet\x12=\n" +
+	"\vdynamic_dns\x18\n" +
+	" \x01(\x0e2\x1c.dislackso.v1.DynamicDnsKindR\n" +
+	"dynamicDns\x12\x1b\n" +
+	"\tdns_token\x18\v \x01(\tR\bdnsToken\x12\"\n" +
+	"\rdns_token_set\x18\f \x01(\bR\vdnsTokenSet\"\x85\x02\n" +
 	"\x0eExposureStatus\x12.\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x1a.dislackso.v1.ExposureKindR\x04kind\x121\n" +
 	"\x05state\x18\x02 \x01(\x0e2\x1b.dislackso.v1.ExposureStateR\x05state\x12\x10\n" +
@@ -1800,7 +1882,11 @@ const file_dislackso_v1_connectivity_proto_rawDesc = "" +
 	"\x1eEXPOSURE_KIND_CLOUDFLARE_QUICK\x10\x03\x12#\n" +
 	"\x1fEXPOSURE_KIND_CLOUDFLARE_TUNNEL\x10\x04\x12\x18\n" +
 	"\x14EXPOSURE_KIND_DIRECT\x10\x05\x12\x15\n" +
-	"\x11EXPOSURE_KIND_LAN\x10\x06*\xbb\x01\n" +
+	"\x11EXPOSURE_KIND_LAN\x10\x06*k\n" +
+	"\x0eDynamicDnsKind\x12 \n" +
+	"\x1cDYNAMIC_DNS_KIND_UNSPECIFIED\x10\x00\x12\x19\n" +
+	"\x15DYNAMIC_DNS_KIND_NONE\x10\x01\x12\x1c\n" +
+	"\x18DYNAMIC_DNS_KIND_DUCKDNS\x10\x02*\xbb\x01\n" +
 	"\rExposureState\x12\x1e\n" +
 	"\x1aEXPOSURE_STATE_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12EXPOSURE_STATE_OFF\x10\x01\x12\x1b\n" +
@@ -1850,79 +1936,81 @@ func file_dislackso_v1_connectivity_proto_rawDescGZIP() []byte {
 	return file_dislackso_v1_connectivity_proto_rawDescData
 }
 
-var file_dislackso_v1_connectivity_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
+var file_dislackso_v1_connectivity_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
 var file_dislackso_v1_connectivity_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_dislackso_v1_connectivity_proto_goTypes = []any{
 	(ExposureKind)(0),               // 0: dislackso.v1.ExposureKind
-	(ExposureState)(0),              // 1: dislackso.v1.ExposureState
-	(TurnKind)(0),                   // 2: dislackso.v1.TurnKind
-	(NatType)(0),                    // 3: dislackso.v1.NatType
-	(HostRating)(0),                 // 4: dislackso.v1.HostRating
-	(*ExposureSettings)(nil),        // 5: dislackso.v1.ExposureSettings
-	(*ExposureStatus)(nil),          // 6: dislackso.v1.ExposureStatus
-	(*TurnSettings)(nil),            // 7: dislackso.v1.TurnSettings
-	(*TurnUsage)(nil),               // 8: dislackso.v1.TurnUsage
-	(*PortMapping)(nil),             // 9: dislackso.v1.PortMapping
-	(*SelfTestReport)(nil),          // 10: dislackso.v1.SelfTestReport
-	(*HostOptions)(nil),             // 11: dislackso.v1.HostOptions
-	(*Connectivity)(nil),            // 12: dislackso.v1.Connectivity
-	(*GetConnectivityRequest)(nil),  // 13: dislackso.v1.GetConnectivityRequest
-	(*GetConnectivityResponse)(nil), // 14: dislackso.v1.GetConnectivityResponse
-	(*SetExposureRequest)(nil),      // 15: dislackso.v1.SetExposureRequest
-	(*SetExposureResponse)(nil),     // 16: dislackso.v1.SetExposureResponse
-	(*SetTurnRequest)(nil),          // 17: dislackso.v1.SetTurnRequest
-	(*SetTurnResponse)(nil),         // 18: dislackso.v1.SetTurnResponse
-	(*RunSelfTestRequest)(nil),      // 19: dislackso.v1.RunSelfTestRequest
-	(*RunSelfTestResponse)(nil),     // 20: dislackso.v1.RunSelfTestResponse
-	(*StartRelayTestRequest)(nil),   // 21: dislackso.v1.StartRelayTestRequest
-	(*StartRelayTestResponse)(nil),  // 22: dislackso.v1.StartRelayTestResponse
-	(*SetHostOptionsRequest)(nil),   // 23: dislackso.v1.SetHostOptionsRequest
-	(*SetHostOptionsResponse)(nil),  // 24: dislackso.v1.SetHostOptionsResponse
-	(*AddFirewallRuleRequest)(nil),  // 25: dislackso.v1.AddFirewallRuleRequest
-	(*AddFirewallRuleResponse)(nil), // 26: dislackso.v1.AddFirewallRuleResponse
-	(*IceServer)(nil),               // 27: dislackso.v1.IceServer
+	(DynamicDnsKind)(0),             // 1: dislackso.v1.DynamicDnsKind
+	(ExposureState)(0),              // 2: dislackso.v1.ExposureState
+	(TurnKind)(0),                   // 3: dislackso.v1.TurnKind
+	(NatType)(0),                    // 4: dislackso.v1.NatType
+	(HostRating)(0),                 // 5: dislackso.v1.HostRating
+	(*ExposureSettings)(nil),        // 6: dislackso.v1.ExposureSettings
+	(*ExposureStatus)(nil),          // 7: dislackso.v1.ExposureStatus
+	(*TurnSettings)(nil),            // 8: dislackso.v1.TurnSettings
+	(*TurnUsage)(nil),               // 9: dislackso.v1.TurnUsage
+	(*PortMapping)(nil),             // 10: dislackso.v1.PortMapping
+	(*SelfTestReport)(nil),          // 11: dislackso.v1.SelfTestReport
+	(*HostOptions)(nil),             // 12: dislackso.v1.HostOptions
+	(*Connectivity)(nil),            // 13: dislackso.v1.Connectivity
+	(*GetConnectivityRequest)(nil),  // 14: dislackso.v1.GetConnectivityRequest
+	(*GetConnectivityResponse)(nil), // 15: dislackso.v1.GetConnectivityResponse
+	(*SetExposureRequest)(nil),      // 16: dislackso.v1.SetExposureRequest
+	(*SetExposureResponse)(nil),     // 17: dislackso.v1.SetExposureResponse
+	(*SetTurnRequest)(nil),          // 18: dislackso.v1.SetTurnRequest
+	(*SetTurnResponse)(nil),         // 19: dislackso.v1.SetTurnResponse
+	(*RunSelfTestRequest)(nil),      // 20: dislackso.v1.RunSelfTestRequest
+	(*RunSelfTestResponse)(nil),     // 21: dislackso.v1.RunSelfTestResponse
+	(*StartRelayTestRequest)(nil),   // 22: dislackso.v1.StartRelayTestRequest
+	(*StartRelayTestResponse)(nil),  // 23: dislackso.v1.StartRelayTestResponse
+	(*SetHostOptionsRequest)(nil),   // 24: dislackso.v1.SetHostOptionsRequest
+	(*SetHostOptionsResponse)(nil),  // 25: dislackso.v1.SetHostOptionsResponse
+	(*AddFirewallRuleRequest)(nil),  // 26: dislackso.v1.AddFirewallRuleRequest
+	(*AddFirewallRuleResponse)(nil), // 27: dislackso.v1.AddFirewallRuleResponse
+	(*IceServer)(nil),               // 28: dislackso.v1.IceServer
 }
 var file_dislackso_v1_connectivity_proto_depIdxs = []int32{
 	0,  // 0: dislackso.v1.ExposureSettings.kind:type_name -> dislackso.v1.ExposureKind
-	0,  // 1: dislackso.v1.ExposureStatus.kind:type_name -> dislackso.v1.ExposureKind
-	1,  // 2: dislackso.v1.ExposureStatus.state:type_name -> dislackso.v1.ExposureState
-	2,  // 3: dislackso.v1.TurnSettings.kind:type_name -> dislackso.v1.TurnKind
-	3,  // 4: dislackso.v1.SelfTestReport.nat:type_name -> dislackso.v1.NatType
-	9,  // 5: dislackso.v1.SelfTestReport.mapping:type_name -> dislackso.v1.PortMapping
-	4,  // 6: dislackso.v1.SelfTestReport.rating:type_name -> dislackso.v1.HostRating
-	5,  // 7: dislackso.v1.Connectivity.exposure:type_name -> dislackso.v1.ExposureSettings
-	6,  // 8: dislackso.v1.Connectivity.status:type_name -> dislackso.v1.ExposureStatus
-	7,  // 9: dislackso.v1.Connectivity.turn:type_name -> dislackso.v1.TurnSettings
-	8,  // 10: dislackso.v1.Connectivity.usage:type_name -> dislackso.v1.TurnUsage
-	10, // 11: dislackso.v1.Connectivity.self_test:type_name -> dislackso.v1.SelfTestReport
-	11, // 12: dislackso.v1.Connectivity.host:type_name -> dislackso.v1.HostOptions
-	12, // 13: dislackso.v1.GetConnectivityResponse.connectivity:type_name -> dislackso.v1.Connectivity
-	5,  // 14: dislackso.v1.SetExposureRequest.exposure:type_name -> dislackso.v1.ExposureSettings
-	12, // 15: dislackso.v1.SetExposureResponse.connectivity:type_name -> dislackso.v1.Connectivity
-	7,  // 16: dislackso.v1.SetTurnRequest.turn:type_name -> dislackso.v1.TurnSettings
-	12, // 17: dislackso.v1.SetTurnResponse.connectivity:type_name -> dislackso.v1.Connectivity
-	10, // 18: dislackso.v1.RunSelfTestResponse.report:type_name -> dislackso.v1.SelfTestReport
-	27, // 19: dislackso.v1.StartRelayTestResponse.ice_servers:type_name -> dislackso.v1.IceServer
-	11, // 20: dislackso.v1.SetHostOptionsResponse.host:type_name -> dislackso.v1.HostOptions
-	13, // 21: dislackso.v1.ConnectivityService.GetConnectivity:input_type -> dislackso.v1.GetConnectivityRequest
-	15, // 22: dislackso.v1.ConnectivityService.SetExposure:input_type -> dislackso.v1.SetExposureRequest
-	17, // 23: dislackso.v1.ConnectivityService.SetTurn:input_type -> dislackso.v1.SetTurnRequest
-	19, // 24: dislackso.v1.ConnectivityService.RunSelfTest:input_type -> dislackso.v1.RunSelfTestRequest
-	21, // 25: dislackso.v1.ConnectivityService.StartRelayTest:input_type -> dislackso.v1.StartRelayTestRequest
-	23, // 26: dislackso.v1.ConnectivityService.SetHostOptions:input_type -> dislackso.v1.SetHostOptionsRequest
-	25, // 27: dislackso.v1.ConnectivityService.AddFirewallRule:input_type -> dislackso.v1.AddFirewallRuleRequest
-	14, // 28: dislackso.v1.ConnectivityService.GetConnectivity:output_type -> dislackso.v1.GetConnectivityResponse
-	16, // 29: dislackso.v1.ConnectivityService.SetExposure:output_type -> dislackso.v1.SetExposureResponse
-	18, // 30: dislackso.v1.ConnectivityService.SetTurn:output_type -> dislackso.v1.SetTurnResponse
-	20, // 31: dislackso.v1.ConnectivityService.RunSelfTest:output_type -> dislackso.v1.RunSelfTestResponse
-	22, // 32: dislackso.v1.ConnectivityService.StartRelayTest:output_type -> dislackso.v1.StartRelayTestResponse
-	24, // 33: dislackso.v1.ConnectivityService.SetHostOptions:output_type -> dislackso.v1.SetHostOptionsResponse
-	26, // 34: dislackso.v1.ConnectivityService.AddFirewallRule:output_type -> dislackso.v1.AddFirewallRuleResponse
-	28, // [28:35] is the sub-list for method output_type
-	21, // [21:28] is the sub-list for method input_type
-	21, // [21:21] is the sub-list for extension type_name
-	21, // [21:21] is the sub-list for extension extendee
-	0,  // [0:21] is the sub-list for field type_name
+	1,  // 1: dislackso.v1.ExposureSettings.dynamic_dns:type_name -> dislackso.v1.DynamicDnsKind
+	0,  // 2: dislackso.v1.ExposureStatus.kind:type_name -> dislackso.v1.ExposureKind
+	2,  // 3: dislackso.v1.ExposureStatus.state:type_name -> dislackso.v1.ExposureState
+	3,  // 4: dislackso.v1.TurnSettings.kind:type_name -> dislackso.v1.TurnKind
+	4,  // 5: dislackso.v1.SelfTestReport.nat:type_name -> dislackso.v1.NatType
+	10, // 6: dislackso.v1.SelfTestReport.mapping:type_name -> dislackso.v1.PortMapping
+	5,  // 7: dislackso.v1.SelfTestReport.rating:type_name -> dislackso.v1.HostRating
+	6,  // 8: dislackso.v1.Connectivity.exposure:type_name -> dislackso.v1.ExposureSettings
+	7,  // 9: dislackso.v1.Connectivity.status:type_name -> dislackso.v1.ExposureStatus
+	8,  // 10: dislackso.v1.Connectivity.turn:type_name -> dislackso.v1.TurnSettings
+	9,  // 11: dislackso.v1.Connectivity.usage:type_name -> dislackso.v1.TurnUsage
+	11, // 12: dislackso.v1.Connectivity.self_test:type_name -> dislackso.v1.SelfTestReport
+	12, // 13: dislackso.v1.Connectivity.host:type_name -> dislackso.v1.HostOptions
+	13, // 14: dislackso.v1.GetConnectivityResponse.connectivity:type_name -> dislackso.v1.Connectivity
+	6,  // 15: dislackso.v1.SetExposureRequest.exposure:type_name -> dislackso.v1.ExposureSettings
+	13, // 16: dislackso.v1.SetExposureResponse.connectivity:type_name -> dislackso.v1.Connectivity
+	8,  // 17: dislackso.v1.SetTurnRequest.turn:type_name -> dislackso.v1.TurnSettings
+	13, // 18: dislackso.v1.SetTurnResponse.connectivity:type_name -> dislackso.v1.Connectivity
+	11, // 19: dislackso.v1.RunSelfTestResponse.report:type_name -> dislackso.v1.SelfTestReport
+	28, // 20: dislackso.v1.StartRelayTestResponse.ice_servers:type_name -> dislackso.v1.IceServer
+	12, // 21: dislackso.v1.SetHostOptionsResponse.host:type_name -> dislackso.v1.HostOptions
+	14, // 22: dislackso.v1.ConnectivityService.GetConnectivity:input_type -> dislackso.v1.GetConnectivityRequest
+	16, // 23: dislackso.v1.ConnectivityService.SetExposure:input_type -> dislackso.v1.SetExposureRequest
+	18, // 24: dislackso.v1.ConnectivityService.SetTurn:input_type -> dislackso.v1.SetTurnRequest
+	20, // 25: dislackso.v1.ConnectivityService.RunSelfTest:input_type -> dislackso.v1.RunSelfTestRequest
+	22, // 26: dislackso.v1.ConnectivityService.StartRelayTest:input_type -> dislackso.v1.StartRelayTestRequest
+	24, // 27: dislackso.v1.ConnectivityService.SetHostOptions:input_type -> dislackso.v1.SetHostOptionsRequest
+	26, // 28: dislackso.v1.ConnectivityService.AddFirewallRule:input_type -> dislackso.v1.AddFirewallRuleRequest
+	15, // 29: dislackso.v1.ConnectivityService.GetConnectivity:output_type -> dislackso.v1.GetConnectivityResponse
+	17, // 30: dislackso.v1.ConnectivityService.SetExposure:output_type -> dislackso.v1.SetExposureResponse
+	19, // 31: dislackso.v1.ConnectivityService.SetTurn:output_type -> dislackso.v1.SetTurnResponse
+	21, // 32: dislackso.v1.ConnectivityService.RunSelfTest:output_type -> dislackso.v1.RunSelfTestResponse
+	23, // 33: dislackso.v1.ConnectivityService.StartRelayTest:output_type -> dislackso.v1.StartRelayTestResponse
+	25, // 34: dislackso.v1.ConnectivityService.SetHostOptions:output_type -> dislackso.v1.SetHostOptionsResponse
+	27, // 35: dislackso.v1.ConnectivityService.AddFirewallRule:output_type -> dislackso.v1.AddFirewallRuleResponse
+	29, // [29:36] is the sub-list for method output_type
+	22, // [22:29] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_dislackso_v1_connectivity_proto_init() }
@@ -1937,7 +2025,7 @@ func file_dislackso_v1_connectivity_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_dislackso_v1_connectivity_proto_rawDesc), len(file_dislackso_v1_connectivity_proto_rawDesc)),
-			NumEnums:      5,
+			NumEnums:      6,
 			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,

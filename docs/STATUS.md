@@ -184,6 +184,19 @@ mode. Phase 6 (drawing) is merged and in use.
 
 ## Done
 
+### Phase 7 — Direct address with a free DuckDNS name
+
+- **Direct exposure keeps a DuckDNS name pointed at the hub** (`adapter/ddns`, behind
+  `ports.DynamicDNS`): before the certificate the provider reports the `dns` stage, finds the
+  public IPv4 with STUN and updates DuckDNS; then it checks every 5 minutes and updates on change.
+  A failed update is the `dynamic_dns_failed` problem and the provider retries with the usual
+  backoff.
+- **Settings:** `ExposureSettings.dynamic_dns` (none or DuckDNS) and the write-only
+  `dns_token`, stored in the secret store like the tunnel token. With DuckDNS the domain must be
+  `<name>.duckdns.org` and the token is required.
+- **Connectivity page:** "Keep the domain pointed here" and the DuckDNS token under "Public
+  address with a domain"; HOSTING.md has the steps.
+
 ### Phase 7 — After the first evening with the desktop app
 
 - **Laser color:** the laser packet carries its color (`Laser.color_rgba`); it used to borrow the
@@ -733,6 +746,14 @@ mode. Phase 6 (drawing) is merged and in use.
   does not fall back to it, and Apple Silicon refuses unsigned apps.
 - **The app's version is the release tag** (`extraMetadata.version`); local builds use
   `git describe`.
+- **Direct mode with DuckDNS** for hosts with a public IP, so the team's address no longer
+  depends on Tailscale's relays. No ledger change: D7 already lists direct as an alternative and
+  DuckDNS is free. It is a dynamic DNS port, so other providers fit without touching the direct
+  provider. `duckdns.org` is on the Public Suffix List, so Let's Encrypt limits count per name,
+  and autocert caches the certificate in `acme/` so restarts do not request a new one.
+- **The public IPv4 comes from the STUN servers the doctor already uses,** not from DuckDNS
+  guessing the caller's address, so an IPv6 request can never point the name at the wrong
+  family.
 
 ### Phase 6
 
@@ -874,8 +895,27 @@ mode. Phase 6 (drawing) is merged and in use.
 - Without `restrictOwnAudio` (older Chromium, other browsers) shared system audio can carry the
   call's voices back; the sharer gets a warning.
 - The stage shortcuts (G, F, arrows, Ctrl+Shift+S) are fixed until the Keybinds page.
+- **Direct mode needs inbound port 443** for Let's Encrypt's TLS-ALPN challenge; an ISP that
+  blocks it would need the DNS challenge (DuckDNS can set TXT records), which is not built.
+- **The public address may not open from the hub machine itself** when the router has no NAT
+  loopback; the host uses `http://localhost:7300` (the desktop app accepts it).
+- **DuckDNS gets an IPv4 record only,** which every client can reach.
 
 ## Manual test script
+
+### Direct address with DuckDNS
+
+Prerequisites: the router sends port 443 to the hub machine (DMZ or forward), a DuckDNS name and
+token.
+
+1. Settings → Connectivity → Public address: choose "Public address with a domain", set "Keep the
+   domain pointed here" to DuckDNS, enter the name and token, Save and restart. Allow the hub in
+   the Windows Firewall prompt (Private and Public).
+2. The status shows "Pointing the domain…", then "Getting an HTTPS certificate…", then reachable
+   with `https://<name>.duckdns.org`. On duckdns.org the name shows your public IP.
+3. From a phone on mobile data, open the address and sign in; join a call.
+4. Restart the hub: it comes back without a new certificate (the `acme/` folder in the data
+   folder keeps it).
 
 ### Phase 7 (part 1)
 

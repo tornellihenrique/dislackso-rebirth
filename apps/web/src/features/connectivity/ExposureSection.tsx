@@ -19,6 +19,7 @@ import { SelectField, TextField } from '@/ui/Fields';
 import { StatusDot, type StatusTone } from '@/ui/StatusDot';
 
 import {
+  DYNAMIC_DNS_CHOICES,
   EXPOSURE_CHOICES,
   exposureChoice,
   exposureFormFrom,
@@ -72,7 +73,7 @@ export function ExposureSection({ settings, status }: ExposureSectionProps) {
     onSuccess: (res) => {
       queryClient.setQueryData(CONNECTIVITY_KEY, res.connectivity ?? null);
       void queryClient.invalidateQueries({ queryKey: INSTANCE_SETTINGS_KEY });
-      setForm((f) => ({ ...f, tunnelToken: '' }));
+      setForm((f) => ({ ...f, tunnelToken: '', dnsToken: '' }));
     },
   });
   const errors = useApiErrors(save.error);
@@ -155,15 +156,50 @@ export function ExposureSection({ settings, status }: ExposureSectionProps) {
         )}
         {form.choice === 'direct' && (
           <>
+            <SelectField
+              label={t('connectivity.exposure.dynamicDns')}
+              hint={t(`connectivity.exposure.dynamicDnsChoices.${form.dynamicDns}.hint`)}
+              value={form.dynamicDns}
+              error={field('dynamic_dns')}
+              onChange={(e) => {
+                set({
+                  dynamicDns:
+                    DYNAMIC_DNS_CHOICES.find((c) => c === e.target.value) ?? form.dynamicDns,
+                });
+              }}
+            >
+              {DYNAMIC_DNS_CHOICES.map((c) => (
+                <option key={c} value={c}>
+                  {t(`connectivity.exposure.dynamicDnsChoices.${c}.label`)}
+                </option>
+              ))}
+            </SelectField>
             <TextField
               label={t('connectivity.exposure.directDomain')}
-              placeholder="chat.example.com"
+              placeholder={form.dynamicDns === 'duckdns' ? 'team.duckdns.org' : 'chat.example.com'}
               value={form.directDomain}
               error={field('direct_domain')}
               onChange={(e) => {
                 set({ directDomain: e.target.value });
               }}
             />
+            {form.dynamicDns === 'duckdns' && (
+              <TextField
+                label={t('connectivity.exposure.dnsToken')}
+                hint={
+                  settings?.dnsTokenSet === true
+                    ? t('connectivity.secretKeep')
+                    : t('connectivity.exposure.dnsTokenHint')
+                }
+                type="password"
+                autoComplete="off"
+                value={form.dnsToken}
+                error={field('dns_token')}
+                onChange={(e) => {
+                  set({ dnsToken: e.target.value });
+                }}
+              />
+            )}
             <TextField
               label={t('connectivity.exposure.directEmail')}
               hint={t('connectivity.exposure.directEmailHint')}

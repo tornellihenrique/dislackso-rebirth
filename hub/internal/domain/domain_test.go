@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/netip"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -75,6 +76,46 @@ func TestValidateSMTP(t *testing.T) {
 		if !got[f] {
 			t.Errorf("missing violation for %s (got %v)", f, de.Fields)
 		}
+	}
+}
+
+func TestValidateExposureDirect(t *testing.T) {
+	direct := func(domain string, dns DynamicDNSKind) ExposureSettings {
+		s := DefaultExposureSettings()
+		s.Kind, s.DirectDomain, s.DynamicDNS = ExposureDirect, domain, dns
+		return s
+	}
+	tests := []struct {
+		name        string
+		settings    ExposureSettings
+		dnsTokenSet bool
+		want        []string
+	}{
+		{"own domain", direct("hub.example.com", DynamicDNSNone), false, nil},
+		{"duckdns", direct("team.duckdns.org", DynamicDNSDuckDNS), true, nil},
+		{"duckdns without token", direct("team.duckdns.org", DynamicDNSDuckDNS), false, []string{"e.dns_token"}},
+		{"duckdns on another domain", direct("hub.example.com", DynamicDNSDuckDNS), true, []string{"e.direct_domain"}},
+		{"duckdns nested name", direct("a.team.duckdns.org", DynamicDNSDuckDNS), true, []string{"e.direct_domain"}},
+		{"empty domain once", direct("", DynamicDNSDuckDNS), true, []string{"e.direct_domain"}},
+		{"unknown provider", direct("hub.example.com", "noip"), false, []string{"e.dynamic_dns"}},
+	}
+	for _, tt := range tests {
+		var got []string
+		for _, v := range ValidateExposure("e.", tt.settings, false, tt.dnsTokenSet) {
+			got = append(got, v.Field)
+		}
+		if !slices.Equal(got, tt.want) {
+			t.Errorf("%s: violations = %v, want %v", tt.name, got, tt.want)
+		}
+	}
+}
+
+func TestDuckDNSName(t *testing.T) {
+	if name, ok := DuckDNSName("team.duckdns.org"); !ok || name != "team" {
+		t.Errorf("DuckDNSName = %q, %v", name, ok)
+	}
+	if _, ok := DuckDNSName("duckdns.org"); ok {
+		t.Error("the bare suffix is not a DuckDNS name")
 	}
 }
 

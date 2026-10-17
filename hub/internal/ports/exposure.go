@@ -49,3 +49,9 @@ type PublicProbe interface {
 	// Reachable fails until rawURL answers an HTTPS GET with a 2xx status.
 	Reachable(ctx context.Context, rawURL string) error
 }
+
+// DynamicDNS points a domain at an address, for hosts whose public address
+// changes.
+type DynamicDNS interface {
+	Point(ctx context.Context, domain string, ip netip.Addr) error
+}

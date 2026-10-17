@@ -1,5 +1,6 @@
 import { create } from '@bufbuild/protobuf';
 import {
+  DynamicDnsKind,
   ExposureKind,
   ExposureSettingsSchema,
   TurnKind,
@@ -38,8 +39,28 @@ describe('exposure form', () => {
     });
   });
 
+  it('keeps a DuckDNS name and never shows the stored DNS token', () => {
+    const form = exposureFormFrom(
+      create(ExposureSettingsSchema, {
+        kind: ExposureKind.DIRECT,
+        directDomain: 'team.duckdns.org',
+        dynamicDns: DynamicDnsKind.DUCKDNS,
+        dnsTokenSet: true,
+      }),
+    );
+    expect(form).toMatchObject({ choice: 'direct', dynamicDns: 'duckdns', dnsToken: '' });
+    expect(
+      exposureSettingsFrom({ ...form, directDomain: ' Team.DuckDNS.org ', dnsToken: ' abc ' }),
+    ).toMatchObject({
+      kind: ExposureKind.DIRECT,
+      directDomain: 'team.duckdns.org',
+      dynamicDns: DynamicDnsKind.DUCKDNS,
+      dnsToken: 'abc',
+    });
+  });
+
   it('starts local when nothing is configured', () => {
-    expect(exposureFormFrom(undefined).choice).toBe('local');
+    expect(exposureFormFrom(undefined)).toMatchObject({ choice: 'local', dynamicDns: 'none' });
   });
 });
 

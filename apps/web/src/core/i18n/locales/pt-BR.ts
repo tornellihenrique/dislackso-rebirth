@@ -870,6 +870,19 @@ export const ptBR: Messages = {
       tunnelTokenHint:
         'No painel do Cloudflare: Zero Trust → Networks → Tunnels → seu túnel → o valor longo depois de --token no comando de instalação.',
       directDomain: 'Domínio',
+      dynamicDns: 'Manter o domínio apontando para cá',
+      dynamicDnsChoices: {
+        none: {
+          label: 'Não precisa',
+          hint: 'O DNS do seu domínio já aponta para o IP público desta máquina.',
+        },
+        duckdns: {
+          label: 'DuckDNS (nome gratuito)',
+          hint: 'Um <nome>.duckdns.org gratuito. O hub aponta o nome para esta máquina ao iniciar e de novo sempre que o IP público mudar.',
+        },
+      },
+      dnsToken: 'Token do DuckDNS',
+      dnsTokenHint: 'No duckdns.org, depois de entrar: o token no topo da página.',
       directEmail: 'Email de contato (opcional)',
       directEmailHint: "O Let's Encrypt escreve para cá antes de um certificado expirar.",
       listenAddr: 'Endereço de escuta',
@@ -884,6 +897,7 @@ export const ptBR: Messages = {
         failed: '{{provider}} não está funcionando.',
       },
       stages: {
+        dns: 'Apontando o domínio para esta máquina…',
         certificate: 'Obtendo um certificado HTTPS para o endereço…',
         publishing:
           'Esperando {{url}} funcionar pela internet. Na primeira vez, o Tailscale leva até 10 minutos para publicá-lo.',
@@ -905,7 +919,7 @@ export const ptBR: Messages = {
         },
         direct: {
           label: 'Endereço público com domínio',
-          hint: "Esta máquina tem um IP público e seu domínio aponta para ela. O hub obtém sozinho um certificado do Let's Encrypt.",
+          hint: "Esta máquina tem um IP público e a porta 443 chega até ela. Use seu próprio domínio ou um nome gratuito do DuckDNS; o hub obtém sozinho um certificado do Let's Encrypt.",
         },
         lan: {
           label: 'Só esta rede',
@@ -931,6 +945,8 @@ export const ptBR: Messages = {
       address_in_use: 'Outro programa usa essa porta. Feche-o ou escolha outro endereço.',
       certificate_failed:
         'Não foi possível obter um certificado. Verifique se o domínio aponta para esta máquina e se a porta 443 chega até ela.',
+      dynamic_dns_failed:
+        'Não foi possível apontar o domínio para esta máquina. Verifique o token do DuckDNS e se o nome é um que você criou no duckdns.org; o hub tenta de novo.',
       exposure_failed: 'Algo deu errado; o hub tenta de novo. Os detalhes abaixo podem ajudar.',
     },
     selfTest: {

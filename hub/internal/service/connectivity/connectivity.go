@@ -65,6 +65,7 @@ type Deps struct {
 type View struct {
 	Exposure       domain.ExposureSettings
 	TunnelTokenSet bool
+	DNSTokenSet    bool
 	Status         domain.ExposureStatus
 	TURN           domain.TURNSettings
 	TURNSecretSet  bool
@@ -99,6 +100,9 @@ func (s *Service) view(ctx context.Context) (View, error) {
 		SelfTest: s.d.Doctor.Last(),
 	}
 	if v.TunnelTokenSet, err = s.d.Settings.SecretSet(ctx, settings.TunnelTokenSecret); err != nil {
+		return View{}, err
+	}
+	if v.DNSTokenSet, err = s.d.Settings.SecretSet(ctx, settings.DNSTokenSecret); err != nil {
 		return View{}, err
 	}
 	if v.TURNSecretSet, err = s.d.Settings.SecretSet(ctx, settings.TURNSecret); err != nil {

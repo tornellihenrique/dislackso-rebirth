@@ -18,6 +18,7 @@ import (
 	"math/big"
 	"net"
 	"net/http"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"time"
@@ -29,7 +30,12 @@ import (
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/transport/ingress"
 )
 
-const drainTimeout = 5 * time.Second
+const (
+	drainTimeout = 5 * time.Second
+	// A home connection's public address changes rarely; a few minutes of
+	// a stale name after a change is the cost of not asking constantly.
+	defaultDNSCheck = 5 * time.Minute
+)
 
 // Public serves on a public address with a certificate from Let's Encrypt,
 // over the TLS-ALPN challenge on the same port.
@@ -38,6 +44,12 @@ type Public struct {
 	Email    string
 	Addr     string
 	CacheDir string
+	// DNS keeps Domain pointed at this machine; nil when the domain's own
+	// DNS already does. PublicIP is then this machine's address as the
+	// internet sees it.
+	DNS      ports.DynamicDNS
+	PublicIP func(ctx context.Context) (netip.Addr, error)
+	DNSCheck time.Duration
 	Logger   *slog.Logger
 	Clock    ports.Clock
 }
@@ -45,7 +57,26 @@ type Public struct {
 func (p *Public) Kind() domain.ExposureKind { return domain.ExposureDirect }
 
 func (p *Public) Run(ctx context.Context, handler http.Handler, report func(domain.ExposureStatus)) error {
-	report(domain.ExposureStatus{Kind: domain.ExposureDirect, State: domain.ExposureStarting, Since: p.Clock.Now()})
+	starting := func(stage string) {
+		report(domain.ExposureStatus{
+			Kind: domain.ExposureDirect, State: domain.ExposureStarting, Stage: stage,
+			URL: "https://" + hostPort(p.Domain, p.Addr), Since: p.Clock.Now(),
+		})
+	}
+	if p.DNS != nil {
+		// Let's Encrypt looks the domain up before it issues the certificate.
+		starting(domain.StageDNS)
+		ip, err := p.point(ctx)
+		if err != nil {
+			return &ports.ExposureError{Problem: domain.ProblemDynamicDNS, Err: err}
+		}
+		// A failed run is retried with a new Run; its updater must not stay.
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithCancel(ctx)
+		defer cancel()
+		go p.keepPointed(ctx, ip)
+	}
+	starting(domain.StageCertificate)
 	m := &autocert.Manager{
 		Prompt:     autocert.AcceptTOS,
 		HostPolicy: autocert.HostWhitelist(p.Domain),
@@ -68,6 +99,47 @@ func (p *Public) Run(ctx context.Context, handler http.Handler, report func(doma
 	})
 	info := ingress.Info{Name: string(domain.ExposureDirect), Secure: true, HSTS: true}
 	return serve(ctx, tls.NewListener(ln, m.TLSConfig()), handler, info, p.Logger)
+}
+
+func (p *Public) point(ctx context.Context) (netip.Addr, error) {
+	ip, err := p.PublicIP(ctx)
+	if err != nil {
+		return netip.Addr{}, fmt.Errorf("find the public address: %w", err)
+	}
+	if err := p.DNS.Point(ctx, p.Domain, ip); err != nil {
+		return netip.Addr{}, err
+	}
+	return ip, nil
+}
+
+// keepPointed follows the public address while the hub serves, so a new
+// one after a router restart reaches the domain.
+func (p *Public) keepPointed(ctx context.Context, last netip.Addr) {
+	every := p.DNSCheck
+	if every <= 0 {
+		every = defaultDNSCheck
+	}
+	t := time.NewTicker(every)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
+		ip, err := p.PublicIP(ctx)
+		if err != nil || ip == last {
+			continue
+		}
+		if err := p.DNS.Point(ctx, p.Domain, ip); err != nil {
+			p.Logger.WarnContext(ctx, "point the domain at the new public address",
+				slog.String("domain", p.Domain), slog.Any("error", err))
+			continue
+		}
+		p.Logger.InfoContext(ctx, "the domain points at the new public address",
+			slog.String("domain", p.Domain), slog.String("ip", ip.String()))
+		last = ip
+	}
 }
 
 // LAN serves on this machine's network with a self-signed certificate,

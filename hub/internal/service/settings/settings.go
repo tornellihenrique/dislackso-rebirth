@@ -1,6 +1,6 @@
 // Package settings owns the instance settings: cached reads, validated
-// updates, and the secrets (SMTP password, tunnel token, TURN secret) kept
-// in the secret store.
+// updates, and the secrets (SMTP password, tunnel token, dynamic DNS token,
+// TURN secret) kept in the secret store.
 package settings
 
 import (
@@ -17,6 +17,7 @@ import (
 const (
 	SMTPPasswordSecret = "smtp.password"
 	TunnelTokenSecret  = "exposure.tunnel_token"
+	DNSTokenSecret     = "exposure.dns_token"
 	TURNSecret         = "turn.secret"
 )
 
@@ -93,7 +94,9 @@ type Patch struct {
 	Exposure     *domain.ExposureSettings
 	// TunnelToken replaces the Cloudflare tunnel token when non-empty.
 	TunnelToken string
-	TURN        *domain.TURNSettings
+	// DNSToken replaces the dynamic DNS token when non-empty.
+	DNSToken string
+	TURN     *domain.TURNSettings
 	// TURNSecret replaces the relay provider's secret when non-empty.
 	TURNSecret        string
 	TURNBudgetGB      *int
@@ -138,11 +141,18 @@ func (s *Service) Update(ctx context.Context, p Patch) (domain.InstanceSettings,
 		next.Exposure.TailscaleHostname = strings.ToLower(strings.TrimSpace(next.Exposure.TailscaleHostname))
 		next.Exposure.DirectDomain = strings.ToLower(strings.TrimSpace(next.Exposure.DirectDomain))
 		next.Exposure.TunnelURL = domain.NormalizePublicURL(next.Exposure.TunnelURL)
+		if next.Exposure.DynamicDNS == "" {
+			next.Exposure.DynamicDNS = domain.DynamicDNSNone
+		}
 		tokenSet, err := s.secretSet(ctx, TunnelTokenSecret, p.TunnelToken)
 		if err != nil {
 			return domain.InstanceSettings{}, err
 		}
-		checks = append(checks, domain.ValidateExposure("exposure.", next.Exposure, tokenSet)...)
+		dnsTokenSet, err := s.secretSet(ctx, DNSTokenSecret, p.DNSToken)
+		if err != nil {
+			return domain.InstanceSettings{}, err
+		}
+		checks = append(checks, domain.ValidateExposure("exposure.", next.Exposure, tokenSet, dnsTokenSet)...)
 	}
 	if p.TURN != nil {
 		next.TURN = *p.TURN
@@ -172,6 +182,7 @@ func (s *Service) Update(ctx context.Context, p Patch) (domain.InstanceSettings,
 	for key, value := range map[string]string{
 		SMTPPasswordSecret: p.SMTPPassword,
 		TunnelTokenSecret:  p.TunnelToken,
+		DNSTokenSecret:     p.DNSToken,
 		TURNSecret:         p.TURNSecret,
 	} {
 		if value == "" {

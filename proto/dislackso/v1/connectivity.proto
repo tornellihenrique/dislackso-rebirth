@@ -42,6 +42,14 @@ enum ExposureKind {
   EXPOSURE_KIND_LAN = 6;
 }
 
+// Keeps the direct domain pointed at this machine's public address.
+enum DynamicDnsKind {
+  DYNAMIC_DNS_KIND_UNSPECIFIED = 0;
+  DYNAMIC_DNS_KIND_NONE = 1;
+  // A free <name>.duckdns.org, updated with a DuckDNS token.
+  DYNAMIC_DNS_KIND_DUCKDNS = 2;
+}
+
 message ExposureSettings {
   ExposureKind kind = 1;
   string tailscale_hostname = 2;
@@ -55,6 +63,11 @@ message ExposureSettings {
   string tunnel_token = 8;
   // Read-only: whether a token is stored.
   bool tunnel_token_set = 9;
+  DynamicDnsKind dynamic_dns = 10;
+  // Write-only: the dynamic DNS provider's token. Empty keeps the stored one.
+  string dns_token = 11;
+  // Read-only: whether a dynamic DNS token is stored.
+  bool dns_token_set = 12;
 }
 
 enum ExposureState {
