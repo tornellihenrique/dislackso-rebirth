@@ -2,10 +2,10 @@
 
 ## Current phase
 
-**Phase 7 — Desktop shell: in progress.** The first part is built: the desktop app, its screen
-picker and the drawing overlay on the shared screen. Next in this phase: window-share overlay,
-global hotkeys and push-to-talk, tray, auto-update, host mode and installers. Phase 6 (drawing) is
-merged and in use.
+**Phase 7 — Desktop shell: in progress.** Built: the desktop app, its screen picker, the drawing
+overlay on the shared screen, installers for Windows, macOS and Linux, and updates from GitHub
+releases. Next in this phase: window-share overlay, global hotkeys and push-to-talk, tray and host
+mode. Phase 6 (drawing) is merged and in use.
 
 ### Phase 7 acceptance
 
@@ -183,6 +183,20 @@ merged and in use.
       typecheck + tests, build + Playwright smoke).
 
 ## Done
+
+### Phase 7 — Desktop shell (part 2: installers and updates)
+
+- **Installers** (electron-builder 26.17, `task desktop:dist`): Windows NSIS one-click for the
+  current user without admin rights, macOS dmg (x64 and arm64, ad-hoc signed), Linux AppImage and
+  deb. The package holds only electron-vite's bundle and `package.json`. The icon is the product
+  mark (`apps/web/public/favicon.svg`) rendered at 1024 px.
+- **Updates** (electron-updater 6.8): a packaged app checks the latest published release at start
+  and every 6 hours. Windows and the AppImage download it in the background and ask to restart
+  (otherwise it installs on quit); macOS, unsigned, opens the download page instead.
+- **Release workflow:** on a tag, a job per OS builds the installers with the tag as the version;
+  they go into the draft release with the updater's `latest*.yml`, the blockmaps and checksums.
+- **Tests:** `E2E_DESKTOP_EXE` runs the desktop e2e against a packaged app; it passed on the
+  unpacked Windows build, with the updater on.
 
 ### Phase 7 — Desktop shell (part 1)
 
@@ -695,6 +709,15 @@ merged and in use.
   into the main process: preloads can load no other file, and workspace packages ship TypeScript.
 - **The desktop e2e runs locally, not in CI:** it shares and draws on the real screen, and capture
   protection is a Windows (and macOS) feature.
+- **electron-builder 26.17.0 and electron-updater 6.8.10.** The updater is bundled into the main
+  process with everything else, so packaging never walks pnpm's `node_modules`.
+  electron-winstaller's install script (Squirrel.Windows, unused by NSIS) is denied in
+  `pnpm-workspace.yaml` (`allowBuilds`).
+- **One-click per-user NSIS:** no admin rights and no choices; the app starts when it is installed.
+- **macOS builds are ad-hoc signed** (`identity: '-'`, hardened runtime off): electron-builder
+  does not fall back to it, and Apple Silicon refuses unsigned apps.
+- **The app's version is the release tag** (`extraMetadata.version`); local builds use
+  `git describe`.
 
 ### Phase 6
 
@@ -824,8 +847,10 @@ merged and in use.
 - Pop-out (Picture-in-Picture) comes in Phase 11.
 - **A sharer sees drawings on the real screen only in the desktop app,** and only when sharing a
   whole screen; sharing one window shows them on the tile, until the window-share overlay.
-- **The desktop app has no installer yet:** it runs from the repo with `task desktop`. Installers
-  and auto-update come later in Phase 7.
+- **The installers are unsigned:** Windows SmartScreen asks to confirm the first run ("More info"
+  → "Run anyway"), and macOS needs right-click → Open. macOS builds cannot update themselves and
+  show a download link; the Linux deb updates by installing the new one (the AppImage updates
+  itself). The macOS and Linux installers are built by the release workflow but not yet tried.
 - **The computer's sound shared from the desktop app includes the call's voices** on Windows; the
   exclusion is still to come.
 - **The desktop app is tested on Windows only;** macOS and Linux builds are not made yet.

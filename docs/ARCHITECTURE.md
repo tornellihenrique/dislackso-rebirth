@@ -668,6 +668,9 @@ interface DesktopBridge {
 ### 16.6 Other native features
 Global hotkeys including PTT key-down/key-up via `uiohook-napi` (macOS needs Accessibility permission; Wayland unsupported → fall back to focused-window PTT) · tray icon (mute/deafen/quit) · close-to-tray · start at login · native notifications + taskbar badge/overlay icon · deep links `dislackso://` · window state persistence · hardware acceleration toggle · auto-update via `electron-updater` from GitHub Releases (repo must be public; macOS unsigned builds cannot auto-update — show "download new version" instead) · **Host mode**: bundles the hub binary; "Host an instance" spawns it with a data dir under app data and opens the setup wizard.
 
+### 16.7 Installers and updates
+`electron-builder` (`apps/desktop/electron-builder.yml`, `task desktop:dist`): Windows NSIS one-click installer for the current user (no admin rights), macOS dmg for x64 and arm64 (ad-hoc signed), Linux AppImage and deb. electron-vite bundles everything the app runs into `out/`, so the package carries no `node_modules`. The release workflow builds them on a tag, with the tag as the app's version, and adds them and the updater's `latest*.yml` and blockmaps to the draft release. A packaged app checks the latest published release at start and every 6 hours: Windows and the AppImage download in the background, then offer to restart (or install on quit); macOS shows a download link; the deb updates through reinstalling.
+
 ---
 
 ## 17. Optional features (designed now, built in later phases)
