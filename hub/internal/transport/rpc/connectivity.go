@@ -47,8 +47,7 @@ func (h *connectivityHandler) SetExposure(ctx context.Context, req *dislacksov1.
 	if err != nil {
 		return nil, err
 	}
-	s, token := exposureFromProto(req.GetExposure())
-	v, err := h.svc.SetExposure(ctx, actor, exposure.Patch{Settings: s, TunnelToken: token})
+	v, err := h.svc.SetExposure(ctx, actor, exposureFromProto(req.GetExposure()))
 	if err != nil {
 		return nil, h.toConnect(ctx, err)
 	}
@@ -140,16 +139,21 @@ func iceServersToProto(servers []ports.IceServer) []*dislacksov1.IceServer {
 	return out
 }
 
-func exposureFromProto(p *dislacksov1.ExposureSettings) (domain.ExposureSettings, string) {
-	return domain.ExposureSettings{
-		Kind:              wire.ExposureKindFromProto(p.GetKind()),
-		TailscaleHostname: strings.TrimSpace(p.GetTailscaleHostname()),
-		TunnelURL:         strings.TrimSpace(p.GetTunnelUrl()),
-		DirectDomain:      strings.TrimSpace(p.GetDirectDomain()),
-		DirectEmail:       strings.TrimSpace(p.GetDirectEmail()),
-		DirectAddr:        strings.TrimSpace(p.GetDirectAddr()),
-		LANAddr:           strings.TrimSpace(p.GetLanAddr()),
-	}, strings.TrimSpace(p.GetTunnelToken())
+func exposureFromProto(p *dislacksov1.ExposureSettings) exposure.Patch {
+	return exposure.Patch{
+		Settings: domain.ExposureSettings{
+			Kind:              wire.ExposureKindFromProto(p.GetKind()),
+			TailscaleHostname: strings.TrimSpace(p.GetTailscaleHostname()),
+			TunnelURL:         strings.TrimSpace(p.GetTunnelUrl()),
+			DirectDomain:      strings.ToLower(strings.TrimSpace(p.GetDirectDomain())),
+			DirectEmail:       strings.TrimSpace(p.GetDirectEmail()),
+			DirectAddr:        strings.TrimSpace(p.GetDirectAddr()),
+			DynamicDNS:        wire.DynamicDNSKindFromProto(p.GetDynamicDns()),
+			LANAddr:           strings.TrimSpace(p.GetLanAddr()),
+		},
+		TunnelToken: strings.TrimSpace(p.GetTunnelToken()),
+		DNSToken:    strings.TrimSpace(p.GetDnsToken()),
+	}
 }
 
 func hostOptionsToProto(o domain.HostOptions, client domain.ClientInfo) *dislacksov1.HostOptions {
@@ -171,8 +175,10 @@ func connectivityToProto(v connectivity.View, client domain.ClientInfo) *dislack
 			DirectDomain:      v.Exposure.DirectDomain,
 			DirectEmail:       v.Exposure.DirectEmail,
 			DirectAddr:        v.Exposure.DirectAddr,
+			DynamicDns:        wire.DynamicDNSKind(v.Exposure.DynamicDNS),
 			LanAddr:           v.Exposure.LANAddr,
 			TunnelTokenSet:    v.TunnelTokenSet,
+			DnsTokenSet:       v.DNSTokenSet,
 		},
 		Status: wire.ExposureStatus(v.Status),
 		Turn: &dislacksov1.TurnSettings{

@@ -1,5 +1,6 @@
 import type { MessageInitShape } from '@bufbuild/protobuf';
 import {
+  DynamicDnsKind,
   ExposureKind,
   type ExposureSettings,
   type ExposureSettingsSchema,
@@ -34,6 +35,20 @@ export function exposureChoice(kind: ExposureKind): ExposureChoice {
   return EXPOSURE_CHOICES.find((c) => exposureKinds[c] === kind) ?? 'local';
 }
 
+/** Who keeps the direct domain pointed at this machine. */
+export type DynamicDnsChoice = 'none' | 'duckdns';
+
+export const DYNAMIC_DNS_CHOICES: readonly DynamicDnsChoice[] = ['none', 'duckdns'];
+
+const dynamicDnsKinds: Record<DynamicDnsChoice, DynamicDnsKind> = {
+  none: DynamicDnsKind.NONE,
+  duckdns: DynamicDnsKind.DUCKDNS,
+};
+
+export function dynamicDnsChoice(kind: DynamicDnsKind): DynamicDnsChoice {
+  return DYNAMIC_DNS_CHOICES.find((c) => dynamicDnsKinds[c] === kind) ?? 'none';
+}
+
 export interface ExposureForm {
   readonly choice: ExposureChoice;
   readonly tailscaleHostname: string;
@@ -43,6 +58,9 @@ export interface ExposureForm {
   readonly directDomain: string;
   readonly directEmail: string;
   readonly directAddr: string;
+  readonly dynamicDns: DynamicDnsChoice;
+  /** Empty keeps the stored token. */
+  readonly dnsToken: string;
   readonly lanAddr: string;
 }
 
@@ -55,6 +73,8 @@ export function exposureFormFrom(s: ExposureSettings | undefined): ExposureForm 
     directDomain: s?.directDomain ?? '',
     directEmail: s?.directEmail ?? '',
     directAddr: s?.directAddr ?? '',
+    dynamicDns: dynamicDnsChoice(s?.dynamicDns ?? DynamicDnsKind.NONE),
+    dnsToken: '',
     lanAddr: s?.lanAddr ?? '',
   };
 }
@@ -70,6 +90,8 @@ export function exposureSettingsFrom(
     directDomain: f.directDomain.trim().toLowerCase(),
     directEmail: f.directEmail.trim(),
     directAddr: f.directAddr.trim(),
+    dynamicDns: dynamicDnsKinds[f.dynamicDns],
+    dnsToken: f.dnsToken.trim(),
     lanAddr: f.lanAddr.trim(),
   };
 }

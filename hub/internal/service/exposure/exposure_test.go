@@ -49,7 +49,7 @@ func newHarness(t *testing.T, failWith error) *harness {
 	evs := fakes.NewEvents(store)
 	svc := New(Deps{
 		Settings: st,
-		Factory: func(s domain.ExposureSettings, _ string) ports.ExposureProvider {
+		Factory: func(s domain.ExposureSettings, _ Secrets) ports.ExposureProvider {
 			if s.Kind != domain.ExposureCloudflareQuick {
 				return nil
 			}

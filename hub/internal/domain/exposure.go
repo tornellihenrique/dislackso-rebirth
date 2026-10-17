@@ -32,8 +32,25 @@ func (k ExposureKind) Valid() bool {
 	return false
 }
 
+// DynamicDNSKind keeps the direct domain pointed at this machine's public
+// address, which a home connection may change.
+type DynamicDNSKind string
+
+const (
+	DynamicDNSNone DynamicDNSKind = "none"
+	// DynamicDNSDuckDNS updates a free <name>.duckdns.org.
+	DynamicDNSDuckDNS DynamicDNSKind = "duckdns"
+)
+
+// DuckDNSSuffix ends every DuckDNS domain.
+const DuckDNSSuffix = ".duckdns.org"
+
+func (k DynamicDNSKind) Valid() bool {
+	return k == DynamicDNSNone || k == DynamicDNSDuckDNS
+}
+
 // ExposureSettings choose and configure the exposure provider. Secrets (the
-// Cloudflare tunnel token) live in the secret store.
+// Cloudflare tunnel token, the dynamic DNS token) live in the secret store.
 type ExposureSettings struct {
 	Kind ExposureKind
 	// TailscaleHostname names the node: https://<hostname>.<tailnet>.ts.net.
@@ -46,6 +63,8 @@ type ExposureSettings struct {
 	DirectDomain string
 	DirectEmail  string
 	DirectAddr   string
+	// DynamicDNS keeps DirectDomain pointed at this machine.
+	DynamicDNS DynamicDNSKind
 	// LANAddr is the address on this machine's network the hub listens on,
 	// with a self-signed certificate.
 	LANAddr string
@@ -58,6 +77,7 @@ func DefaultExposureSettings() ExposureSettings {
 		Kind:              ExposureLocal,
 		TailscaleHostname: DefaultTailscaleHostname,
 		DirectAddr:        ":443",
+		DynamicDNS:        DynamicDNSNone,
 		LANAddr:           "0.0.0.0:7443",
 	}
 }
@@ -83,6 +103,7 @@ const (
 	ProblemTunnelToken       = "tunnel_token_missing"
 	ProblemAddressInUse      = "address_in_use"
 	ProblemCertificate       = "certificate_failed"
+	ProblemDynamicDNS        = "dynamic_dns_failed"
 	ProblemExposureFailed    = "exposure_failed"
 )
 
@@ -103,6 +124,8 @@ type ExposureStatus struct {
 
 // Stages of an address on its way up, so the admin panel can say what it waits for.
 const (
+	// StageDNS: the domain is being pointed at this machine.
+	StageDNS = "dns"
 	// StageCertificate: the HTTPS certificate is being issued.
 	StageCertificate = "certificate"
 	// StagePublishing: the address does not answer from the internet yet.
@@ -114,8 +137,9 @@ const (
 // Hostname labels: letters, digits and dashes, as Tailscale accepts them.
 var hostnameRe = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`)
 
-// ValidateExposure checks the settings the chosen provider needs.
-func ValidateExposure(prefix string, s ExposureSettings, tunnelTokenSet bool) []*FieldViolation {
+// ValidateExposure checks the settings the chosen provider needs, given
+// which of its secrets are stored.
+func ValidateExposure(prefix string, s ExposureSettings, tunnelTokenSet, dnsTokenSet bool) []*FieldViolation {
 	var out []*FieldViolation
 	if !s.Kind.Valid() {
 		return []*FieldViolation{{prefix + "kind", ReasonFieldInvalid}}
@@ -133,7 +157,8 @@ func ValidateExposure(prefix string, s ExposureSettings, tunnelTokenSet bool) []
 			out = append(out, v)
 		}
 	case ExposureDirect:
-		if !validDomain(s.DirectDomain) {
+		_, duck := DuckDNSName(s.DirectDomain)
+		if !validDomain(s.DirectDomain) || s.DynamicDNS == DynamicDNSDuckDNS && !duck {
 			out = append(out, &FieldViolation{prefix + "direct_domain", ReasonFieldInvalidFormat})
 		}
 		if s.DirectEmail != "" {
@@ -142,6 +167,12 @@ func ValidateExposure(prefix string, s ExposureSettings, tunnelTokenSet bool) []
 		if !validListenAddr(s.DirectAddr) {
 			out = append(out, &FieldViolation{prefix + "direct_addr", ReasonFieldInvalidFormat})
 		}
+		if !s.DynamicDNS.Valid() {
+			out = append(out, &FieldViolation{prefix + "dynamic_dns", ReasonFieldInvalid})
+		}
+		if s.DynamicDNS == DynamicDNSDuckDNS && !dnsTokenSet {
+			out = append(out, &FieldViolation{prefix + "dns_token", ReasonFieldRequired})
+		}
 	case ExposureLAN:
 		if !validListenAddr(s.LANAddr) {
 			out = append(out, &FieldViolation{prefix + "lan_addr", ReasonFieldInvalidFormat})
@@ -149,6 +180,13 @@ func ValidateExposure(prefix string, s ExposureSettings, tunnelTokenSet bool) []
 	case ExposureLocal, ExposureCloudflareQuick:
 	}
 	return out
+}
+
+// DuckDNSName is the name DuckDNS knows a domain by: "team" for
+// team.duckdns.org. Only a direct subdomain is one.
+func DuckDNSName(domain string) (string, bool) {
+	name, ok := strings.CutSuffix(domain, DuckDNSSuffix)
+	return name, ok && hostnameRe.MatchString(name)
 }
 
 func validateHTTPSURL(field, raw string) *FieldViolation {

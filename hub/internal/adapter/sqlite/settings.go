@@ -63,6 +63,7 @@ type exposureJSON struct {
 	DirectDomain      string `json:"direct_domain"`
 	DirectEmail       string `json:"direct_email"`
 	DirectAddr        string `json:"direct_addr"`
+	DynamicDNS        string `json:"dynamic_dns"`
 	LANAddr           string `json:"lan_addr"`
 }
 
@@ -175,6 +176,7 @@ func sections(s domain.InstanceSettings) settingsJSON {
 			DirectDomain:      e.DirectDomain,
 			DirectEmail:       e.DirectEmail,
 			DirectAddr:        e.DirectAddr,
+			DynamicDNS:        string(e.DynamicDNS),
 			LANAddr:           e.LANAddr,
 		},
 		turn: turnJSON{
@@ -218,6 +220,7 @@ func (s settingsJSON) settings() domain.InstanceSettings {
 			DirectDomain:      e.DirectDomain,
 			DirectEmail:       e.DirectEmail,
 			DirectAddr:        e.DirectAddr,
+			DynamicDNS:        dynamicDNS(e.DynamicDNS),
 			LANAddr:           e.LANAddr,
 		},
 		TURN: domain.TURNSettings{
@@ -229,4 +232,12 @@ func (s settingsJSON) settings() domain.InstanceSettings {
 		},
 		Host: domain.HostSettings{KeepAwake: s.host.KeepAwake},
 	}
+}
+
+// dynamicDNS reads settings saved before the field existed as none.
+func dynamicDNS(raw string) domain.DynamicDNSKind {
+	if raw == "" {
+		return domain.DynamicDNSNone
+	}
+	return domain.DynamicDNSKind(raw)
 }

@@ -84,10 +84,29 @@ For a stable address on a domain you manage on Cloudflare (the free plan is enou
 4. In the hub, choose **Cloudflare Tunnel (own domain)**, enter `https://chat.example.com` and the
    token, and **Save and restart**.
 
+### Public address with a free DuckDNS name
+
+When the router gives this machine a public IP (DMZ or port 443 forwarded to it), the hub can serve
+the internet itself, with no tunnel in between. DuckDNS gives a free `<name>.duckdns.org` and the
+hub keeps it pointed at your public IP, also after the provider changes it.
+
+1. Sign in at [duckdns.org](https://www.duckdns.org) (GitHub or Google), add a subdomain and copy
+   the **token** at the top of the page.
+2. In the hub, choose **Public address with a domain**, set **Keep the domain pointed here** to
+   **DuckDNS**, enter `<name>.duckdns.org`, paste the token, leave the listen address at `:443`
+   and **Save and restart**.
+3. When Windows asks whether the hub may use the network, tick **Private** and **Public** and allow
+   it. Let's Encrypt connects to port 443 to issue the certificate.
+4. The status goes through "Pointing the domain…" and "Getting an HTTPS certificate…" to
+   reachable, usually within a minute. The address becomes the instance's public URL.
+
+On the hub machine itself keep using `http://localhost:7300`: some routers do not loop the public
+address back to the inside.
+
 ### Other choices
 
-- **Public address with a domain**: the machine has a public IP, your domain's DNS points at it,
-  and port 443 reaches it. The hub gets a Let's Encrypt certificate itself.
+- **Public address with your own domain**: the machine has a public IP, your domain's DNS points
+  at it, and port 443 reaches it. The hub gets a Let's Encrypt certificate itself.
 - **This network only**: devices on your network open `https://<this machine's IP>:7443`. The
   certificate is self-signed, so each browser warns once.
 - **Only this machine**: the default; nobody else can reach the hub.
@@ -170,6 +189,8 @@ The app updates itself from new releases (on macOS it shows where to download th
 | "Turn on HTTPS certificates for your tailnet" | Tailscale admin console → DNS → HTTPS Certificates → Enable. |
 | "Your tailnet does not allow Funnel" | Add the `funnel` node attribute in Access controls → JSON editor (step 3 of the Tailscale path); wait a minute. |
 | "Could not download cloudflared" | The hub retries; check that GitHub is reachable from this machine. |
+| "Could not point the domain at this machine" | Check the DuckDNS token and that the name is one you added on duckdns.org. |
+| "Could not get a certificate" | Port 443 must reach this machine: router DMZ or forward, and Windows Firewall allowing the hub. Test port 443 with an online port checker while the hub runs. |
 | "Another program uses that port" | Something else listens on the address (443, 7443 or 7301); stop it or choose another. |
 | Calls connect at home but not for friends | Run the reachability test; add a relay; allow the firewall rule. |
 | The hub window closes at once | Start it from a terminal (`hub`) to read the error; on Windows the window now waits for Enter after an error. |

@@ -859,6 +859,19 @@ export const en = {
       tunnelTokenHint:
         'From the Cloudflare dashboard: Zero Trust → Networks → Tunnels → your tunnel → the long value after --token in the install command.',
       directDomain: 'Domain',
+      dynamicDns: 'Keep the domain pointed here',
+      dynamicDnsChoices: {
+        none: {
+          label: 'Not needed',
+          hint: "Your domain's DNS already points at this machine's public IP.",
+        },
+        duckdns: {
+          label: 'DuckDNS (free name)',
+          hint: 'A free <name>.duckdns.org. The hub points it at this machine when it starts and again whenever the public IP changes.',
+        },
+      },
+      dnsToken: 'DuckDNS token',
+      dnsTokenHint: 'On duckdns.org, after signing in: the token at the top of the page.',
       directEmail: 'Contact email (optional)',
       directEmailHint: "Let's Encrypt writes here before a certificate expires.",
       listenAddr: 'Listen address',
@@ -873,6 +886,7 @@ export const en = {
         failed: '{{provider}} is not working.',
       },
       stages: {
+        dns: 'Pointing the domain at this machine…',
         certificate: 'Getting an HTTPS certificate for the address…',
         publishing:
           'Waiting for {{url}} to work from the internet. The first time, Tailscale takes up to 10 minutes to publish it.',
@@ -894,7 +908,7 @@ export const en = {
         },
         direct: {
           label: 'Public address with a domain',
-          hint: "This machine has a public IP and your domain points at it. The hub gets a Let's Encrypt certificate itself.",
+          hint: "This machine has a public IP and port 443 reaches it. Use your own domain or a free DuckDNS name; the hub gets a Let's Encrypt certificate itself.",
         },
         lan: {
           label: 'This network only',
@@ -920,6 +934,8 @@ export const en = {
       address_in_use: 'Another program uses that port. Close it or choose another address.',
       certificate_failed:
         'Could not get a certificate. Check that the domain points at this machine and that port 443 reaches it.',
+      dynamic_dns_failed:
+        'Could not point the domain at this machine. Check the DuckDNS token and that the name is one you added on duckdns.org; the hub retries.',
       exposure_failed: 'Something went wrong; the hub retries. The details below may help.',
     },
     selfTest: {

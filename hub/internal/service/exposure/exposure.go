@@ -32,8 +32,14 @@ type Settings interface {
 	SecretSet(ctx context.Context, key string) (bool, error)
 }
 
+// Secrets are what providers need from the secret store.
+type Secrets struct {
+	TunnelToken string
+	DNSToken    string
+}
+
 // Factory builds the provider for the settings; nil keeps the hub local.
-type Factory func(s domain.ExposureSettings, tunnelToken string) ports.ExposureProvider
+type Factory func(s domain.ExposureSettings, secrets Secrets) ports.ExposureProvider
 
 type Deps struct {
 	Settings Settings
@@ -67,10 +73,11 @@ func (s *Service) Status() domain.ExposureStatus {
 	return s.status
 }
 
-// Patch changes the exposure settings; an empty TunnelToken keeps the stored one.
+// Patch changes the exposure settings; an empty token keeps the stored one.
 type Patch struct {
 	Settings    domain.ExposureSettings
 	TunnelToken string
+	DNSToken    string
 }
 
 // Apply saves new exposure settings and restarts the provider with them.
@@ -78,7 +85,9 @@ func (s *Service) Apply(ctx context.Context, actor domain.Actor, p Patch) (domai
 	if err := s.policy.ManageInstance(actor); err != nil {
 		return domain.InstanceSettings{}, err
 	}
-	st, err := s.d.Settings.Update(ctx, settings.Patch{Exposure: &p.Settings, TunnelToken: p.TunnelToken})
+	st, err := s.d.Settings.Update(ctx, settings.Patch{
+		Exposure: &p.Settings, TunnelToken: p.TunnelToken, DNSToken: p.DNSToken,
+	})
 	if err != nil {
 		return domain.InstanceSettings{}, err
 	}
@@ -116,12 +125,17 @@ func (s *Service) runConfigured(ctx context.Context, handler http.Handler) {
 		s.report(ctx, failed(domain.ExposureLocal, err, s.d.Clock.Now()))
 		return
 	}
-	token, err := s.d.Settings.Secret(ctx, settings.TunnelTokenSecret)
-	if err != nil {
-		s.report(ctx, failed(st.Exposure.Kind, err, s.d.Clock.Now()))
-		return
+	var secrets Secrets
+	for key, into := range map[string]*string{
+		settings.TunnelTokenSecret: &secrets.TunnelToken,
+		settings.DNSTokenSecret:    &secrets.DNSToken,
+	} {
+		if *into, err = s.d.Settings.Secret(ctx, key); err != nil {
+			s.report(ctx, failed(st.Exposure.Kind, err, s.d.Clock.Now()))
+			return
+		}
 	}
-	provider := s.d.Factory(st.Exposure, token)
+	provider := s.d.Factory(st.Exposure, secrets)
 	if provider == nil {
 		s.report(ctx, domain.ExposureStatus{Kind: domain.ExposureLocal, State: domain.ExposureOff, Since: s.d.Clock.Now()})
 		return

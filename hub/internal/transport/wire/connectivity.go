@@ -20,6 +20,17 @@ func ExposureKindFromProto(k dislacksov1.ExposureKind) domain.ExposureKind {
 	return reverse(exposureKinds, k)
 }
 
+var dynamicDNSKinds = map[domain.DynamicDNSKind]dislacksov1.DynamicDnsKind{
+	domain.DynamicDNSNone:    dislacksov1.DynamicDnsKind_DYNAMIC_DNS_KIND_NONE,
+	domain.DynamicDNSDuckDNS: dislacksov1.DynamicDnsKind_DYNAMIC_DNS_KIND_DUCKDNS,
+}
+
+func DynamicDNSKind(k domain.DynamicDNSKind) dislacksov1.DynamicDnsKind { return dynamicDNSKinds[k] }
+
+func DynamicDNSKindFromProto(k dislacksov1.DynamicDnsKind) domain.DynamicDNSKind {
+	return reverse(dynamicDNSKinds, k)
+}
+
 var exposureStates = map[domain.ExposureState]dislacksov1.ExposureState{
 	domain.ExposureOff:        dislacksov1.ExposureState_EXPOSURE_STATE_OFF,
 	domain.ExposureStarting:   dislacksov1.ExposureState_EXPOSURE_STATE_STARTING,
