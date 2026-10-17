@@ -1,0 +1,29 @@
+{
+  "name": "@dislackso/desktop",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.web.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "catalog:",
+    "@dislackso/annotation": "workspace:*",
+    "@dislackso/contracts": "workspace:*",
+    "@dislackso/desktop-bridge": "workspace:*"
+  },
+  "devDependencies": {
+    "@dislackso/config": "workspace:*",
+    "@types/node": "catalog:",
+    "electron": "catalog:",
+    "electron-vite": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}

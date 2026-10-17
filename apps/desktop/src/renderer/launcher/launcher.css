@@ -1,0 +1,142 @@
+:root {
+  --bg: #1a1a1e;
+  --panel: #232328;
+  --fg: #f2f3f5;
+  --muted: #a5a8ae;
+  --border: #35363c;
+  --accent: #5865f2;
+  --danger: #f23f43;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font:
+    15px/1.45 'Inter Variable',
+    'Segoe UI',
+    system-ui,
+    sans-serif;
+}
+
+main {
+  padding: 40px 36px;
+}
+
+h1 {
+  margin: 0 0 6px;
+  font-size: 22px;
+}
+
+h2 {
+  margin: 32px 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+p {
+  margin: 0 0 16px;
+  color: var(--muted);
+}
+
+.notice {
+  color: var(--fg);
+  padding: 10px 12px;
+  border-left: 3px solid var(--danger);
+  background: var(--panel);
+  border-radius: 4px;
+}
+
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+}
+
+input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--fg);
+  font: inherit;
+}
+
+input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+button {
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.error {
+  min-height: 1.45em;
+  margin-top: 8px;
+  color: var(--danger);
+}
+
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+li .open {
+  flex: 1;
+  overflow: hidden;
+  padding: 6px 0;
+  background: none;
+  color: var(--fg);
+  font-weight: 500;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+li .remove {
+  padding: 6px 10px;
+  background: none;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+li .remove:hover {
+  color: var(--danger);
+}

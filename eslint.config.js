@@ -5,6 +5,7 @@ export default defineConfig([
   globalIgnores([
     '**/node_modules/',
     '**/dist/',
+    'apps/desktop/out/',
     '.tools/',
     'hub/',
     'packages/contracts/src/gen/',
@@ -17,8 +18,10 @@ export default defineConfig([
   allowDefaultExport({
     files: [
       '**/vite.config.ts',
+      '**/electron.vite.config.ts',
       '**/playwright.config.ts',
       '**/playwright.bench.config.ts',
+      '**/playwright.desktop.config.ts',
       'prettier.config.js',
       'eslint.config.js',
     ],
