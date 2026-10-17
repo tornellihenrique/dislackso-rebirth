@@ -2,21 +2,20 @@
 
 ## Current phase
 
-**Phase 5 — Hosting & connectivity: implemented, waiting for review and a test with the team.**
-The first three acceptance items need people on other networks; [HOSTING.md](HOSTING.md) and the
-manual script below are the steps. Next: Phase 6 — Drawing on shares.
+**Phase 5 — Hosting & connectivity: in use by the team.** Two evenings with friends on other
+networks worked (voice, 1080p60 shares, kick); the fixes they asked for are below. A clean-machine
+run of the release is still open. Next: Phase 6 — Drawing on shares.
 
 ### Phase 5 acceptance
 
-- [ ] A teammate on a different ISP joins via the Funnel URL from a browser, hears voice and sees a
-      1080p60 share. Needs the team: manual script steps 2–6. Checked on one PC: a Cloudflare quick
-      tunnel served the app over HTTPS with the public host kept (same-origin checks pass), the
-      client address taken from Cloudflare, and tunnel visitors never treated as local.
-- [ ] With the host's router UPnP disabled and TURN configured, a client forced to `relay` connects
-      (relay test passes) and the admin panel shows the relayed session. Needs a Cloudflare TURN key:
-      manual script step 7. The relay test (a relay-only join of a diagnostics room), credential
-      minting (Cloudflare, coturn, static) and the relayed-session count are built and unit-tested;
-      this PC's router answers none of PCP, NAT-PMP or UPnP, so it is the right place to try.
+- [x] A teammate on a different ISP joins via the Funnel URL from a browser, hears voice and sees a
+      1080p60 share. Done with five friends on 2026-10-16. All of them went through the relay then,
+      which cost quota and frame rate; [ADR 0004](adr/0004-server-reflexive-candidates.md) is the
+      fix, to be confirmed on the next evening.
+- [x] With the host's router UPnP disabled and TURN configured, a client forced to `relay` connects
+      (relay test passes) and the admin panel shows the relayed session. The owner's router answers
+      none of PCP, NAT-PMP or UPnP; with a Cloudflare TURN key the relay test passed and the
+      friends' sessions counted as relayed.
 - [x] Switching exposure provider in the admin panel works without data loss; quick-tunnel URL
       change is surfaced. Checked in the browser: local → Cloudflare quick tunnel → local from
       Settings → Connectivity; the status and the public URL followed live over the gateway,
@@ -198,6 +197,14 @@ manual script below are the steps. Next: Phase 6 — Drawing on shares.
   connection), the share tile's fullscreen button toggles, and dragging a server icon no longer
   drags the link itself: dropping it used to make the browser open it, reloading the app and
   ending the call. A page-wide guard keeps any other dropped link or file from doing the same.
+  (That was not the cause: the reload still happens, see Known issues.)
+- **After the first evening with the team:** LiveKit gets a node IP only when the router keeps the
+  media port's number; otherwise it gathers server-reflexive candidates over STUN, so callers
+  behind ordinary routers connect directly instead of through the relay
+  ([ADR 0004](adr/0004-server-reflexive-candidates.md)), and the self-test rates such a router
+  Good. "Optimize for" and the "Share audio" toggle are gone: the preset's frame rate sets the
+  tuning (60 fps keeps the frame rate with VP9, 30 fps keeps text sharp with AV1), and the
+  browser's own picker decides about audio.
 
 ### Phase 4 — Screen share & stage
 
@@ -614,6 +621,11 @@ manual script below are the steps. Next: Phase 6 — Drawing on shares.
 - **livekit-server for macOS is built from the pinned source on a Mac:** its CPU stats need cgo,
   so the release jobs for macOS run on a macOS runner, and `task tools` keeps cgo on for native
   source builds.
+- **LiveKit gathers its own outside ports** ([ADR 0004](adr/0004-server-reflexive-candidates.md),
+  ledger D8 reworded): a pinned `node_ip` made LiveKit advertise 7882, which a router that picks
+  its own port numbers never forwards, so every caller from outside used the relay.
+- **The preset's frame rate sets the share tuning** (ARCHITECTURE §9.5, ADR 0002 update), at the
+  team's request: a preset already names a resolution and a frame rate.
 - **New dependencies:** tailscale.com v1.104.1 (tsnet), github.com/huin/goupnp v1.3.0, github.com/pion/stun/v3 v3.1.7,
   golang.org/x/crypto/acme/autocert (already a module), actions/download-artifact v8.0.2 (release).
 
@@ -672,8 +684,15 @@ manual script below are the steps. Next: Phase 6 — Drawing on shares.
   longer outage people rejoin by hand.
 - Disabling or deleting an account ends its sessions but not a voice connection already up
   (LiveKit keeps refreshing its token); the next join is refused.
-- A host that loses internet after starting keeps LiveKit's last external address until the hub
-  restarts.
+- A host whose router keeps port numbers and that loses internet after starting keeps LiveKit's
+  last external address until the hub restarts.
+- **Dragging a server icon in the rail still reloads the page on the owner's PC** (Chrome, real
+  mouse), which ends the call. Playwright does not reproduce it, also during a call with slow
+  drags; the app has no reload of its own, so the next step is a DevTools capture (Console and
+  Network with "Preserve log") of one drop.
+- **The owner's host has IPv6 addresses but no IPv6 route out** (2026-10-17: the gateway answers,
+  nothing past it does). The second router in the way (an ONT used as a switch) is the likely
+  cause; the self-test reports IPv6 as missing, which is right.
 - livekit-client logs some of its own races and data channel closings as console errors; the
   e2e error tracker ignores lines tagged with a LiveKit room.
 - **The codec numbers come from one PC** (Core Ultra 9, RTX 5070 laptop) with synthetic screens
