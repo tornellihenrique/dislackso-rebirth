@@ -165,7 +165,8 @@ func RateNetwork(t domain.SelfTest) (domain.HostRating, []string) {
 	switch {
 	case t.Mapping.OK || t.NAT == domain.NATOpen || t.IPv6:
 		return domain.RatingExcellent, advice
-	case t.NAT == domain.NATPortPreserving:
+	case t.NAT == domain.NATPortPreserving, t.NAT == domain.NATEndpointIndependent:
+		// Full ICE gets through both from callers whose own router is not strict.
 		return domain.RatingGood, advice
 	}
 	if t.RelayConfigured {

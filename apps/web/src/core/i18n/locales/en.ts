@@ -904,7 +904,7 @@ export const en = {
         noInternet: 'No internet connection',
         open: 'None in the way (public address)',
         portPreserving: 'Keeps ports, calls usually connect directly',
-        endpointIndependent: 'Standard NAT',
+        endpointIndependent: 'Standard NAT, most calls connect directly',
         symmetric: 'Strict NAT, calls need a relay',
       },
     },

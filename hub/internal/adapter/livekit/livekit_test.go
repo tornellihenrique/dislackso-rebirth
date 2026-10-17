@@ -259,7 +259,7 @@ func TestParseWebhook(t *testing.T) {
 func TestServerConfig(t *testing.T) {
 	data, err := ServerConfig(ServerOptions{
 		Port: 7880, UDPPort: 7882, TCPPort: 7881, APIKey: key,
-		WebhookURL: "http://127.0.0.1:7300/internal/livekit/webhook", ExternalIP: true,
+		WebhookURL: "http://127.0.0.1:7300/internal/livekit/webhook",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -275,8 +275,7 @@ func TestServerConfig(t *testing.T) {
 		"port":           7880,
 		"bind_addresses": []any{"127.0.0.1"},
 		"rtc": map[string]any{
-			"udp_port": 7882, "tcp_port": 7881, "use_external_ip": true,
-			"skip_external_ip_validation": true, "advertise_internal_ip": true,
+			"udp_port": 7882, "tcp_port": 7881, "use_external_ip": false, "advertise_internal_ip": false,
 			"stun_servers": []any{"stun.cloudflare.com:3478", "stun.l.google.com:19302"},
 		},
 		"room":    map[string]any{"auto_create": true, "empty_timeout": 30, "departure_timeout": 20},
@@ -292,7 +291,7 @@ func TestServerConfig(t *testing.T) {
 }
 
 func TestServerConfigWithKnownNodeIP(t *testing.T) {
-	data, err := ServerConfig(ServerOptions{Port: 7880, UDPPort: 7882, ExternalIP: true, NodeIP: "203.0.113.9"})
+	data, err := ServerConfig(ServerOptions{Port: 7880, UDPPort: 7882, NodeIP: "203.0.113.9"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -302,8 +301,7 @@ func TestServerConfigWithKnownNodeIP(t *testing.T) {
 	}
 	// An explicit node IP with the lookup off is what LiveKit advertises as is.
 	for k, want := range map[string]any{
-		"node_ip": "203.0.113.9", "use_external_ip": false,
-		"skip_external_ip_validation": false, "advertise_internal_ip": true,
+		"node_ip": "203.0.113.9", "use_external_ip": false, "advertise_internal_ip": true,
 	} {
 		if got.RTC[k] != want {
 			t.Errorf("rtc.%s = %v, want %v", k, got.RTC[k], want)

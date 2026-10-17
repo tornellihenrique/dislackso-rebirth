@@ -65,7 +65,7 @@ Federation between instances · mobile native apps · E2E encryption · recordin
 | D5 | **Own WebSocket gateway** (Discord-style Hello → Identify/Resume → Ready, heartbeats, sequence replay). | Deterministic reconnection; one place where push events enter the client. |
 | D6 | **Hub is the authority for voice state.** LiveKit webhooks reconcile. One voice connection per user (LiveKit identity = userId). | Consistent sidebar state across all guilds; "moved to another device" semantics. |
 | D7 | **Exposure is pluggable.** Default: **Tailscale Funnel via embedded `tsnet`** (free, stable `https://<name>.<tailnet>.ts.net`, no domain, no separate install). Alternatives: Cloudflare named tunnel (own domain), Cloudflare quick tunnel (trial), direct (public IP/VPS), LAN-only. | Reachable HTTPS/WSS without port forwarding or budget. |
-| D8 | **Media reachability ladder:** LiveKit full-ICE behind NAT (external IP via STUN, single UDP mux port, IPv6, internal IP for LAN) + automatic UPnP/NAT-PMP/PCP mapping + **client TURN fallback with short-lived credentials minted by the hub** (default provider: Cloudflare Realtime TURN, 1 TB/month free) + built-in connectivity self-test and TURN budget guard. | Works behind most NATs/CGNAT with zero router config; degrades to relay instead of failing. |
+| D8 | **Media reachability ladder:** LiveKit full-ICE behind NAT (outside address via STUN, server-reflexive candidates where the router changes port numbers, single UDP mux port otherwise, IPv6, internal IP for LAN; [ADR 0004](adr/0004-server-reflexive-candidates.md)) + automatic UPnP/NAT-PMP/PCP mapping + **client TURN fallback with short-lived credentials minted by the hub** (default provider: Cloudflare Realtime TURN, 1 TB/month free) + built-in connectivity self-test and TURN budget guard. | Works behind most NATs/CGNAT with zero router config; degrades to relay instead of failing. |
 | D9 | **Web client is embedded in and served by the hub** (same origin, HttpOnly cookie auth). | No CORS, no version skew, XSS-resistant sessions. |
 | D10 | **Desktop = thin Electron shell** that loads the instance URL and exposes a small, versioned native bridge (screen picker, system audio, drawing overlay, global hotkeys, tray, notifications, deep links, host mode). | Consistent Chromium WebRTC; native features without shipping a second UI. |
 | D11 | **Drawing transport = LiveKit data packets** in the voice room (lossy point batches + reliable begin/end/clear), protobuf-encoded; coordinates normalized to the share's video frame. Shared `@dislackso/annotation` package renders on web tiles and the desktop overlay. | Low latency, automatically scoped to the channel, no hub fan-out. |
@@ -147,9 +147,9 @@ port: 7880                      # bind_addresses: [127.0.0.1]
 rtc:
   udp_port: 7882                # single UDP mux port (simplifies mapping)
   tcp_port: 7881                # useful only when mapped
-  use_external_ip: true
-  skip_external_ip_validation: true   # NAT without hairpin
-  advertise_internal_ip: true         # LAN peers connect directly
+  use_external_ip: false        # LiveKit's lookup keeps the local port
+  node_ip: <public IPv4>        # only when the router keeps 7882's number
+  advertise_internal_ip: true   # with node_ip: LAN peers connect directly
   stun_servers: [stun.cloudflare.com:3478, stun.l.google.com:19302]
   # use_ice_lite stays false (full ICE is required behind NAT)
 room: { auto_create: true, empty_timeout: 30, departure_timeout: 20 }
@@ -157,12 +157,14 @@ keys: { <generated>: <generated> }
 webhook: { api_key: <generated>, urls: [http://127.0.0.1:7300/internal/livekit/webhook] }
 logging: { level: info }
 ```
-The API key pair is generated once and kept in `secrets.yaml`; the sidecar receives it through `LIVEKIT_KEYS`, so `livekit.yaml` holds no secret. LiveKit rejects unknown keys and refuses to start when `use_external_ip` cannot reach STUN, so hosts without internet access set `livekit.external_ip: false` in the hub config.
+The API key pair is generated once and kept in `secrets.yaml`; the sidecar receives it through `LIVEKIT_KEYS`, so `livekit.yaml` holds no secret. LiveKit rejects unknown keys.
+
+Before starting LiveKit the hub probes UDP 7882 with STUN (§4.4). When the router keeps the port's number outside (or there is no NAT), `node_ip` is the public IPv4 and LiveKit advertises 7882 there. Otherwise `node_ip` stays empty, and LiveKit then hands the STUN servers to its own ICE agent: each connection gathers a **server-reflexive candidate** on a port of its own, with the outside port the router really gave it ([ADR 0004](adr/0004-server-reflexive-candidates.md)). `livekit.external_ip: false` (offline or LAN-only hosts) skips the probe and the port forwarding.
 
 Connection paths, in order of preference:
 1. **LAN host candidate** (same office network).
 2. **IPv6** global address (common on Brazilian fiber; stateful firewalls are opened by full-ICE checks from both sides).
-3. **IPv4 direct** — works when the host NAT preserves the mapped port, or after the hub creates a mapping for UDP 7882 (+TCP 7881) with PCP, NAT-PMP or UPnP-IGD (`adapter/portmap`, tried in that order). The outside port must equal the inside one, since LiveKit advertises its own port with the STUN-discovered address, so a router offering another port is refused (tailscale's portmapper picks other ports, hence our own). Mapping is renewed and removed on shutdown.
+3. **IPv4 direct** — the host's server-reflexive candidate works behind any router that keeps one outside port per inside port (endpoint-independent mapping, most home routers), as long as the caller's router does too: full-ICE checks from both sides open both. With a port-preserving router, or after the hub creates a mapping for UDP 7882 (+TCP 7881) with PCP, NAT-PMP or UPnP-IGD (`adapter/portmap`, tried in that order), 7882 itself is reachable. A mapping's outside port must equal the inside one, since LiveKit advertises its own port, so a router offering another port is refused (tailscale's portmapper picks other ports, hence our own). Mapping is renewed and removed on shutdown.
 4. **TURN relay** — clients receive short-lived TURN credentials from the hub at voice join and pass them as `rtcConfig.iceServers` to `Room.connect` (verify livekit-client merge/override semantics). Because LiveKit runs full ICE, it sends checks to the client's relay candidate, which opens the host NAT toward the relay; works even for symmetric host NAT.
 
 `IceServerProvider` interface:
@@ -181,7 +183,7 @@ Runs at every start (background, after the first forwarding attempt and once Liv
 3. IPv6: global address present? STUN over udp6.
 4. Port mapping attempt (UPnP/NAT-PMP/PCP) → success + external address.
 5. Relay test (browser, from the admin panel): `livekit-client` joins a diagnostics room with `iceTransportPolicy: 'relay'` through the configured TURN → proves remote relayed clients work.
-6. Rating: **Excellent** (mapping OK or IPv6), **Good** (port-preserving NAT), **Relay-dependent** (symmetric/CGNAT, no IPv6) with actionable advice ("enable UPnP on router", "this host will consume TURN quota", "consider another host").
+6. Rating: **Excellent** (mapping OK or IPv6), **Good** (port-preserving or endpoint-independent NAT), **Relay-dependent** (symmetric/CGNAT, no IPv6) with actionable advice ("enable UPnP on router", "this host will consume TURN quota", "consider another host").
 
 Runtime telemetry: each client reports its selected ICE candidate-pair type and bytes every 30 s over the gateway. Admin panel shows % relayed and an **estimated monthly TURN usage**. **TURN budget guard:** `turn.monthly_budget_gb` (default 900). Above 90 % the hub warns admins (log and admin panel); above 100 % it stops issuing TURN credentials (STUN only) unless an admin overrides. Budgets count decimal gigabytes, as providers bill them.
 

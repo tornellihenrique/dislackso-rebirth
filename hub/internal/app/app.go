@@ -328,12 +328,10 @@ func (a *App) probeNetwork(ctx, bg context.Context, background *sync.WaitGroup) 
 	if a.media.binary == "" || !lk.ExternalIP {
 		return
 	}
-	switch p := a.doctor.Probe(ctx, lk.UDPPort); {
-	case p.NAT == domain.NATNoInternet:
-		// LiveKit refuses to start when it cannot find its public address.
-		a.media.cfg.ExternalIP = false
-		a.logger.WarnContext(ctx, "no internet connection: voice works on this network only until the hub restarts online")
-	case p.PublicIPv4.IsValid():
+	// Callers reach the media port itself at the public address only when the
+	// router keeps its number; behind other routers LiveKit finds each
+	// connection's outside port over STUN.
+	if p := a.doctor.Probe(ctx, lk.UDPPort); p.NAT == domain.NATOpen || p.NAT == domain.NATPortPreserving {
 		a.media.nodeIP = p.PublicIPv4.String()
 	}
 	background.Go(func() { a.doctor.Run(bg, lk.UDPPort, lk.TCPPort) })

@@ -913,7 +913,7 @@ export const ptBR: Messages = {
         noInternet: 'Sem conexão com a internet',
         open: 'Nenhum no caminho (endereço público)',
         portPreserving: 'Mantém as portas, as chamadas costumam conectar direto',
-        endpointIndependent: 'NAT comum',
+        endpointIndependent: 'NAT comum, a maioria das chamadas conecta direto',
         symmetric: 'NAT restrito, as chamadas precisam de retransmissão',
       },
     },
