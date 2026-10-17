@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package dislackso.annotation.v1;
+
+// Drawing on screen shares travels between clients as LiveKit data packets in
+// the voice room (topic "annot"); the hub never sees it. The author of every
+// packet is its LiveKit sender. Points are normalized to the share's video
+// frame: x and y in [0, 1] scaled to 0..65535 and packed as little-endian
+// uint16 pairs.
+
+enum Tool {
+  TOOL_UNSPECIFIED = 0;
+  TOOL_PEN = 1;
+  TOOL_HIGHLIGHTER = 2;
+  TOOL_ARROW = 3;
+}
+
+enum ClearScope {
+  CLEAR_SCOPE_UNSPECIFIED = 0;
+  // The sender's own strokes.
+  CLEAR_SCOPE_MINE = 1;
+  // Everyone's strokes; only the share's owner may send it.
+  CLEAR_SCOPE_ALL = 2;
+}
+
+message AnnotationPacket {
+  oneof kind {
+    StrokeBegin stroke_begin = 1;
+    StrokePoints stroke_points = 2;
+    StrokeEnd stroke_end = 3;
+    Undo undo = 4;
+    Clear clear = 5;
+    Laser laser = 6;
+    ShareDrawingPolicy policy = 7;
+  }
+}
+
+// Sent reliably when the pen goes down.
+message StrokeBegin {
+  // Unique among the sender's strokes.
+  uint32 stroke_id = 1;
+  string target_track_sid = 2;
+  Tool tool = 3;
+  fixed32 color_rgba = 4;
+  // Line width relative to the content height.
+  float width_rel = 5;
+  // How long the stroke stays after the pen lifts, before it fades.
+  uint32 hold_ms = 6;
+}
+
+// Sent lossily every 16–33 ms while drawing.
+message StrokePoints {
+  uint32 stroke_id = 1;
+  uint32 seq = 2;
+  bytes packed_points = 3;
+  // Milliseconds since the previous point, one per point.
+  repeated uint32 dt_ms = 4;
+}
+
+// Sent reliably when the pen lifts; its points replace what arrived, which
+// repairs lost StrokePoints.
+message StrokeEnd {
+  uint32 stroke_id = 1;
+  uint32 total_points = 2;
+  bytes packed_points = 3;
+}
+
+message Undo {
+  uint32 stroke_id = 1;
+}
+
+message Clear {
+  string target_track_sid = 1;
+  ClearScope scope = 2;
+}
+
+// A pointer that leaves no stroke; sent lossily.
+message Laser {
+  string target_track_sid = 1;
+  uint32 x = 2;
+  uint32 y = 3;
+  bool ended = 4;
+}
+
+// Whether others may draw on a share; only its owner may send it.
+message ShareDrawingPolicy {
+  string target_track_sid = 1;
+  bool allowed = 2;
+}

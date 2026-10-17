@@ -462,11 +462,11 @@ Top bar: channel name, participant count, layout toggle, "hide no-video", chat t
 ### 11.1 Behavior
 - Anyone in the channel can draw on **any** share in that channel, including the sharer on their own share (desktop: overlay draw mode; browser: on their self-preview tile).
 - The **sharer** can disable drawing for their share ("Allow drawing" toggle, default from their settings, default on). Channel setting `drawing_allowed` can disable it channel-wide (admins).
-- Activate: pen button on a share tile (or `D` on the focused share). Cursor becomes a pen; left-drag draws; `Esc` or right-click exits. A compact toolbar appears on the tile: color, size, tool, "undo my last", "clear mine" (sharer also sees "clear all").
+- Activate: pen button on a share tile (or `D` on the focused share). Cursor becomes a pen; left-drag draws; `Esc` or right-click exits. A compact toolbar replaces the tile's hover toolbar: tool, color, size, "undo my last", "clear mine", snapshot (sharer also sees "clear all" and "stop others from drawing").
 - **Lifespan (never infinite):** a stroke stays fully opaque while drawn and for `hold` after pointer-up, then fades over 800 ms. `hold` options 2/3/5/8 s (default 3 s), capped by instance setting (max 10 s). The author's choice travels with the stroke so every viewer sees the same timing.
 - **Name tag**: author display name in a pill (author color) next to the pen tip while drawing and 1.5 s after.
 - **Customization (per user)**: color (8 presets + custom hex; default auto-assigned from user id), size S/M/L, tool, hold time, "show name tags" on/off.
-- Tools: **Pen** (smoothed freehand), **Highlighter** (3× width, 35 % alpha), **Arrow** (drag start→end, arrowhead), **Laser** (transient glowing dot + 600 ms trail, no persistence).
+- Tools: **Pen** (smoothed freehand), **Highlighter** (3× width, 35 % alpha), **Arrow** (drag start→end, arrowhead), **Laser** (glowing dot + 600 ms trail while the button is held, no persistence; repeated every second while held still, dropped after 2.5 s without news).
 - Sharer sees strokes on their real screen through the desktop overlay (§16.5). In browser-only sharing, the sharer sees them on the self-preview tile.
 
 ### 11.2 Geometry
@@ -486,13 +486,14 @@ AnnotationPacket { oneof {
   ShareDrawingPolicy { target_track_sid, allowed }                                          // reliable, from sharer
 }}
 ```
-- Author identity comes from the LiveKit packet sender (never from payload). Late joiners do not receive history (strokes are short-lived by design).
+- Author identity comes from the LiveKit packet sender (never from payload). Late joiners do not receive history (strokes are short-lived by design), but the sharer sends its `ShareDrawingPolicy` again to each one who joins.
+- Points leave in batches every 25 ms; the sender drops points closer than 0.0008 or sooner than 5 ms after the last, so it stays under the receivers' rate. A stroke past 3,000 points continues as a new one, so its `StrokeEnd` fits one reliable packet. The instance's hold cap reaches clients as `Ready.instance.stroke_hold_max_ms`.
 - Target = share track SID; packets for unknown/ended tracks are dropped.
 - Latency target: < 100 ms stroke-to-screen for peers near the host.
 
 ### 11.4 Rendering & anti-grief (`packages/annotation`)
 - `AnnotationEngine` (pure TS, no React): stroke model, packet encode/decode, policy checks, timing.
-- `CanvasRenderer`: one canvas per share surface, DPR capped at 2, rAF loop runs only while strokes/lasers exist.
+- `CanvasRenderer`: one canvas per share surface, DPR capped at 2, rAF loop runs only while strokes/lasers exist; lines are at least 2 px wide on screen.
 - Receiver-side limits per author per target: ≤ 240 points/s, ≤ 8 concurrent strokes, ≤ 40 active strokes per target overall (oldest evicted), max 4,000 points per stroke. Violations dropped silently, counted in diagnostics.
 - Used by web tiles and by the desktop overlay window (same package).
 

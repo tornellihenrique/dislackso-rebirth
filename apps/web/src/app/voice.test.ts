@@ -83,7 +83,12 @@ class FakeSession {
   }
   startShare(req: { preset: string }) {
     this.calls.push(`startShare ${req.preset}`);
-    return Promise.resolve({ codec: 'vp9', audio: false, ownAudioWarning: false });
+    return Promise.resolve({
+      trackSid: 'TR_self',
+      codec: 'vp9',
+      audio: false,
+      ownAudioWarning: false,
+    });
   }
   stopShare() {
     this.calls.push('stopShare');

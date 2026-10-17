@@ -80,9 +80,20 @@ export interface VoiceActions {
   /** Shows someone's share in el; returns the function that takes it out. */
   mountShare(userId: string, el: HTMLElement): () => void;
   mountSelfShare(el: HTMLElement): () => void;
+  /** The <video> showing a share, for drawing and snapshots. */
+  shareElement(userId: string, self: boolean): HTMLVideoElement | undefined;
   shareStats(userId: string): Promise<RemoteShareStats | undefined>;
   selfShareStats(): Promise<OutboundVideoStats | undefined>;
   connectionStats(): Promise<ConnectionStats | undefined>;
+}
+
+/** Data packets between the people in this device's call. */
+export interface DataLink {
+  /** Sends to everyone else in the call, or only to the given user ids. */
+  send(topic: string, payload: Uint8Array, reliable: boolean, to?: readonly string[]): void;
+  /** Runs handler for every packet on topic; returns the function that stops it. */
+  onData(topic: string, handler: (payload: Uint8Array, userId: string) => void): () => void;
+  onPeerJoined(handler: (userId: string) => void): () => void;
 }
 
 /** What the gateway tells the controller. */
@@ -139,7 +150,7 @@ function audioPrefs(s: VoiceSettings, inputDevice: string): AudioPrefs {
  * session, keeps the hub told about mute and deafen, and reacts when the hub
  * ends, moves or replaces the connection (ARCHITECTURE §9.2–9.3).
  */
-export class VoiceController implements VoiceActions, VoiceGatewayHooks {
+export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLink {
   /** Created with the first call: livekit-client is large and loads only then. */
   private session: VoiceSession | undefined;
   private readonly listener: VoiceSessionListener;
@@ -161,6 +172,11 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks {
   private readonly views = new ShareViews();
   private telemetry: ReturnType<typeof setInterval> | undefined;
   private meter = new TransportMeter();
+  private readonly dataHandlers = new Map<
+    string,
+    Set<(payload: Uint8Array, userId: string) => void>
+  >();
+  private readonly peerHandlers = new Set<(userId: string) => void>();
 
   constructor(private readonly d: VoiceDeps) {
     this.listener = {
@@ -191,6 +207,12 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks {
       },
       onShareEnded: (reason) => {
         this.shareEnded(reason);
+      },
+      onData: (topic, payload, userId) => {
+        for (const h of this.dataHandlers.get(topic) ?? []) h(payload, userId);
+      },
+      onPeerJoined: (userId) => {
+        for (const h of this.peerHandlers) h(userId);
       },
     };
   }
@@ -388,6 +410,7 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks {
         type: 'localShare',
         share: {
           status: 'live',
+          trackSid: info.trackSid,
           preset,
           codec: info.codec,
           audio: info.audio,
@@ -435,6 +458,33 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks {
 
   mountSelfShare(el: HTMLElement): () => void {
     return this.views.mount(SELF_SHARE, el);
+  }
+
+  shareElement(userId: string, self: boolean): HTMLVideoElement | undefined {
+    return this.views.element(self ? SELF_SHARE : userId);
+  }
+
+  send(topic: string, payload: Uint8Array, reliable: boolean, to?: readonly string[]): void {
+    this.session?.sendData(topic, payload, reliable, to);
+  }
+
+  onData(topic: string, handler: (payload: Uint8Array, userId: string) => void): () => void {
+    let set = this.dataHandlers.get(topic);
+    if (!set) {
+      set = new Set();
+      this.dataHandlers.set(topic, set);
+    }
+    set.add(handler);
+    return () => {
+      set.delete(handler);
+    };
+  }
+
+  onPeerJoined(handler: (userId: string) => void): () => void {
+    this.peerHandlers.add(handler);
+    return () => {
+      this.peerHandlers.delete(handler);
+    };
   }
 
   async shareStats(userId: string): Promise<RemoteShareStats | undefined> {

@@ -133,7 +133,7 @@ func TestGuildFlowOverHTTPAndGateway(t *testing.T) {
 	}
 
 	adminGW, ready := admin.openGateway(t)
-	if len(ready.GetGuilds()) != 1 || ready.GetInstance().GetName() != "Team" {
+	if len(ready.GetGuilds()) != 1 || ready.GetInstance().GetName() != "Team" || ready.GetInstance().GetStrokeHoldMaxMs() != 10_000 {
 		t.Fatalf("admin ready = %v", ready)
 	}
 

@@ -12,6 +12,7 @@ import { dispatchSession, sessionStore } from '@/stores/session';
 import { App } from './App';
 import { startRealtime } from './realtime';
 import { createAppRouter } from './router';
+import { DrawingController } from './drawing';
 import { createServices } from './services';
 import { VoiceController } from './voice';
 
@@ -41,13 +42,15 @@ export async function startApp(container: HTMLElement): Promise<void> {
   audioHost.hidden = true;
   document.body.append(audioHost);
   let voice: VoiceController | undefined;
+  let drawing: DrawingController | undefined;
   const services = createServices(
     () => {
       dispatchSession({ type: 'signedOut' });
     },
     (hub) => {
       voice = new VoiceController({ hub, sounds: createSoundPlayer(), t: i18n.t, host: audioHost });
-      return voice;
+      drawing = new DrawingController(voice);
+      return { voice, drawing };
     },
   );
   try {
@@ -60,6 +63,7 @@ export async function startApp(container: HTMLElement): Promise<void> {
   const router = createAppRouter();
   if (voice) {
     voice.start();
+    drawing?.start();
     startRealtime(queryClient, voice);
   }
   sessionStore.subscribe((next, prev) => {

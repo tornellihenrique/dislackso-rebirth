@@ -15,6 +15,7 @@ export type LocalShareState =
   | { readonly status: 'starting' }
   | {
       readonly status: 'live';
+      readonly trackSid: string;
       readonly preset: SharePreset;
       readonly codec: ShareCodec;
       readonly audio: boolean;
