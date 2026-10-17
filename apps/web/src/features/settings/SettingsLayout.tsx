@@ -1,11 +1,12 @@
 import { useMutation } from '@tanstack/react-query';
 import { Link, Outlet, useRouter } from '@tanstack/react-router';
 import { LogOut, X } from 'lucide-react';
-import { useEffect, type ReactNode } from 'react';
+import { useCallback, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useServices } from '@/app/services';
 import { signOut } from '@/features/auth/session-actions';
+import { navigationStore } from '@/stores/navigation';
 import { useSession } from '@/stores/session';
 
 interface NavItemProps {
@@ -45,15 +46,18 @@ export function SettingsLayout() {
     onSuccess: () => router.navigate({ to: '/login' }),
   });
 
+  const close = useCallback(() => {
+    void router.navigate({ href: navigationStore.getState().returnTo });
+  }, [router]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') void router.navigate({ to: '/' });
+      if (e.key === 'Escape') close();
     };
     window.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('keydown', onKey);
     };
-  }, [router]);
+  }, [close]);
 
   return (
     <div className="flex h-full">
@@ -100,14 +104,15 @@ export function SettingsLayout() {
         </div>
       </main>
       <div className="shrink-0 bg-main p-6">
-        <Link
-          to="/"
+        <button
+          type="button"
+          onClick={close}
           aria-label={t('settings.close')}
           title={t('settings.close')}
           className="flex size-9 items-center justify-center rounded-full border-2 border-fg-muted text-fg-muted hover:border-fg hover:text-fg"
         >
           <X aria-hidden className="size-5" />
-        </Link>
+        </button>
       </div>
     </div>
   );

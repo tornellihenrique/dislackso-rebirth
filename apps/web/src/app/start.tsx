@@ -10,6 +10,7 @@ import { displayName } from '@/features/members/member-groups';
 import { loadSession } from '@/features/auth/session-actions';
 import { appearanceStore, applyAppearance } from '@/stores/appearance';
 import { entitiesStore } from '@/stores/entities';
+import { dispatchNavigation } from '@/stores/navigation';
 import { dispatchSession, sessionStore } from '@/stores/session';
 
 import { App } from './App';
@@ -86,6 +87,13 @@ export async function startApp(container: HTMLElement): Promise<void> {
 
   const queryClient = new QueryClient();
   const router = createAppRouter();
+  router.subscribe('onResolved', (e) => {
+    dispatchNavigation({
+      type: 'visited',
+      pathname: e.toLocation.pathname,
+      href: e.toLocation.href,
+    });
+  });
   if (voice) {
     voice.start();
     drawing?.start();
