@@ -312,6 +312,25 @@ export const ptBR: Messages = {
     snapshotCopied: 'Captura copiada para a área de transferência.',
     snapshotSaved: 'Captura salva.',
   },
+  desktop: {
+    picker: {
+      title: 'Compartilhar sua tela',
+      screens: 'Telas',
+      windows: 'Janelas',
+      audio: 'Compartilhar o som do computador',
+      share: 'Compartilhar',
+      loading: 'Procurando telas…',
+      none: 'Nada para compartilhar aqui.',
+    },
+    overlay: {
+      draw: 'Desenhar na sua tela',
+      stopDrawing: 'Parar de desenhar (Esc)',
+      clearAll: 'Apagar os traços de todos',
+      stopOthers: 'Impedir que outros desenhem',
+      letOthers: 'Deixar outros desenharem',
+      stopSharing: 'Parar de compartilhar',
+    },
+  },
   members: {
     title: 'Membros',
     groupCount: '{{group}} — {{count}}',

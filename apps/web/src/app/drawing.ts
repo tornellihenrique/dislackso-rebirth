@@ -13,6 +13,7 @@ import {
   type StrokeStyle,
   type Target,
 } from '@dislackso/annotation';
+import type { OverlayApi, OverlayInput, OverlayLabels } from '@dislackso/desktop-bridge';
 
 import { callStore } from '@/stores/call';
 import { dispatchDrawing, drawingStore } from '@/stores/drawing';
@@ -54,6 +55,15 @@ export interface DrawingActions {
 
 const emptyScene: Scene = { strokes: [], lasers: [], tags: [] };
 
+/** The desktop shell's overlay on the sharer's real screen, when there is one. */
+export interface OverlayHost {
+  readonly overlay?: OverlayApi | undefined;
+  readonly labels?: () => OverlayLabels;
+  /** userId → display name, for the overlay's name tags. */
+  readonly names?: () => Record<string, string>;
+  readonly stopShare?: () => void;
+}
+
 /**
  * Drawing in this device's call (ARCHITECTURE §11): one annotation engine
  * whose packets travel over the call's data channel. It follows the call's
@@ -67,8 +77,14 @@ export class DrawingController implements DrawingActions {
   /** This device's share, whose policy goes to everyone who joins. */
   private ownShare = '';
   private laserAt: { target: string; point: Point; sentAt: number } | undefined;
+  /** The share the overlay shows; empty while it is closed. */
+  private overlayShare = '';
+  private othersAllowed = true;
 
-  constructor(private readonly link: DataLink) {}
+  constructor(
+    private readonly link: DataLink,
+    private readonly host: OverlayHost = {},
+  ) {}
 
   /** Starts following the call; returns a stop function. */
   start(): () => void {
@@ -84,10 +100,12 @@ export class DrawingController implements DrawingActions {
       }),
       drawingSettingsStore.subscribe((next, prev) => {
         if (next.allowOthers !== prev.allowOthers) this.setOthersAllowed(next.allowOthers);
+        if (next.nameTags !== prev.nameTags) this.updateOverlay({ nameTags: next.nameTags });
       }),
       this.link.onData(ANNOTATION_TOPIC, (payload, userId) => {
         const p = decodePacket(payload);
         if (p) this.engine?.receive(p, userId);
+        if (this.overlayShare !== '') this.host.overlay?.send(payload, userId);
       }),
       this.link.onPeerJoined((userId) => {
         if (this.engine && this.ownShare !== '') {
@@ -95,10 +113,31 @@ export class DrawingController implements DrawingActions {
         }
       }),
     ];
+    const overlay = this.host.overlay;
+    if (overlay) {
+      stops.push(
+        overlay.onInput((input) => {
+          this.overlayInput(input);
+        }),
+        overlay.onAction((action) => {
+          if (this.ownShare === '') return;
+          if (action === 'clearAll') this.clear(this.ownShare, 'all');
+          else if (action === 'toggleOthers') this.setOthersAllowed(!this.othersAllowed);
+          else this.host.stopShare?.();
+        }),
+        entitiesStore.subscribe((next, prev) => {
+          if (next.users !== prev.users) this.updateOverlay({ names: this.host.names?.() ?? {} });
+        }),
+        realtimeStore.subscribe(() => {
+          this.updateOverlay({ holdMaxMs: this.holdMax() });
+        }),
+      );
+    }
     this.sync();
     return () => {
       for (const stop of stops) stop();
       this.stopTimer();
+      this.closeOverlay();
     };
   }
 
@@ -120,6 +159,9 @@ export class DrawingController implements DrawingActions {
   begin(target: string, at: Point): void {
     const e = this.engine;
     if (!e) return;
+    this.timer ??= setInterval(() => {
+      this.flush();
+    }, FLUSH_EVERY_MS);
     this.send(e.begin(target, this.style(e.self), at));
   }
 
@@ -131,6 +173,7 @@ export class DrawingController implements DrawingActions {
     if (!this.engine) return;
     this.send(this.engine.flush());
     this.send(this.engine.end());
+    if (drawingStore.getState().mode === null) this.stopTimer();
   }
 
   laser(target: string, at: Point | undefined): void {
@@ -193,7 +236,56 @@ export class DrawingController implements DrawingActions {
   }
 
   private send(out: readonly Outgoing[], to?: readonly string[]): void {
-    for (const o of out) this.link.send(ANNOTATION_TOPIC, encodePacket(o.packet), o.reliable, to);
+    const me = this.engine?.self ?? '';
+    for (const o of out) {
+      const bytes = encodePacket(o.packet);
+      this.link.send(ANNOTATION_TOPIC, bytes, o.reliable, to);
+      // The overlay draws this user's strokes too, wherever they were drawn.
+      if (to === undefined && this.overlayShare !== '') this.host.overlay?.send(bytes, me);
+    }
+  }
+
+  /** The sharer drawing on the overlay draws on their own share. */
+  private overlayInput(input: OverlayInput): void {
+    const own = this.ownShare;
+    if (own === '' || own !== this.overlayShare) return;
+    if (input.kind === 'begin') this.begin(own, input.point);
+    else if (input.kind === 'move') this.extend(input.points);
+    else this.end();
+  }
+
+  private openOverlay(own: string, me: string): void {
+    const { overlay, labels } = this.host;
+    if (!overlay || !labels) return;
+    void overlay
+      .open({
+        trackSid: own,
+        owner: me,
+        labels: labels(),
+        names: this.host.names?.() ?? {},
+        nameTags: drawingSettingsStore.getState().nameTags,
+        othersAllowed: this.othersAllowed,
+        holdMaxMs: this.holdMax(),
+      })
+      .then((opened) => {
+        if (!opened || this.ownShare !== own) return;
+        this.overlayShare = own;
+        // The policy went out before the overlay existed.
+        if (this.engine) {
+          for (const o of this.engine.policy(own)) overlay.send(encodePacket(o.packet), me);
+        }
+      })
+      .catch(() => undefined);
+  }
+
+  private closeOverlay(): void {
+    if (this.overlayShare === '') return;
+    this.overlayShare = '';
+    void this.host.overlay?.close().catch(() => undefined);
+  }
+
+  private updateOverlay(state: Parameters<OverlayApi['update']>[0]): void {
+    if (this.overlayShare !== '') this.host.overlay?.update(state);
   }
 
   private stopTimer(): void {
@@ -207,6 +299,7 @@ export class DrawingController implements DrawingActions {
     const me = sessionStore.getState().me?.user?.id ?? '';
     if (call.status === 'idle' || me === '') {
       this.ownShare = '';
+      this.closeOverlay();
       this.engine?.setTargets(new Map());
       if (drawingStore.getState().mode !== null) this.setMode(null);
       this.publishPermissions();
@@ -226,7 +319,12 @@ export class DrawingController implements DrawingActions {
     e.setTargets(targets);
     if (own !== this.ownShare) {
       this.ownShare = own;
-      if (own !== '') this.send(e.setAllowed(own, drawingSettingsStore.getState().allowOthers));
+      this.closeOverlay();
+      if (own !== '') {
+        this.send(e.setAllowed(own, drawingSettingsStore.getState().allowOthers));
+        this.othersAllowed = e.allowed(own);
+        this.openOverlay(own, me);
+      }
     }
     this.publishPermissions();
   }
@@ -255,5 +353,9 @@ export class DrawingController implements DrawingActions {
     }
     const othersAllowed = !e || this.ownShare === '' || e.allowed(this.ownShare);
     dispatchDrawing({ type: 'permissionsChanged', drawable, othersAllowed });
+    if (othersAllowed !== this.othersAllowed) {
+      this.othersAllowed = othersAllowed;
+      this.updateOverlay({ othersAllowed });
+    }
   }
 }

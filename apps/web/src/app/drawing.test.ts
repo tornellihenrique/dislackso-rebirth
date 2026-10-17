@@ -1,13 +1,20 @@
 import { create, type MessageInitShape } from '@bufbuild/protobuf';
 import {
   AnnotationPacketSchema,
+  ClearScope,
   Tool,
   type AnnotationPacket,
 } from '@dislackso/contracts/gen/dislackso/annotation/v1/annotation_pb';
 import { ChannelSchema } from '@dislackso/contracts/gen/dislackso/v1/channel_pb';
 import { MeSchema } from '@dislackso/contracts/gen/dislackso/v1/common_pb';
 import { ANNOTATION_TOPIC, decodePacket, encodePacket } from '@dislackso/annotation';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type {
+  OverlayAction,
+  OverlayApi,
+  OverlayInput,
+  OverlayOpen,
+} from '@dislackso/desktop-bridge';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { RemoteShare } from '@/core/media/voice-session';
 import { callStore, dispatchCall, idleCall } from '@/stores/call';
@@ -175,5 +182,121 @@ describe('DrawingController', () => {
     drawing.setMode('bob');
     dispatchCall({ type: 'ended' });
     expect(drawingStore.getState().mode).toBeNull();
+  });
+});
+
+class FakeOverlay implements OverlayApi {
+  opened: OverlayOpen[] = [];
+  closed = 0;
+  packets: { packet: AnnotationPacket; sender: string }[] = [];
+  states: Parameters<OverlayApi['update']>[0][] = [];
+  private input: ((i: OverlayInput) => void) | undefined;
+  private action: ((a: OverlayAction) => void) | undefined;
+
+  open(o: OverlayOpen) {
+    this.opened.push(o);
+    return Promise.resolve(true);
+  }
+  close() {
+    this.closed++;
+    return Promise.resolve();
+  }
+  send(bytes: Uint8Array, sender: string) {
+    const packet = decodePacket(bytes);
+    if (packet) this.packets.push({ packet, sender });
+  }
+  update(state: Parameters<OverlayApi['update']>[0]) {
+    this.states.push(state);
+  }
+  onInput(cb: (i: OverlayInput) => void) {
+    this.input = cb;
+    return () => undefined;
+  }
+  onAction(cb: (a: OverlayAction) => void) {
+    this.action = cb;
+    return () => undefined;
+  }
+  draw(i: OverlayInput) {
+    this.input?.(i);
+  }
+  press(a: OverlayAction) {
+    this.action?.(a);
+  }
+  kinds() {
+    return this.packets.map((p) => `${p.packet.kind.case ?? ''} from ${p.sender}`);
+  }
+}
+
+describe('DrawingController with the desktop overlay', () => {
+  let overlay: FakeOverlay;
+  let stopped: number;
+
+  beforeEach(async () => {
+    stop();
+    overlay = new FakeOverlay();
+    stopped = 0;
+    drawing = new DrawingController(link, {
+      overlay,
+      labels: () => ({
+        draw: 'Draw',
+        stopDrawing: 'Stop',
+        clearAll: 'Clear',
+        stopOthers: 'Lock',
+        letOthers: 'Unlock',
+        stopSharing: 'Stop sharing',
+      }),
+      names: () => ({ bob: 'Bob' }),
+      stopShare: () => {
+        stopped++;
+      },
+    });
+    stop = drawing.start();
+    shareLive();
+    await vi.waitFor(() => {
+      expect(overlay.kinds()).toContain('policy from me');
+    });
+  });
+
+  it('opens over this device’s share and shows everyone’s strokes there', () => {
+    expect(overlay.opened).toMatchObject([
+      { trackSid: 'TR_me', owner: 'me', names: { bob: 'Bob' }, othersAllowed: true },
+    ]);
+    link.deliver(
+      {
+        case: 'strokeBegin',
+        value: { strokeId: 1, targetTrackSid: 'TR_me', tool: Tool.PEN, widthRel: 0.004 },
+      },
+      'bob',
+    );
+    expect(overlay.kinds()).toContain('strokeBegin from bob');
+  });
+
+  it('turns drawing on the overlay into this user’s strokes on their share', () => {
+    overlay.draw({ kind: 'begin', point: { x: 0.2, y: 0.2 } });
+    overlay.draw({ kind: 'move', points: [{ x: 0.5, y: 0.5 }] });
+    overlay.draw({ kind: 'end' });
+    const begin = link.sent.find((s) => s.packet.kind.case === 'strokeBegin')?.packet.kind;
+    expect(begin?.case === 'strokeBegin' && begin.value.targetTrackSid).toBe('TR_me');
+    expect(link.kinds()).toContain('strokeEnd');
+    expect(overlay.kinds()).toEqual(
+      expect.arrayContaining(['strokeBegin from me', 'strokeEnd from me']),
+    );
+  });
+
+  it('does what its toolbar asks', () => {
+    overlay.press('toggleOthers');
+    const last = link.sent.at(-1)?.packet.kind;
+    expect(last?.case === 'policy' && last.value.allowed).toBe(false);
+    expect(overlay.states).toContainEqual({ othersAllowed: false });
+    overlay.press('clearAll');
+    const clear = link.sent.at(-1)?.packet.kind;
+    expect(clear?.case === 'clear' && clear.value.scope).toBe(ClearScope.ALL);
+    overlay.press('stopShare');
+    expect(stopped).toBe(1);
+  });
+
+  it('closes when the share ends', () => {
+    dispatchCall({ type: 'localShare', share: null });
+    expect(overlay.closed).toBe(1);
   });
 });
