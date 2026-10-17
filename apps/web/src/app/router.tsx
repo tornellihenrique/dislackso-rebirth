@@ -27,6 +27,7 @@ import { AppearancePage } from '@/features/settings/AppearancePage';
 import { ProfilePage } from '@/features/settings/ProfilePage';
 import { SessionsPage } from '@/features/settings/SessionsPage';
 import { SettingsLayout } from '@/features/settings/SettingsLayout';
+import { DrawingPage } from '@/features/settings/DrawingPage';
 import { SharePage } from '@/features/settings/SharePage';
 import { VoicePage } from '@/features/settings/VoicePage';
 import { SetupPage } from '@/features/setup/SetupPage';
@@ -262,6 +263,12 @@ const settingsShareRoute = createRoute({
   component: SharePage,
 });
 
+const settingsDrawingRoute = createRoute({
+  getParentRoute: () => settingsRoute,
+  path: 'drawing',
+  component: DrawingPage,
+});
+
 const settingsSessionsRoute = createRoute({
   getParentRoute: () => settingsRoute,
   path: 'sessions',
@@ -306,6 +313,7 @@ const routeTree = rootRoute.addChildren([
         settingsProfileRoute,
         settingsVoiceRoute,
         settingsShareRoute,
+        settingsDrawingRoute,
         settingsAppearanceRoute,
         settingsSessionsRoute,
         settingsInstanceRoute,

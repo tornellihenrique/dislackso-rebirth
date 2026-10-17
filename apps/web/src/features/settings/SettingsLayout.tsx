@@ -15,6 +15,7 @@ interface NavItemProps {
     | '/settings/appearance'
     | '/settings/voice'
     | '/settings/share'
+    | '/settings/drawing'
     | '/settings/sessions'
     | '/settings/instance'
     | '/settings/connectivity';
@@ -68,6 +69,7 @@ export function SettingsLayout() {
           <NavItem to="/settings/profile">{t('settings.nav.profile')}</NavItem>
           <NavItem to="/settings/voice">{t('settings.nav.voice')}</NavItem>
           <NavItem to="/settings/share">{t('settings.nav.share')}</NavItem>
+          <NavItem to="/settings/drawing">{t('settings.nav.drawing')}</NavItem>
           <NavItem to="/settings/appearance">{t('settings.nav.appearance')}</NavItem>
           <NavItem to="/settings/sessions">{t('settings.nav.sessions')}</NavItem>
           {admin && (

@@ -4,9 +4,11 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { useTranslation } from 'react-i18next';
 
 import { useServices } from '@/app/services';
+import { shareTarget } from '@/features/drawing/hooks';
 import { displayName } from '@/features/members/member-groups';
 import { useOccupants } from '@/features/voice/hooks';
-import { useCall } from '@/stores/call';
+import { callStore, useCall } from '@/stores/call';
+import { drawingStore } from '@/stores/drawing';
 import { useEntities } from '@/stores/entities';
 import { useSession } from '@/stores/session';
 import { useShareSettings } from '@/stores/share-settings';
@@ -42,6 +44,7 @@ function typing(e: KeyboardEvent): boolean {
  */
 export function Stage({ guildId, channelId }: StageProps) {
   const { t } = useTranslation();
+  const { drawing } = useServices();
   const occupants = useOccupants(guildId, channelId);
   const myId = useSession((s) => s.me?.user?.id ?? '');
   const shares = useCall((s) => s.shares);
@@ -117,10 +120,21 @@ export function Stage({ guildId, channelId }: StageProps) {
     [stageEl, channelId, fullscreen, stage.mode, stage.focused],
   );
 
+  const focusedTile =
+    stage.mode === 'focus' ? tiles.find((tile) => tile.key === stage.focused) : undefined;
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented || typing(e)) return;
-      if (e.code === 'KeyG') {
+      if (e.code === 'KeyD') {
+        if (focusedTile?.kind !== 'share') return;
+        const { userId, self } = focusedTile;
+        const d = drawingStore.getState();
+        if (d.mode === userId) drawing.setMode(null);
+        else if (d.drawable[shareTarget(callStore.getState(), userId, self)])
+          drawing.setMode(userId);
+        else return;
+      } else if (e.code === 'KeyG') {
         dispatchStage({ type: 'grid', channelId });
       } else if (e.code === 'KeyF') {
         if (stage.mode === 'grid') {
@@ -145,10 +159,7 @@ export function Stage({ guildId, channelId }: StageProps) {
     return () => {
       window.removeEventListener('keydown', onKey);
     };
-  }, [channelId, stage.mode, focusable, keys, toggleFullscreen]);
-
-  const focusedTile =
-    stage.mode === 'focus' ? tiles.find((tile) => tile.key === stage.focused) : undefined;
+  }, [channelId, stage.mode, focusable, keys, toggleFullscreen, focusedTile, drawing]);
   const states = useMemo(() => new Map(occupants.map((o) => [o.userId, o])), [occupants]);
   const render = (tile: StageTile, place: 'grid' | 'focus' | 'strip') => (
     <TileView

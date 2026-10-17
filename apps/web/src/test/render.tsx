@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { I18nextProvider } from 'react-i18next';
 
 import { ServicesContext, type Services } from '@/app/services';
+import type { DrawingActions } from '@/app/drawing';
 import type { VoiceActions } from '@/app/voice';
 import { createHubClients } from '@/core/api/clients';
 import { createI18n, type Language } from '@/core/i18n/i18n';
@@ -34,9 +35,28 @@ export function stubVoice(): VoiceActions {
     setShareSettings: () => undefined,
     mountShare: () => () => undefined,
     mountSelfShare: () => () => undefined,
+    shareElement: () => undefined,
     shareStats: () => Promise.resolve(undefined),
     selfShareStats: () => Promise.resolve(undefined),
     connectionStats: () => Promise.resolve(undefined),
+  };
+}
+
+/** Drawing actions that draw nothing. */
+export function stubDrawing(): DrawingActions {
+  return {
+    scene: () => ({ strokes: [], lasers: [], tags: [] }),
+    active: () => false,
+    subscribe: () => () => undefined,
+    begin: () => undefined,
+    extend: () => undefined,
+    end: () => undefined,
+    laser: () => undefined,
+    undo: () => undefined,
+    clear: () => undefined,
+    setOthersAllowed: () => undefined,
+    setMode: () => undefined,
+    setSettings: () => undefined,
   };
 }
 
@@ -52,6 +72,7 @@ export async function renderWithProviders(
     hub: createHubClients(createRouterTransport(routes)),
     uploads: { upload: () => Promise.reject(new Error('uploads are not stubbed')) },
     voice: stubVoice(),
+    drawing: stubDrawing(),
     ...services,
   };
   return render(

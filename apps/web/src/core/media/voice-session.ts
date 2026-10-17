@@ -1,5 +1,6 @@
 import {
   ConnectionQuality,
+  ConnectionState,
   createLocalAudioTrack,
   DisconnectReason,
   MediaDeviceFailure,
@@ -55,6 +56,8 @@ export interface RemoteShare {
 }
 
 export interface LocalShareInfo {
+  /** The published track's SID: drawing on the share names it. */
+  readonly trackSid: string;
   readonly codec: ShareCodec;
   readonly audio: boolean;
   readonly ownAudioWarning: boolean;
@@ -79,6 +82,9 @@ export interface VoiceSessionListener {
   onMicLevel?(level: MicLevel): void;
   onShares?(shares: readonly RemoteShare[]): void;
   onShareEnded?(reason: ShareEnd): void;
+  /** A data packet someone in the call sent. */
+  onData?(topic: string, payload: Uint8Array, identity: string): void;
+  onPeerJoined?(identity: string): void;
 }
 
 export interface CallTarget {
@@ -315,6 +321,7 @@ export class VoiceSession {
     this.outCounters = new Map();
     this.views.setTrack(SELF_SHARE, share.video);
     return {
+      trackSid: share.video.sid ?? '',
       codec: share.codec,
       audio: share.audio !== undefined,
       ownAudioWarning: share.ownAudioWarning,
@@ -327,6 +334,20 @@ export class VoiceSession {
     this.share = undefined;
     this.views.setTrack(SELF_SHARE, undefined);
     if (this.room) await stopShare(this.room, share);
+  }
+
+  /** Sends bytes to everyone else in the call, or only to the given identities. */
+  sendData(topic: string, payload: Uint8Array, reliable: boolean, to?: readonly string[]): void {
+    const room = this.room;
+    if (room?.state !== ConnectionState.Connected) return;
+    void room.localParticipant
+      // A copy: LiveKit takes only bytes backed by a plain ArrayBuffer.
+      .publishData(new Uint8Array(payload), {
+        reliable,
+        topic,
+        ...(to ? { destinationIdentities: [...to] } : {}),
+      })
+      .catch(() => undefined);
   }
 
   /** Stops or resumes receiving someone's share, video and audio. */
@@ -545,6 +566,15 @@ export class VoiceSession {
       .on(RoomEvent.TrackMuted, shares)
       .on(RoomEvent.TrackUnmuted, shares)
       .on(RoomEvent.ParticipantDisconnected, shares)
+      .on(RoomEvent.ParticipantConnected, (p: RemoteParticipant) => {
+        l.onPeerJoined?.(p.identity);
+      })
+      .on(
+        RoomEvent.DataReceived,
+        (payload: Uint8Array, p?: RemoteParticipant, _kind?: unknown, topic?: string) => {
+          if (p) l.onData?.(topic ?? '', payload, p.identity);
+        },
+      )
       .on(
         RoomEvent.TrackSubscribed,
         (track: RemoteTrack, pub: RemoteTrackPublication, p: RemoteParticipant) => {

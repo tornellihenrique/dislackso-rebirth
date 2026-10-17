@@ -1,6 +1,7 @@
 import type { VoiceState } from '@dislackso/contracts/gen/dislackso/v1/common_pb';
 import {
   Activity,
+  Camera,
   Eye,
   EyeOff,
   LoaderCircle,
@@ -8,17 +9,25 @@ import {
   Maximize2,
   Minimize,
   Minimize2,
+  Pen,
   ScreenShareOff,
   Volume2,
   VolumeX,
 } from 'lucide-react';
-import { useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useServices } from '@/app/services';
 import type { RemoteShare } from '@/core/media/voice-session';
+import { AnnotationLayer } from '@/features/drawing/AnnotationLayer';
+import { DrawToolbar } from '@/features/drawing/DrawToolbar';
+import { useCanDraw, useNameOf, useShareTarget } from '@/features/drawing/hooks';
+import { copyOrSave, snapshotPng } from '@/features/drawing/snapshot';
 import { displayName } from '@/features/members/member-groups';
+import { useDrawing } from '@/stores/drawing';
+import { drawingSettingsStore } from '@/stores/drawing-settings';
 import { useEntities } from '@/stores/entities';
+import { pushNotice } from '@/stores/notices';
 import { useShareSettings } from '@/stores/share-settings';
 import { Button } from '@/ui/Button';
 import { IconButton } from '@/ui/IconButton';
@@ -63,7 +72,7 @@ export function ShareTile({
   onFullscreen,
 }: ShareTileProps) {
   const { t } = useTranslation();
-  const { voice } = useServices();
+  const { voice, drawing } = useServices();
   const user = useEntities((s) => s.users[tile.userId]);
   const name = displayName(user);
   const statsAll = useShareSettings((s) => s.statsOverlay);
@@ -72,6 +81,10 @@ export function ShareTile({
   const mount = useShareMount(tile.userId, tile.self);
   const sliderId = useId();
   const fullLabel = fullscreen ? t('stage.tile.exitFullscreen') : t('stage.tile.fullscreen');
+  const target = useShareTarget(tile.userId, tile.self);
+  const canDraw = useCanDraw(target);
+  const drawMode = useDrawing((s) => s.mode === tile.userId);
+  const nameOf = useNameOf();
 
   const watching = tile.self || (share?.watching ?? true);
   const hasVideo = tile.self || (share?.hasVideo ?? false);
@@ -81,6 +94,35 @@ export function ShareTile({
   const watch = (on: boolean) => {
     voice.setWatching(tile.userId, on);
   };
+  const drawable = canDraw && hasVideo && watching;
+  const drawLabel = drawMode ? t('stage.tile.stopDrawing') : t('stage.tile.draw');
+  const toggleDraw = () => {
+    drawing.setMode(drawMode ? null : tile.userId);
+  };
+  const snapshot = async () => {
+    const video = voice.shareElement(tile.userId, tile.self);
+    const png = video
+      ? await snapshotPng(
+          video,
+          drawing.scene(target),
+          nameOf,
+          drawingSettingsStore.getState().nameTags,
+        )
+      : undefined;
+    if (!png) return;
+    const how = await copyOrSave(
+      png,
+      `${name}-${new Date().toISOString().replace(/[:.]/g, '-')}.png`,
+    );
+    pushNotice({
+      kind: 'message',
+      text: how === 'copied' ? t('drawing.snapshotCopied') : t('drawing.snapshotSaved'),
+    });
+  };
+
+  useEffect(() => {
+    if (drawMode && (compact || !drawable)) drawing.setMode(null);
+  }, [drawMode, compact, drawable, drawing]);
 
   const menu = (
     <>
@@ -118,6 +160,16 @@ export function ShareTile({
         {focused ? t('stage.tile.unfocus') : t('stage.tile.focus')}
       </ContextItem>
       <ContextItem onSelect={onFullscreen}>{fullLabel}</ContextItem>
+      {drawable && <ContextItem onSelect={toggleDraw}>{drawLabel}</ContextItem>}
+      {hasVideo && watching && (
+        <ContextItem
+          onSelect={() => {
+            void snapshot();
+          }}
+        >
+          {t('stage.tile.snapshot')}
+        </ContextItem>
+      )}
       <ContextCheckItem checked={statsAll || statsHere} onCheckedChange={setStatsHere}>
         {t('stage.tile.stats')}
       </ContextCheckItem>
@@ -158,6 +210,14 @@ export function ShareTile({
           ref={mount}
           className="absolute inset-0 [&>video]:size-full [&>video]:object-contain"
         />
+        {target !== '' && watching && (
+          <AnnotationLayer
+            target={target}
+            userId={tile.userId}
+            self={tile.self}
+            drawing={drawMode}
+          />
+        )}
         {!watching ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-rail p-4 text-center">
             <p className="text-sm text-fg-muted">{t('stage.tile.notWatching', { name })}</p>
@@ -188,7 +248,7 @@ export function ShareTile({
             <VolumeX aria-label={t('stage.tile.streamMuted')} className="size-4" />
           )}
         </span>
-        {!compact && (
+        {!compact && !drawMode && (
           <div className="absolute top-2 right-2 flex gap-1 rounded-md bg-floating/90 p-1 opacity-0 shadow-lg transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
             <TileButton
               label={focused ? t('stage.tile.unfocus') : t('stage.tile.focus')}
@@ -207,6 +267,21 @@ export function ShareTile({
                 <Maximize aria-hidden className="size-4" />
               )}
             </TileButton>
+            {drawable && (
+              <TileButton label={drawLabel} pressed={drawMode} onClick={toggleDraw}>
+                <Pen aria-hidden className="size-4" />
+              </TileButton>
+            )}
+            {hasVideo && watching && (
+              <TileButton
+                label={t('stage.tile.snapshot')}
+                onClick={() => {
+                  void snapshot();
+                }}
+              >
+                <Camera aria-hidden className="size-4" />
+              </TileButton>
+            )}
             <TileButton
               label={t('stage.tile.stats')}
               pressed={statsAll || statsHere}
@@ -254,6 +329,15 @@ export function ShareTile({
               </TileButton>
             )}
           </div>
+        )}
+        {drawMode && !compact && (
+          <DrawToolbar
+            target={target}
+            own={tile.self}
+            onSnapshot={() => {
+              void snapshot();
+            }}
+          />
         )}
         {stats && <StatsOverlay userId={tile.userId} self={tile.self} />}
         {state && !state.connected && (

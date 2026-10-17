@@ -254,6 +254,9 @@ export const ptBR: Messages = {
       streamMuted: 'Transmissão silenciada',
       muteStream: 'Silenciar a transmissão',
       unmuteStream: 'Ativar o som da transmissão',
+      draw: 'Desenhar',
+      stopDrawing: 'Parar de desenhar',
+      snapshot: 'Capturar',
     },
     stats: {
       title: 'Estatísticas da transmissão',
@@ -287,6 +290,27 @@ export const ptBR: Messages = {
       kbps: '{{value}} kbps',
       ms: '{{value}} ms',
     },
+  },
+  drawing: {
+    toolbar: 'Ferramentas de desenho',
+    tools: {
+      pen: 'Caneta',
+      highlighter: 'Marca-texto',
+      arrow: 'Seta',
+      laser: 'Apontador laser',
+    },
+    color: 'Cor',
+    customColor: 'Cor personalizada',
+    size: 'Tamanho',
+    sizes: { s: 'Pequeno', m: 'Médio', l: 'Grande' },
+    undo: 'Desfazer meu último traço',
+    clearMine: 'Apagar meus traços',
+    clearAll: 'Apagar os traços de todos',
+    stopOthers: 'Impedir que outros desenhem',
+    letOthers: 'Deixar outros desenharem',
+    done: 'Parar de desenhar (Esc)',
+    snapshotCopied: 'Captura copiada para a área de transferência.',
+    snapshotSaved: 'Captura salva.',
   },
   members: {
     title: 'Membros',
@@ -608,6 +632,7 @@ export const ptBR: Messages = {
       sessions: 'Sessões',
       instance: 'Instância',
       connectivity: 'Conectividade',
+      drawing: 'Desenho',
     },
     voice: {
       title: 'Voz e áudio',
@@ -648,6 +673,25 @@ export const ptBR: Messages = {
         'Tocar sons quando pessoas entram e saem, e quando você silencia ou desativa o áudio.',
       boostWarning:
         'Acima de 100 %, esta pessoa toca pelo Web Audio, o que pode enfraquecer o cancelamento de eco. Fones ajudam.',
+    },
+    drawing: {
+      title: 'Desenho',
+      pen: 'Caneta',
+      penHint:
+        'Desenhe em qualquer tela compartilhada na sua chamada: o botão de caneta na tela, ou D na tela em foco. Os traços somem sozinhos.',
+      color: 'Cor',
+      colorAuto: 'Automática (sua cor)',
+      size: 'Tamanho',
+      tool: 'Ferramenta',
+      hold: 'Os traços ficam por',
+      holdHint:
+        'Quanto tempo seus traços ficam depois que você levanta a caneta, antes de sumirem.',
+      holdOption: '{{seconds}} segundos',
+      nameTags: 'Mostrar nomes ao lado da caneta',
+      sharing: 'Quando eu compartilho',
+      allowOthers: 'Deixar outros desenharem na minha tela',
+      allowOthersHint:
+        'Dá para mudar durante o compartilhamento, nas ferramentas de desenho da sua tela.',
     },
     share: {
       title: 'Compartilhamento de tela',

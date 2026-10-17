@@ -7,6 +7,7 @@ import { createHealthApi, type HealthApi } from '@/core/api/health';
 import { createHubTransport } from '@/core/api/transport';
 import { createUploadApi, type UploadApi } from '@/core/api/uploads';
 
+import type { DrawingActions } from './drawing';
 import type { VoiceActions } from './voice';
 
 /** Everything features need from outside the browser tab, injected through ServicesContext. */
@@ -15,6 +16,7 @@ export interface Services {
   readonly hub: HubClients;
   readonly uploads: UploadApi;
   readonly voice: VoiceActions;
+  readonly drawing: DrawingActions;
 }
 
 /**
@@ -24,7 +26,7 @@ export interface Services {
  */
 export function createServices(
   onSessionLost: () => void,
-  voice: (hub: HubClients) => VoiceActions,
+  media: (hub: HubClients) => Pick<Services, 'voice' | 'drawing'>,
 ): Services {
   const sessionGuard: Interceptor = (next) => async (req) => {
     try {
@@ -40,7 +42,7 @@ export function createServices(
     health: createHealthApi(transport, () => performance.now()),
     hub,
     uploads: createUploadApi(),
-    voice: voice(hub),
+    ...media(hub),
   };
 }
 
