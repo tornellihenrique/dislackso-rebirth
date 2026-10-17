@@ -8,7 +8,9 @@ import { SETUP_TOKEN } from './tests/fixtures';
 
 const port = Number(process.env.E2E_HUB_PORT ?? 7399);
 const exe = process.platform === 'win32' ? '.exe' : '';
-const hubBinary = fileURLToPath(new URL(`../bin/hub${exe}`, import.meta.url));
+// A hub running from bin/ locks that file on Windows; E2E_HUB_BINARY points at another build.
+const hubBinary =
+  process.env.E2E_HUB_BINARY ?? fileURLToPath(new URL(`../bin/hub${exe}`, import.meta.url));
 const liveKitBinary = fileURLToPath(new URL(`../.tools/bin/livekit-server${exe}`, import.meta.url));
 // Off the dev hub's LiveKit ports, so both can run at once.
 const liveKitFlags = [
