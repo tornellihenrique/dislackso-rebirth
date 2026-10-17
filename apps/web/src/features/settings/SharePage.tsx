@@ -6,6 +6,7 @@ import {
   isSharePreset,
   presetsUpTo,
   SHARE_CODECS,
+  tuningFor,
   type CodecChoice,
 } from '@/core/media/share-presets';
 import { useRealtime } from '@/stores/realtime';
@@ -33,10 +34,15 @@ export function SharePage() {
         title={t('settings.share.quality')}
         description={t('settings.share.qualityHint')}
       >
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="sm:w-1/2">
           <SelectField
             label={t('stage.share.quality')}
             value={preset}
+            hint={
+              tuningFor(preset) === 'text'
+                ? t('settings.share.textHint')
+                : t('settings.share.motionHint')
+            }
             onChange={(e) => {
               const v = e.target.value;
               if (isSharePreset(v)) voice.setShareSettings({ preset: v });
@@ -48,27 +54,8 @@ export function SharePage() {
               </option>
             ))}
           </SelectField>
-          <SelectField
-            label={t('stage.share.optimize')}
-            value={s.optimize}
-            hint={
-              s.optimize === 'text' ? t('settings.share.textHint') : t('settings.share.motionHint')
-            }
-            onChange={(e) => {
-              voice.setShareSettings({ optimize: e.target.value === 'motion' ? 'motion' : 'text' });
-            }}
-          >
-            <option value="text">{t('stage.share.text')}</option>
-            <option value="motion">{t('stage.share.motion')}</option>
-          </SelectField>
         </div>
-        <CheckboxField
-          label={t('stage.share.audio')}
-          checked={s.audio}
-          onChange={(e) => {
-            voice.setShareSettings({ audio: e.target.checked });
-          }}
-        />
+        <p className="text-sm text-fg-muted">{t('settings.share.audioHint')}</p>
       </SettingsSection>
 
       <SettingsSection title={t('settings.share.stage')}>

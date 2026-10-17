@@ -382,19 +382,13 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks {
     const gen = this.generation;
     dispatchCall({ type: 'localShare', share: { status: 'starting' } });
     try {
-      const info = await session.startShare({
-        preset,
-        optimize: s.optimize,
-        codec: s.codec,
-        audio: s.audio,
-      });
+      const info = await session.startShare({ preset, codec: s.codec });
       if (gen !== this.generation) return;
       dispatchCall({
         type: 'localShare',
         share: {
           status: 'live',
           preset,
-          optimize: s.optimize,
           codec: info.codec,
           audio: info.audio,
         },

@@ -1,7 +1,7 @@
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
 
-import type { OptimizeFor, ShareCodec, SharePreset } from '@/core/media/share-presets';
+import type { ShareCodec, SharePreset } from '@/core/media/share-presets';
 import type { MicFailure, Quality, RemoteShare } from '@/core/media/voice-session';
 
 /**
@@ -16,7 +16,6 @@ export type LocalShareState =
   | {
       readonly status: 'live';
       readonly preset: SharePreset;
-      readonly optimize: OptimizeFor;
       readonly codec: ShareCodec;
       readonly audio: boolean;
     };

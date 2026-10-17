@@ -6,6 +6,7 @@ import {
   pickCodec,
   presetsUpTo,
   shareEncoding,
+  tuningFor,
   type ShareCodec,
 } from './share-presets';
 
@@ -54,37 +55,45 @@ describe('captureConstraints', () => {
   });
 });
 
+describe('tuningFor', () => {
+  it('keeps the frame rate of 60 fps presets and the sharpness of the others', () => {
+    expect(tuningFor('1080p60')).toBe('motion');
+    expect(tuningFor('1440p60')).toBe('motion');
+    expect(tuningFor('1080p30')).toBe('text');
+  });
+});
+
 describe('shareEncoding', () => {
-  it('keeps text sharp and motion smooth', () => {
-    const text = shareEncoding('1440p60', 'text', 'vp9');
-    expect(text.full).toEqual({ width: 2560, height: 1440, fps: 60, bitrate: 6_000_000 });
+  it('keeps 30 fps text sharp and 60 fps motion smooth', () => {
+    const text = shareEncoding('1440p30', 'av1');
+    expect(text.full).toEqual({ width: 2560, height: 1440, fps: 30, bitrate: 4_000_000 });
     expect(text.degradation).toBe('maintain-resolution');
     expect(text.contentHint).toBe('detail');
-    const motion = shareEncoding('1440p60', 'motion', 'vp9');
+    const motion = shareEncoding('1440p60', 'vp9');
     expect(motion.full.bitrate).toBe(10_000_000);
     expect(motion.degradation).toBe('maintain-framerate');
     expect(motion.contentHint).toBe('motion');
   });
 
   it('adds a half-size low layer at most 30 fps', () => {
-    expect(shareEncoding('1080p60', 'text', 'vp8').low).toEqual({
+    expect(shareEncoding('1080p60', 'vp8').low).toEqual({
       width: 960,
       height: 540,
       fps: 30,
-      bitrate: 1_000_000,
+      bitrate: 1_750_000,
     });
-    expect(shareEncoding('720p30', 'text', 'vp8').low.bitrate).toBe(375_000);
+    expect(shareEncoding('720p30', 'vp8').low.bitrate).toBe(375_000);
   });
 
   it('publishes VP9 and AV1 as one temporal-layered stream per size, with a VP8 backup', () => {
-    expect(shareEncoding('1080p30', 'text', 'av1')).toMatchObject({
+    expect(shareEncoding('1080p30', 'av1')).toMatchObject({
       scalabilityMode: 'L1T3',
       backupCodec: 'vp8',
     });
-    expect(shareEncoding('1080p30', 'text', 'h264')).toMatchObject({
+    expect(shareEncoding('1080p30', 'h264')).toMatchObject({
       scalabilityMode: undefined,
       backupCodec: 'vp8',
     });
-    expect(shareEncoding('1080p30', 'text', 'vp8').backupCodec).toBeUndefined();
+    expect(shareEncoding('1080p30', 'vp8').backupCodec).toBeUndefined();
   });
 });

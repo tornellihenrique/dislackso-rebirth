@@ -213,10 +213,6 @@ export const en = {
     share: {
       options: 'Screen share options',
       quality: 'Quality',
-      optimize: 'Optimize for',
-      text: 'Text and detail',
-      motion: 'Motion (games, 3D)',
-      audio: 'Share audio',
       whileLive: 'Stop sharing to change these.',
       more: 'More screen share settings',
     },
@@ -654,8 +650,10 @@ export const en = {
       quality: 'Quality',
       qualityHint:
         'Used when you start sharing. The server or the channel may allow less; higher quality needs more upload.',
-      textHint: 'Keeps text and code sharp; the frame rate drops first when the network is tight.',
-      motionHint: 'Keeps the frame rate for games and 3D viewports; detail drops first.',
+      textHint:
+        'At 30 fps, text and code stay sharp; the frame rate drops first when the network is tight.',
+      motionHint: 'At 60 fps, motion stays smooth; detail drops first when the network is tight.',
+      audioHint: "To share sound, turn on audio in your browser's share window.",
       stage: 'Stage',
       autoFocus: "Focus the first screen someone shares while I'm in the grid",
       selfPreview: 'Show my own screen while I share',
@@ -663,7 +661,7 @@ export const en = {
       stats: 'Show stream stats on every screen (Ctrl+Shift+S)',
       advanced: 'Advanced',
       codecHint:
-        'Automatic uses AV1 for text and VP9 for motion, which worked best in our measurements. Viewers whose browser cannot decode the choice get VP8.',
+        'Automatic uses AV1 at 30 fps and VP9 at 60 fps, which worked best in our measurements. Viewers whose browser cannot decode the choice get VP8.',
       codec: 'Video codec',
       codecs: {
         auto: 'Automatic (recommended)',

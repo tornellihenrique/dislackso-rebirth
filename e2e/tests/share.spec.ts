@@ -133,8 +133,8 @@ test('the video stays live across grid, focus and fullscreen', async () => {
 
   await page.keyboard.press('Control+Shift+S');
   await expect(page.getByTestId('share-stats')).toContainText('Resolution', CONNECT);
-  // Text optimization picks AV1 where the browser can send it.
-  await expect(page.getByTestId('share-stats')).toContainText('AV1');
+  // A 60 fps share keeps the frame rate with VP9 where the browser can send it.
+  await expect(page.getByTestId('share-stats')).toContainText('VP9');
   await page.keyboard.press('Control+Shift+S');
   await expect(page.getByTestId('share-stats')).toBeHidden();
 });

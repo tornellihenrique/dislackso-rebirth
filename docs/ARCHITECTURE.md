@@ -409,20 +409,20 @@ Switching channels is the same call; target ≤ 1 s. Use `Room.prepareConnection
 ### 9.5 Screen sharing
 Room options: `adaptiveStream: true`, `dynacast: true`.
 
-| Preset | Resolution | FPS | Max bitrate (Text/Detail) | Max bitrate (Motion) |
+| Preset | Resolution | FPS | Tuning | Max bitrate |
 |---|---|---|---|---|
-| `720p30` | 1280×720 | 30 | 1.5 Mbps | 2.5 Mbps |
-| `1080p30` | 1920×1080 | 30 | 2.5 Mbps | 4.5 Mbps |
-| `1080p60` | 1920×1080 | 60 | 4 Mbps | 7 Mbps |
-| `1440p30` | 2560×1440 | 30 | 4 Mbps | 6 Mbps |
-| `1440p60` (max) | 2560×1440 | 60 | 6 Mbps | 10 Mbps |
+| `720p30` | 1280×720 | 30 | Text | 1.5 Mbps |
+| `1080p30` | 1920×1080 | 30 | Text | 2.5 Mbps |
+| `1080p60` (default) | 1920×1080 | 60 | Motion | 7 Mbps |
+| `1440p30` | 2560×1440 | 30 | Text | 4 Mbps |
+| `1440p60` (max) | 2560×1440 | 60 | Motion | 10 Mbps |
 
-- "Optimize for": **Text/Detail** (`contentHint: 'detail'`, `degradationPreference: 'maintain-resolution'`) or **Motion** (UE5 viewport, games: `contentHint: 'motion'`, `maintain-framerate`). Default Text.
-- Codec: **Automatic** picks **AV1 for Text/Detail** (else VP9, else VP8) and **VP9 for Motion** (else VP8), from measurements ([ADR 0002](adr/0002-screen-share-codecs.md)); a **VP8 backup codec** serves viewers that cannot decode the choice. H.264 (hardware encoders), VP8, VP9 and AV1 can be chosen in Settings → Screen share.
+- The preset's frame rate sets the tuning; there is no separate choice. **Text** (30 fps presets: `contentHint: 'detail'`, `degradationPreference: 'maintain-resolution'`) keeps text sharp and drops frames first; **Motion** (60 fps presets: `contentHint: 'motion'`, `maintain-framerate`) keeps the frame rate and lowers detail first.
+- Codec: **Automatic** picks **AV1 for Text** (else VP9, else VP8) and **VP9 for Motion** (else VP8), from measurements ([ADR 0002](adr/0002-screen-share-codecs.md)); a **VP8 backup codec** serves viewers that cannot decode the choice. H.264 (hardware encoders), VP8, VP9 and AV1 can be chosen in Settings → Screen share.
 - Every codec is published as **two simulcast layers**: full size and half size (≤ 30 fps, a quarter of the bitrate, at least 300 kbps); VP9 and AV1 use `L1T3` in each layer. Single-stream SVC is not used: LiveKit's client publishes a VP9 *screen share* with one spatial layer (and forces the motion hint) when asked for SVC, and dynacast pauses whole simulcast layers but not SVC layers.
 - Grid tiles and thumbnails get the low layer; adaptive stream subscribes to the layer matching the rendered tile size and pauses off-screen tiles automatically.
 - Capture constraints: `{ width: {ideal: W}, height: {ideal: H}, frameRate: {ideal: F, max: F} }`, cursor always; re-apply with `applyConstraints` after capture (desktop sources ignore some initial constraints).
-- System/tab audio: browser checkbox; desktop via shell (Windows loopback). Request own-audio exclusion (`restrictOwnAudio` or equivalent where supported) so call voices are not re-captured; if unsupported, warn the sharer.
+- System/tab audio: always requested, so the browser's own picker checkbox decides; desktop via shell (Windows loopback). Request own-audio exclusion (`restrictOwnAudio` or equivalent where supported) so call voices are not re-captured; if unsupported, warn the sharer.
 - One share per user per device. Channel cap on simultaneous shares (`max_shares_per_channel`): the client refuses past it, and the hub stops a share the media server reports past it by taking the screen share sources out of the participant's permissions for a moment. Instance and channel caps on the preset apply on the client (the media server cannot cap a publisher's resolution); the instance caps reach clients in `Ready.instance`.
 - Stopping from the browser's native "Stop sharing" ends the share (`ended` event).
 - Streaming flag in voice state is set by the hub from LiveKit `track_published/unpublished` (source `screen_share`), not by the client.
@@ -453,7 +453,7 @@ Same pipeline; `camera` source; default 720p30, simulcast. Off by default in ins
 For N tiles, container W×H, gap g, aspect a = 16/9: for each cols c in 1..N, rows r = ceil(N/c); tileW = min((W − (c−1)g)/c, ((H − (r−1)g)/r)·a); pick c maximizing tileW; center the last row. Pure function in `apps/web/src/features/stage/layout.ts` with unit tests.
 
 ### 10.4 Voice channel UI chrome
-Top bar: channel name, participant count, layout toggle, "hide no-video", chat toggle (text-in-voice, chat phase). Bottom floating control bar: mic, deafen, share screen (split button: quality/optimize/audio; settings apply to the next share), camera (opt), drawing settings, fullscreen, disconnect.
+Top bar: channel name, participant count, layout toggle, "hide no-video", chat toggle (text-in-voice, chat phase). Bottom floating control bar: mic, deafen, share screen (split button: quality for the next share), camera (opt), drawing settings, fullscreen, disconnect.
 
 ---
 

@@ -2,12 +2,15 @@
 export const SHARE_PRESETS = ['720p30', '1080p30', '1080p60', '1440p30', '1440p60'] as const;
 export type SharePreset = (typeof SHARE_PRESETS)[number];
 
-/** Text keeps every pixel sharp and drops frames first; motion keeps the frame rate. */
-export type OptimizeFor = 'text' | 'motion';
+/**
+ * What a share keeps when the encoder or the network falls behind: text keeps
+ * every pixel sharp and drops frames first, motion keeps the frame rate.
+ */
+export type ShareTuning = 'text' | 'motion';
 
 export const SHARE_CODECS = ['vp9', 'vp8', 'h264', 'av1'] as const;
 export type ShareCodec = (typeof SHARE_CODECS)[number];
-/** 'auto' picks the measured default for the chosen optimization. */
+/** 'auto' picks the measured default for the preset's tuning. */
 export type CodecChoice = 'auto' | ShareCodec;
 
 export interface PresetSpec {
@@ -15,36 +18,21 @@ export interface PresetSpec {
   readonly height: number;
   readonly fps: number;
   /** Bits per second of the full layer. */
-  readonly bitrate: Readonly<Record<OptimizeFor, number>>;
+  readonly bitrate: number;
 }
 
 export const presetSpecs: Readonly<Record<SharePreset, PresetSpec>> = {
-  '720p30': { width: 1280, height: 720, fps: 30, bitrate: { text: 1_500_000, motion: 2_500_000 } },
-  '1080p30': {
-    width: 1920,
-    height: 1080,
-    fps: 30,
-    bitrate: { text: 2_500_000, motion: 4_500_000 },
-  },
-  '1080p60': {
-    width: 1920,
-    height: 1080,
-    fps: 60,
-    bitrate: { text: 4_000_000, motion: 7_000_000 },
-  },
-  '1440p30': {
-    width: 2560,
-    height: 1440,
-    fps: 30,
-    bitrate: { text: 4_000_000, motion: 6_000_000 },
-  },
-  '1440p60': {
-    width: 2560,
-    height: 1440,
-    fps: 60,
-    bitrate: { text: 6_000_000, motion: 10_000_000 },
-  },
+  '720p30': { width: 1280, height: 720, fps: 30, bitrate: 1_500_000 },
+  '1080p30': { width: 1920, height: 1080, fps: 30, bitrate: 2_500_000 },
+  '1080p60': { width: 1920, height: 1080, fps: 60, bitrate: 7_000_000 },
+  '1440p30': { width: 2560, height: 1440, fps: 30, bitrate: 4_000_000 },
+  '1440p60': { width: 2560, height: 1440, fps: 60, bitrate: 10_000_000 },
 };
+
+/** A 60 fps preset is picked for smooth motion and keeps it; the others keep text sharp. */
+export function tuningFor(preset: SharePreset): ShareTuning {
+  return presetSpecs[preset].fps > 30 ? 'motion' : 'text';
+}
 
 export function isSharePreset(v: string): v is SharePreset {
   return (SHARE_PRESETS as readonly string[]).includes(v);
@@ -65,11 +53,11 @@ export function presetsUpTo(cap: string): SharePreset[] {
 }
 
 /**
- * The codecs 'auto' tries, per optimization, best first. Chosen from
+ * The codecs 'auto' tries, per tuning, best first. Chosen from
  * measurements (docs/adr/0002-screen-share-codecs.md): AV1 keeps text at the
  * full frame rate where VP9 drops frames, and VP9 holds motion at less CPU.
  */
-export const AUTO_CODECS: Readonly<Record<OptimizeFor, readonly ShareCodec[]>> = {
+export const AUTO_CODECS: Readonly<Record<ShareTuning, readonly ShareCodec[]>> = {
   text: ['av1', 'vp9'],
   motion: ['vp9'],
 };
@@ -77,10 +65,10 @@ export const AUTO_CODECS: Readonly<Record<OptimizeFor, readonly ShareCodec[]>> =
 /** The codec to publish with: the first wanted one the browser can send, else VP8. */
 export function pickCodec(
   choice: CodecChoice,
-  optimize: OptimizeFor,
+  tuning: ShareTuning,
   canSend: (codec: ShareCodec) => boolean,
 ): ShareCodec {
-  const wanted = choice === 'auto' ? AUTO_CODECS[optimize] : [choice];
+  const wanted = choice === 'auto' ? AUTO_CODECS[tuning] : [choice];
   return wanted.find(canSend) ?? 'vp8';
 }
 
@@ -126,13 +114,10 @@ const LOW_LAYER_MIN_BITRATE = 300_000;
  * layer nobody watches (dynacast). Single-stream SVC would keep encoding
  * every layer: LiveKit's client does not pause SVC layers.
  */
-export function shareEncoding(
-  preset: SharePreset,
-  optimize: OptimizeFor,
-  codec: ShareCodec,
-): ShareEncoding {
+export function shareEncoding(preset: SharePreset, codec: ShareCodec): ShareEncoding {
   const p = presetSpecs[preset];
-  const bitrate = p.bitrate[optimize];
+  const { bitrate } = p;
+  const text = tuningFor(preset) === 'text';
   const svc = codec === 'vp9' || codec === 'av1';
   return {
     codec,
@@ -145,7 +130,7 @@ export function shareEncoding(
       bitrate: Math.max(LOW_LAYER_MIN_BITRATE, Math.round(bitrate / 4)),
     },
     scalabilityMode: svc ? 'L1T3' : undefined,
-    degradation: optimize === 'text' ? 'maintain-resolution' : 'maintain-framerate',
-    contentHint: optimize === 'text' ? 'detail' : 'motion',
+    degradation: text ? 'maintain-resolution' : 'maintain-framerate',
+    contentHint: text ? 'detail' : 'motion',
   };
 }

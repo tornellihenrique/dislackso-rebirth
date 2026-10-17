@@ -5,7 +5,6 @@ import {
   isSharePreset,
   SHARE_CODECS,
   type CodecChoice,
-  type OptimizeFor,
   type SharePreset,
 } from '@/core/media/share-presets';
 import { stored } from '@/core/storage/local';
@@ -14,10 +13,7 @@ import { stored } from '@/core/storage/local';
 export interface ShareSettings {
   /** Capped by the instance and the channel when sharing starts. */
   readonly preset: SharePreset;
-  readonly optimize: OptimizeFor;
   readonly codec: CodecChoice;
-  /** Share tab or system audio when the browser offers it. */
-  readonly audio: boolean;
   /** Focus the first share that starts while the stage shows the grid. */
   readonly autoFocus: boolean;
   /** Show this device's own share on the stage. */
@@ -33,9 +29,7 @@ export interface ShareSettings {
 
 export const defaultShareSettings: ShareSettings = {
   preset: '1080p60',
-  optimize: 'text',
   codec: 'auto',
-  audio: true,
   autoFocus: true,
   selfPreview: true,
   hideNoVideo: false,
@@ -81,9 +75,7 @@ function parse(data: unknown): ShareSettings | undefined {
   const def = defaultShareSettings;
   return {
     preset: preset ?? def.preset,
-    optimize: d.optimize === 'motion' ? 'motion' : 'text',
     codec: codec ?? def.codec,
-    audio: flag('audio', def.audio),
     autoFocus: flag('autoFocus', def.autoFocus),
     selfPreview: flag('selfPreview', def.selfPreview),
     hideNoVideo: flag('hideNoVideo', def.hideNoVideo),
