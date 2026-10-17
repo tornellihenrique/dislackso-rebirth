@@ -2,9 +2,31 @@
 
 ## Current phase
 
-**Phase 5 — Hosting & connectivity: in use by the team.** Two evenings with friends on other
-networks worked (voice, 1080p60 shares, kick); the fixes they asked for are below. A clean-machine
-run of the release is still open. Next: Phase 6 — Drawing on shares.
+**Phase 6 — Drawing on shares: implemented, waiting for review and an evening with the team.**
+Phase 5 is in use (a clean-machine run of the release is still open). Next: Phase 7 — Desktop
+shell.
+
+### Phase 6 acceptance
+
+- [x] Two viewers draw simultaneously on two different shares; every participant sees identical
+      strokes aligned to the content at any tile size, letterboxed or not. Playwright: two people
+      share and, in windows of different sizes, draw on each other's share at the same moment;
+      each sharer's own tile shows the other's line on the same spot of the content (pixels read
+      back from the canvas) and nothing next to it. Unit tests cover the content rect and the
+      normalized round trip.
+- [x] Strokes hold for the author's chosen time then fade; nothing persists beyond
+      `stroke_hold_max_ms` + fade. Playwright: a stroke is still there after 2.5 s of its 3 s hold
+      and gone, pixels included, soon after the fade. The hold travels with the stroke and is capped
+      by the instance (unit tests); strokes are kept in memory only.
+- [x] Sharer disabling drawing hides pen controls for others within 500 ms; flood test (synthetic
+      2,000 points/s) is throttled without UI jank. Playwright: the sharer's switch ends the other
+      person's draw mode and removes their pen within 500 ms, and turning it back on returns it. The
+      flood is a unit test (2,000 points a second for a second keep under 500 points); the receiver
+      limits (240 points/s per author, 8 strokes at once, 40 per share, 4,000 points per stroke)
+      bound what a canvas draws, and the canvas redraws only while something is on it.
+- [x] Measured stroke latency < 100 ms on LAN (instrumented test). Playwright measures from the
+      pen going down on one page to the point appearing on the sharer's canvas: 45–65 ms on one PC
+      (points leave in 25 ms batches).
 
 ### Phase 5 acceptance
 
@@ -144,6 +166,29 @@ run of the release is still open. Next: Phase 6 — Drawing on shares.
       typecheck + tests, build + Playwright smoke).
 
 ## Done
+
+### Phase 6 — Drawing on shares
+
+- **Contract.** `proto/dislackso/annotation/v1`: `AnnotationPacket` with stroke begin, points, end,
+  undo, clear, laser and the share's drawing policy (ARCHITECTURE §11.3). `Ready.instance` now
+  carries `stroke_hold_max_ms`.
+- **`packages/annotation`** (framework-agnostic): geometry (content rect of an `object-fit:
+  contain` video, normalized points packed as uint16 pairs), styles and colors, timing (hold, 0.8 s
+  fade, name tags, laser trail), receiver limits, packet codec, the `AnnotationEngine` (this
+  client's strokes as packets, everyone else's from packets, the policy, undo and clear, pruning)
+  and the `CanvasRenderer` (midpoint-smoothed pen, highlighter, arrow, glowing laser, name tags).
+  26 unit tests.
+- **Web.** The voice session sends and receives LiveKit data packets (topic `annot`) and reports
+  who joins; `DrawingController` (`app/drawing.ts`) follows the call's shares, the channel's
+  `drawing_allowed` and this device's share policy, batches points every 25 ms and sends the
+  policy again to whoever joins. Share tiles show strokes on a canvas over the video; the pen button
+  (or D on the focused share) enters draw mode with a toolbar: pen, highlighter, arrow, laser, eight
+  colors and a custom one, three sizes, undo, clear mine, snapshot, and on one's own share clear all
+  and "stop others from drawing". Esc, right-click or the X leave it. Snapshot copies the frame
+  with its strokes as PNG (or saves it). Settings → Drawing: color, tool, size, hold time (capped by
+  the instance), name tags, and whether others may draw on one's shares.
+- **Tests.** Unit: the package, the drawing controller (policy to joiners, channel off, what goes
+  reliable). Playwright: the four acceptance checks above, inside the share spec.
 
 ### Phase 5 — Hosting & connectivity
 
@@ -591,6 +636,23 @@ run of the release is still open. Next: Phase 6 — Drawing on shares.
 - **New dependencies:** github.com/livekit/protocol v1.52.1 (hub), github.com/livekit/server-sdk-go
   v2.19.0 (integration tests only), livekit-client 2.22.4, @sapphi-red/web-noise-suppressor 0.4.1.
 
+### Phase 6
+
+- No ledger decision was changed. ARCHITECTURE §11 updated with what was built.
+- **The share's drawing policy is sent again to whoever joins** (only to them), since late joiners
+  get no history: a packet on change alone would leave them thinking drawing is allowed.
+- **The laser shows while the button is held,** like the pen, and repeats its place every second
+  while held still; receivers drop a laser after 2.5 s without news.
+- **A stroke longer than 3,000 points continues as a new one,** so its end (which carries every
+  point, to repair lost batches) fits in one reliable packet.
+- **The sender keeps under the receivers' limit:** points closer than 0.0008 or sooner than 5 ms
+  after the previous one are dropped before sending.
+- **Lines are at least 2 px wide** on screen: at the spec's widths a medium line in a small tile was
+  under 2 px.
+- **Draw mode hides the tile's hover toolbar;** snapshot moved into the drawing toolbar.
+- **The drawing tests live in the share spec:** a spec of their own made the suite pass the
+  per-account login limit (5 a minute).
+
 ### Phase 5
 
 - No ledger decision was changed; [ADR 0003](adr/0003-hosting-ingress-and-reachability.md)
@@ -699,13 +761,38 @@ run of the release is still open. Next: Phase 6 — Drawing on shares.
   and software encoders: Chromium for testing exposes no hardware encoder, so H.264 ran on
   OpenH264. Real machines, real content and hardware H.264 are steps of the manual script; the
   defaults may change after the team uses them (Phase 5).
-- Draw and Snapshot on share tiles come with drawing in Phase 6; pop-out (Picture-in-Picture) in
-  Phase 11.
+- Pop-out (Picture-in-Picture) comes in Phase 11.
+- **A sharer sees drawings only on their own tile in the browser;** strokes on the real screen
+  need the desktop overlay (Phase 7).
+- **Someone who joins mid-stroke sees strokes only from then on** (no history, by design); a
+  stroke whose end was lost ends by itself 5 s after its last point.
 - Without `restrictOwnAudio` (older Chromium, other browsers) shared system audio can carry the
   call's voices back; the sharer gets a warning.
 - The stage shortcuts (G, F, arrows, Ctrl+Shift+S) are fixed until the Keybinds page.
 
 ## Manual test script
+
+### Phase 6
+
+Prerequisites: the hub updated, two or three people in a voice channel, at least two of them
+sharing a screen.
+
+1. **Draw.** Hover a friend's screen and press the pen (or press D on the focused one). Draw: the
+   line follows the pen with your name next to it; everyone, the sharer included, sees it on the
+   same spot of the content, also in a small grid tile and in fullscreen.
+2. **Fade.** Lift the pen: the line stays about 3 s, then fades. Settings → Drawing → "Strokes stay
+   for" 8 seconds makes it last longer for everyone.
+3. **Tools.** Try the highlighter (wide, see-through), the arrow (drag start to end) and the laser
+   (a glowing dot with a short trail while you hold the button). Change color and size; undo your
+   last stroke; clear yours.
+4. **Two at once.** Two people draw on two different screens at the same time; both see both.
+5. **Owner.** On your own screen (grid view, your tile's pen), press "Stop others from drawing":
+   the others' pen disappears at once and their strokes go. Press it again to allow. "Clear
+   everyone's strokes" removes every stroke on your screen.
+6. **Channel.** As an admin, turn drawing off in the voice channel's settings: the pen disappears
+   for everyone in it.
+7. **Snapshot.** In draw mode press the camera: the frame with its strokes is copied (paste it in a
+   chat) or saved.
 
 ### Phase 5
 
