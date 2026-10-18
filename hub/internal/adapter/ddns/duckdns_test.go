@@ -39,6 +39,29 @@ func TestDuckDNS(t *testing.T) {
 	}
 }
 
+func TestDuckDNSTXT(t *testing.T) {
+	var got url.Values
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = r.URL.Query()
+		_, _ = w.Write([]byte("OK"))
+	}))
+	defer srv.Close()
+	d := DuckDNS{Token: "secret-token", Client: srv.Client(), Endpoint: srv.URL}
+
+	if err := d.SetTXT(t.Context(), "team.duckdns.org", "check-value"); err != nil {
+		t.Fatal(err)
+	}
+	if want := (url.Values{"domains": {"team"}, "token": {"secret-token"}, "txt": {"check-value"}}); got.Encode() != want.Encode() {
+		t.Errorf("set: query = %v, want %v", got, want)
+	}
+	if err := d.ClearTXT(t.Context(), "team.duckdns.org"); err != nil {
+		t.Fatal(err)
+	}
+	if got.Get("clear") != "true" || got.Get("domains") != "team" {
+		t.Errorf("clear: query = %v", got)
+	}
+}
+
 func TestDuckDNSKeepsTheTokenOutOfErrors(t *testing.T) {
 	d := DuckDNS{Token: "secret-token", Client: http.DefaultClient, Endpoint: "http://127.0.0.1:1/update"}
 	err := d.Point(context.Background(), "team.duckdns.org", netip.MustParseAddr("192.0.2.1"))

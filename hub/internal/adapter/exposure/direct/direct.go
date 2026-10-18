@@ -42,8 +42,9 @@ const (
 	failedCheckWait = 15 * time.Minute
 )
 
-// Public serves on a public address with a certificate from Let's Encrypt,
-// over the TLS-ALPN challenge on the same port.
+// Public serves on a public address with a certificate from Let's Encrypt:
+// over its DNS check when the dynamic DNS provider can publish TXT records,
+// else over the TLS-ALPN check on the same port.
 type Public struct {
 	Domain   string
 	Email    string
@@ -56,8 +57,12 @@ type Public struct {
 	DNSName  string
 	PublicIP func(ctx context.Context) (netip.Addr, error)
 	DNSCheck time.Duration
-	Logger   *slog.Logger
-	Clock    ports.Clock
+	// Challenge publishes the DNS check's TXT record under DNSName, so the
+	// certificate needs no inbound connection; LookupTXT reads public DNS.
+	Challenge ports.DNSChallenge
+	LookupTXT func(ctx context.Context, name string) ([]string, error)
+	Logger    *slog.Logger
+	Clock     ports.Clock
 
 	// certs replaces Let's Encrypt in tests.
 	certs certSource
@@ -92,6 +97,9 @@ func (p *Public) Run(ctx context.Context, handler http.Handler, report func(doma
 		go p.keepPointed(ctx, ip)
 	}
 	starting(domain.StageCertificate)
+	if p.Challenge != nil {
+		return p.serveDNSChecked(ctx, handler, report)
+	}
 	certs := p.certs
 	var checks *checkLog
 	if certs == nil {
@@ -132,6 +140,27 @@ func (p *Public) Run(ctx context.Context, handler http.Handler, report func(doma
 	return <-served
 }
 
+func (p *Public) serveDNSChecked(ctx context.Context, handler http.Handler, report func(domain.ExposureStatus)) error {
+	certs := &dnsCerts{
+		domain: p.Domain, txtDomain: p.DNSName, email: p.Email, dir: p.CacheDir,
+		txt: p.Challenge, lookupTXT: p.LookupTXT, logger: p.Logger,
+	}
+	if err := certs.ensure(ctx, p.Clock.Now()); err != nil {
+		return certificateError(err, "", p.Clock.Now())
+	}
+	ln, err := listen(ctx, p.Addr)
+	if err != nil {
+		return err
+	}
+	go certs.renew(ctx, p.Clock)
+	report(domain.ExposureStatus{
+		Kind: domain.ExposureDirect, State: domain.ExposureRunning, Since: p.Clock.Now(),
+		URL: "https://" + hostPort(p.Domain, p.Addr),
+	})
+	info := ingress.Info{Name: string(domain.ExposureDirect), Secure: true, HSTS: true}
+	return serve(ctx, tls.NewListener(ln, certs.tlsConfig()), handler, info, p.Logger)
+}
+
 // acmeBackoff retries Let's Encrypt's passing errors briefly and gives up
 // on a rate limit at once. The ACME client would otherwise sleep through its
 // Retry-After, which can be an hour, inside one certificate request.
@@ -143,13 +172,23 @@ func acmeBackoff(n int, _ *http.Request, res *http.Response) time.Duration {
 }
 
 // certificateError explains a failed certificate request; failedCheck is
-// Let's Encrypt's reason when its check of the domain failed.
+// Let's Encrypt's reason when its check of the domain failed and the error
+// does not carry it.
 func certificateError(err error, failedCheck string, now time.Time) *ports.ExposureError {
 	if ae, ok := errors.AsType[*acme.Error](err); ok && ae.StatusCode == http.StatusTooManyRequests {
 		return &ports.ExposureError{
 			Problem: domain.ProblemCertificateLimit, Err: err,
 			RetryAfter: retryAfter(ae.Header.Get("Retry-After"), now),
 		}
+	}
+	if _, ok := errors.AsType[*publishError](err); ok {
+		return &ports.ExposureError{Problem: domain.ProblemDynamicDNS, Err: err}
+	}
+	if _, ok := errors.AsType[*txtMissingError](err); ok {
+		return &ports.ExposureError{Problem: domain.ProblemDNSRecord, Err: err}
+	}
+	if failedCheck == "" {
+		failedCheck = authorizationReason(err)
 	}
 	if failedCheck != "" {
 		return &ports.ExposureError{
@@ -158,6 +197,23 @@ func certificateError(err error, failedCheck string, now time.Time) *ports.Expos
 		}
 	}
 	return &ports.ExposureError{Problem: domain.ProblemCertificate, Err: err}
+}
+
+// authorizationReason is the CA's reason in a failed authorization, or "".
+func authorizationReason(err error) string {
+	ae, ok := errors.AsType[*acme.AuthorizationError](err)
+	if !ok {
+		return ""
+	}
+	for _, e := range ae.Errors {
+		if pe, ok := errors.AsType[*acme.Error](e); ok && pe.Detail != "" {
+			return pe.Detail
+		}
+		if e != nil {
+			return e.Error()
+		}
+	}
+	return ""
 }
 
 // retryAfter reads a Retry-After header, in seconds or as a date.

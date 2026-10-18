@@ -28,16 +28,32 @@ type DuckDNS struct {
 }
 
 func (d DuckDNS) Point(ctx context.Context, domainName string, ip netip.Addr) error {
-	name, ok := domain.DuckDNSName(domainName)
-	if !ok {
-		return fmt.Errorf("%q is not a duckdns.org domain", domainName)
-	}
-	q := url.Values{"domains": {name}, "token": {d.Token}}
+	q := url.Values{}
 	if ip.Is4() {
 		q.Set("ip", ip.String())
 	} else {
 		q.Set("ipv6", ip.String())
 	}
+	return d.update(ctx, domainName, q)
+}
+
+// SetTXT sets the domain's TXT record, which DuckDNS also answers for every
+// name under it, _acme-challenge included.
+func (d DuckDNS) SetTXT(ctx context.Context, domainName, value string) error {
+	return d.update(ctx, domainName, url.Values{"txt": {value}})
+}
+
+func (d DuckDNS) ClearTXT(ctx context.Context, domainName string) error {
+	return d.update(ctx, domainName, url.Values{"txt": {"cleared"}, "clear": {"true"}})
+}
+
+func (d DuckDNS) update(ctx context.Context, domainName string, q url.Values) error {
+	name, ok := domain.DuckDNSName(domainName)
+	if !ok {
+		return fmt.Errorf("%q is not a duckdns.org domain", domainName)
+	}
+	q.Set("domains", name)
+	q.Set("token", d.Token)
 	endpoint := d.Endpoint
 	if endpoint == "" {
 		endpoint = DuckDNSEndpoint

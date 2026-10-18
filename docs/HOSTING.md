@@ -103,11 +103,17 @@ hub keeps it pointed at your public IP, also after the provider changes it.
 On the hub machine itself keep using `http://localhost:7300`: some routers do not loop the public
 address back to the inside.
 
+With DuckDNS the certificate comes over Let's Encrypt's DNS check: the hub publishes a TXT record
+through DuckDNS, so Let's Encrypt never connects to this machine. This matters on home connections
+whose provider drops connections from abroad, where port 443 works for your friends but not for
+Let's Encrypt. Each request first runs on Let's Encrypt's staging server, so a setup that cannot
+pass never uses up the real allowance; the first certificate takes a few minutes.
+
 **Your own domain, kept pointed by DuckDNS.** To use a subdomain of a domain you own (say
-`chat.example.com`) and still follow a changing public IP: in your domain's DNS add a **CNAME**
-record from `chat` to `<name>.duckdns.org`. In the hub, enter `chat.example.com` as the domain,
-keep DuckDNS, and put `<name>.duckdns.org` in **DuckDNS name**. The hub keeps the DuckDNS name
-pointed here, and your subdomain follows it.
+`chat.example.com`) and still follow a changing public IP, add two **CNAME** records in your
+domain's DNS, both to `<name>.duckdns.org`: one named `chat` and one named `_acme-challenge.chat`.
+In the hub, enter `chat.example.com` as the domain, keep DuckDNS, and put `<name>.duckdns.org` in
+**DuckDNS name**. The hub keeps the DuckDNS name pointed here and answers the DNS check through it.
 
 If a certificate check fails, the status shows Let's Encrypt's reason (usually that port 443 does
 not reach this machine) and the hub waits 15 minutes before the next check, since Let's Encrypt
@@ -201,7 +207,8 @@ The app updates itself from new releases (on macOS it shows where to download th
 | "Could not download cloudflared" | The hub retries; check that GitHub is reachable from this machine. |
 | "Could not point the domain at this machine" | Check the DuckDNS token and that the name is one you added on duckdns.org. |
 | "Let's Encrypt is not issuing a certificate for this name right now" | Too many failed tries recently. Leave the hub running; it tries again at the time in the message. |
-| "Let's Encrypt could not check the domain" | Its reason is under the message. "Timeout during connect" or "Connection refused": port 443 does not reach this machine (router forward, Windows Firewall, or a provider that blocks it). |
+| "Let's Encrypt could not verify the domain" | Its reason is under the message. Without DuckDNS, "Timeout during connect" or "Connection refused" means port 443 does not reach this machine from abroad (router forward, Windows Firewall, or a provider that filters it); DuckDNS avoids that check. |
+| "The record Let's Encrypt checks does not show in public DNS" | With your own domain, add the CNAME from `_acme-challenge.<subdomain>` to the DuckDNS name. |
 | "Could not get a certificate" | Port 443 must reach this machine: router DMZ or forward, and Windows Firewall allowing the hub. Test port 443 with an online port checker while the hub runs. |
 | "Another program uses that port" | Something else listens on the address (443, 7443 or 7301); stop it or choose another. |
 | Calls connect at home but not for friends | Run the reachability test; add a relay; allow the firewall rule. |

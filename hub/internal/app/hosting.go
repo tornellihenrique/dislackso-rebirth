@@ -58,9 +58,11 @@ func exposureProviders(dataDir string, clk ports.Clock, logger *slog.Logger) exp
 				CacheDir: filepath.Join(dataDir, "acme"), Logger: logger, Clock: clk,
 			}
 			if s.DynamicDNS == domain.DynamicDNSDuckDNS {
-				p.DNS = ddns.DuckDNS{Token: secrets.DNSToken, Client: dnsClient}
+				duck := ddns.DuckDNS{Token: secrets.DNSToken, Client: dnsClient}
+				p.DNS, p.Challenge = duck, duck
 				p.DNSName = s.DynamicDNSHost()
 				p.PublicIP = publicIPv4
+				p.LookupTXT = publicprobe.Prober{}.TXT
 			}
 			return p
 		case domain.ExposureLAN:

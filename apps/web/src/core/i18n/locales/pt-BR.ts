@@ -878,12 +878,12 @@ export const ptBR: Messages = {
         },
         duckdns: {
           label: 'DuckDNS (nome gratuito)',
-          hint: 'Um <nome>.duckdns.org gratuito. O hub aponta o nome para esta máquina ao iniciar e de novo sempre que o IP público mudar.',
+          hint: "Um <nome>.duckdns.org gratuito. O hub aponta o nome para esta máquina ao iniciar e sempre que o IP público mudar, e comprova o domínio ao Let's Encrypt pelo DNS, então o certificado não precisa de porta aberta.",
         },
       },
       dynamicDnsName: 'Nome no DuckDNS (opcional)',
       dynamicDnsNameHint:
-        'Só quando o domínio acima é seu: o <nome>.duckdns.org que o hub mantém apontando para cá. No DNS do seu domínio, crie um registro CNAME do domínio para ele.',
+        'Só quando o domínio acima é seu: o <nome>.duckdns.org que o hub mantém apontando para cá. No DNS do seu domínio, crie dois registros CNAME para ele: um para o domínio e um para _acme-challenge na frente dele.',
       dnsToken: 'Token do DuckDNS',
       dnsTokenHint: 'No duckdns.org, depois de entrar: o token no topo da página.',
       directEmail: 'Email de contato (opcional)',
@@ -901,7 +901,8 @@ export const ptBR: Messages = {
       },
       stages: {
         dns: 'Apontando o domínio para esta máquina…',
-        certificate: 'Obtendo um certificado HTTPS para o endereço…',
+        certificate:
+          'Obtendo um certificado HTTPS para o endereço… Na primeira vez isso pode levar alguns minutos.',
         publishing:
           'Esperando {{url}} funcionar pela internet. Na primeira vez, o Tailscale leva até 10 minutos para publicá-lo.',
         unverified:
@@ -949,7 +950,9 @@ export const ptBR: Messages = {
       certificate_failed:
         'Não foi possível obter um certificado. Verifique se o domínio aponta para esta máquina e se a porta 443 chega até ela.',
       certificate_check_failed:
-        "O Let's Encrypt não conseguiu verificar o domínio pela internet; o motivo está abaixo. Normalmente a porta 443 não chega a esta máquina. O hub tenta de novo em 15 minutos, ou agora quando você salvar.",
+        "O Let's Encrypt não conseguiu verificar o domínio; o motivo está abaixo. O hub tenta de novo em 15 minutos, ou agora quando você salvar.",
+      dns_record_missing:
+        "O registro que o Let's Encrypt verifica não aparece no DNS público. Com domínio próprio, crie um registro CNAME de _acme-challenge.<seu subdomínio> para o nome do DuckDNS. O hub tenta de novo sozinho.",
       certificate_rate_limited:
         "O Let's Encrypt não está emitindo certificado para este nome agora, depois de tentativas demais que falharam. O hub tenta de novo quando ele permitir; a mensagem abaixo diz quando.",
       dynamic_dns_failed:

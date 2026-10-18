@@ -116,6 +116,7 @@ const (
 	ProblemCertificateLimit  = "certificate_rate_limited"
 	ProblemCertificateCheck  = "certificate_check_failed"
 	ProblemDynamicDNS        = "dynamic_dns_failed"
+	ProblemDNSRecord         = "dns_record_missing"
 	ProblemExposureFailed    = "exposure_failed"
 )
 
