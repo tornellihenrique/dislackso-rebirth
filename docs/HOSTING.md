@@ -190,6 +190,7 @@ The app updates itself from new releases (on macOS it shows where to download th
 | "Your tailnet does not allow Funnel" | Add the `funnel` node attribute in Access controls → JSON editor (step 3 of the Tailscale path); wait a minute. |
 | "Could not download cloudflared" | The hub retries; check that GitHub is reachable from this machine. |
 | "Could not point the domain at this machine" | Check the DuckDNS token and that the name is one you added on duckdns.org. |
+| "Let's Encrypt is not issuing a certificate for this name right now" | Too many failed tries recently. Leave the hub running; it tries again at the time in the message. |
 | "Could not get a certificate" | Port 443 must reach this machine: router DMZ or forward, and Windows Firewall allowing the hub. Test port 443 with an online port checker while the hub runs. |
 | "Another program uses that port" | Something else listens on the address (443, 7443 or 7301); stop it or choose another. |
 | Calls connect at home but not for friends | Run the reachability test; add a relay; allow the firewall rule. |

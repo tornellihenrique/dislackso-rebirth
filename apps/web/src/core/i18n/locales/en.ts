@@ -934,6 +934,8 @@ export const en = {
       address_in_use: 'Another program uses that port. Close it or choose another address.',
       certificate_failed:
         'Could not get a certificate. Check that the domain points at this machine and that port 443 reaches it.',
+      certificate_rate_limited:
+        "Let's Encrypt is not issuing a certificate for this name right now, after too many failed tries. The hub tries again when it allows; its message below says when.",
       dynamic_dns_failed:
         'Could not point the domain at this machine. Check the DuckDNS token and that the name is one you added on duckdns.org; the hub retries.',
       exposure_failed: 'Something went wrong; the hub retries. The details below may help.',

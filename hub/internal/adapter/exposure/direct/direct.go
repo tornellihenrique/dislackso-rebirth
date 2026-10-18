@@ -21,8 +21,10 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
+	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/domain"
@@ -93,6 +95,7 @@ func (p *Public) Run(ctx context.Context, handler http.Handler, report func(doma
 			HostPolicy: autocert.HostWhitelist(p.Domain),
 			Cache:      autocert.DirCache(p.CacheDir),
 			Email:      p.Email,
+			Client:     &acme.Client{DirectoryURL: autocert.DefaultACMEDirectory, RetryBackoff: acmeBackoff},
 		}
 	}
 	ln, err := listen(ctx, p.Addr)
@@ -111,13 +114,45 @@ func (p *Public) Run(ctx context.Context, handler http.Handler, report func(doma
 	if _, err := certs.GetCertificate(browserHello(p.Domain)); err != nil {
 		cancel()
 		<-served
-		return &ports.ExposureError{Problem: domain.ProblemCertificate, Err: err}
+		return certificateError(err, p.Clock.Now())
 	}
 	report(domain.ExposureStatus{
 		Kind: domain.ExposureDirect, State: domain.ExposureRunning, Since: p.Clock.Now(),
 		URL: "https://" + hostPort(p.Domain, p.Addr),
 	})
 	return <-served
+}
+
+// acmeBackoff retries Let's Encrypt's passing errors briefly and gives up
+// on a rate limit at once. The ACME client would otherwise sleep through its
+// Retry-After, which can be an hour, inside one certificate request.
+func acmeBackoff(n int, _ *http.Request, res *http.Response) time.Duration {
+	if n > 3 || res != nil && res.StatusCode == http.StatusTooManyRequests {
+		return 0
+	}
+	return time.Duration(n) * time.Second
+}
+
+func certificateError(err error, now time.Time) *ports.ExposureError {
+	ae, ok := errors.AsType[*acme.Error](err)
+	if !ok || ae.StatusCode != http.StatusTooManyRequests {
+		return &ports.ExposureError{Problem: domain.ProblemCertificate, Err: err}
+	}
+	return &ports.ExposureError{
+		Problem: domain.ProblemCertificateLimit, Err: err,
+		RetryAfter: retryAfter(ae.Header.Get("Retry-After"), now),
+	}
+}
+
+// retryAfter reads a Retry-After header, in seconds or as a date.
+func retryAfter(v string, now time.Time) time.Duration {
+	if secs, err := strconv.Atoi(v); err == nil {
+		return time.Duration(max(secs, 0)) * time.Second
+	}
+	if at, err := http.ParseTime(v); err == nil {
+		return max(at.Sub(now), 0)
+	}
+	return 0
 }
 
 // browserHello asks for the ECDSA certificate browsers get; autocert would
