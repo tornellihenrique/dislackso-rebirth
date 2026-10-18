@@ -74,3 +74,28 @@ func TestReachable(t *testing.T) {
 		t.Error("plain http counted as reachable")
 	}
 }
+
+func TestTXTFollowsWhatResolversAnswer(t *testing.T) {
+	const answer = `{"Status":0,"Answer":[
+		{"name":"_acme-challenge.chat.example.com.","type":5,"data":"team.duckdns.org."},
+		{"name":"team.duckdns.org.","type":16,"data":"\"check-value\""}]}`
+	google := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("type") != "TXT" {
+			t.Errorf("type = %s", r.URL.Query().Get("type"))
+		}
+		_, _ = w.Write([]byte(answer))
+	}))
+	defer google.Close()
+	broken := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusBadGateway)
+	}))
+	defer broken.Close()
+
+	got, err := Prober{Resolvers: []string{broken.URL, google.URL}}.TXT(t.Context(), "_acme-challenge.chat.example.com")
+	if err != nil || len(got) != 1 || got[0] != "check-value" {
+		t.Errorf("TXT = %v, %v; want [check-value]", got, err)
+	}
+	if _, err := (Prober{Resolvers: []string{broken.URL}}).TXT(t.Context(), "x.example.com"); err == nil {
+		t.Error("no resolver answered, yet no error")
+	}
+}

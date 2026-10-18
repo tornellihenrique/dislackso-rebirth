@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -29,6 +30,7 @@ const (
 	dnsNoSuchName  = 3
 	dnsTypeA       = 1
 	dnsTypeAAAA    = 28
+	dnsTypeTXT     = 16
 )
 
 type Prober struct {
@@ -100,6 +102,33 @@ type dohAnswer struct {
 	} `json:"Answer"`
 }
 
+// TXT is the name's TXT records as any public resolver sees them; CNAMEs on
+// the way are followed by the resolvers.
+func (p Prober) TXT(ctx context.Context, name string) ([]string, error) {
+	resolvers := p.Resolvers
+	if len(resolvers) == 0 {
+		resolvers = Resolvers
+	}
+	var out []string
+	var last error
+	for _, r := range resolvers {
+		ans, err := p.query(ctx, r, name, "TXT")
+		if err != nil {
+			last = err
+			continue
+		}
+		for _, a := range ans.Answer {
+			if a.Type == dnsTypeTXT {
+				out = append(out, strings.Trim(a.Data, "\""))
+			}
+		}
+	}
+	if len(out) == 0 && last != nil {
+		return nil, last
+	}
+	return out, nil
+}
+
 // resolve asks each resolver in turn for the host's addresses.
 func (p Prober) resolve(ctx context.Context, host string) ([]string, error) {
 	if ip := net.ParseIP(host); ip != nil {
@@ -120,28 +149,35 @@ func (p Prober) resolve(ctx context.Context, host string) ([]string, error) {
 	return nil, last
 }
 
-func (p Prober) lookup(ctx context.Context, resolver, host string) ([]string, error) {
+func (p Prober) query(ctx context.Context, resolver, name, typ string) (dohAnswer, error) {
 	client := p.Client
 	if client == nil {
 		client = &http.Client{Timeout: requestTimeout}
 	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
+		resolver+"?name="+url.QueryEscape(name)+"&type="+typ, http.NoBody)
+	if err != nil {
+		return dohAnswer{}, err
+	}
+	req.Header.Set("Accept", "application/dns-json")
+	resp, err := client.Do(req)
+	if err != nil {
+		return dohAnswer{}, fmt.Errorf("resolve %s: %w", name, err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	var ans dohAnswer
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxAnswer)).Decode(&ans); err != nil {
+		return dohAnswer{}, fmt.Errorf("resolve %s: %w", name, err)
+	}
+	return ans, nil
+}
+
+func (p Prober) lookup(ctx context.Context, resolver, host string) ([]string, error) {
 	var ips []string
 	for _, typ := range []string{"A", "AAAA"} {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet,
-			resolver+"?name="+url.QueryEscape(host)+"&type="+typ, http.NoBody)
+		ans, err := p.query(ctx, resolver, host, typ)
 		if err != nil {
 			return nil, err
-		}
-		req.Header.Set("Accept", "application/dns-json")
-		resp, err := client.Do(req)
-		if err != nil {
-			return nil, fmt.Errorf("resolve %s: %w", host, err)
-		}
-		var ans dohAnswer
-		err = json.NewDecoder(io.LimitReader(resp.Body, maxAnswer)).Decode(&ans)
-		_ = resp.Body.Close()
-		if err != nil {
-			return nil, fmt.Errorf("resolve %s: %w", host, err)
 		}
 		if ans.Status == dnsNoSuchName {
 			return nil, fmt.Errorf("resolve %s: %w", host, ErrNotPublished)

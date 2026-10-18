@@ -208,6 +208,14 @@ mode. Phase 6 (drawing) is merged and in use.
   transport around the ACME client keeps the error of an invalid authorization, which autocert
   replaces with "no viable challenge type found". The next check waits 15 minutes, under Let's
   Encrypt's 5 failed checks per name per hour.
+- **With DuckDNS the certificate comes over Let's Encrypt's DNS check** (`direct/dns01.go`, on
+  `x/crypto/acme`): the TXT record goes out through DuckDNS (`ports.DNSChallenge`), so the
+  check needs no inbound connection. The owner's provider lets Brazilian networks reach port 443
+  but drops Let's Encrypt's checks from abroad ("Timeout during connect"). Each request runs on
+  Let's Encrypt's staging server first, and the hub waits until public DNS (DNS-over-HTTPS)
+  shows the record before asking for the check; a record that never shows is
+  `dns_record_missing`, given back unchecked. The certificate is saved in `acme/` and renewed
+  when a third of its lifetime is left. Without dynamic DNS the TLS-ALPN check stays.
 - **An own domain can follow DuckDNS:** `ExposureSettings.dynamic_dns_name` is the DuckDNS name the
   hub keeps pointed when the direct domain is a CNAME to it; empty keeps the domain itself.
 
@@ -909,8 +917,8 @@ mode. Phase 6 (drawing) is merged and in use.
 - Without `restrictOwnAudio` (older Chromium, other browsers) shared system audio can carry the
   call's voices back; the sharer gets a warning.
 - The stage shortcuts (G, F, arrows, Ctrl+Shift+S) are fixed until the Keybinds page.
-- **Direct mode needs inbound port 443** for Let's Encrypt's TLS-ALPN challenge; an ISP that
-  blocks it would need the DNS challenge (DuckDNS can set TXT records), which is not built.
+- **Direct mode without dynamic DNS needs port 443 reachable from abroad** for Let's Encrypt's
+  TLS-ALPN check; with DuckDNS the DNS check needs no open port for the certificate.
 - **The public address may not open from the hub machine itself** when the router has no NAT
   loopback; the host uses `http://localhost:7300` (the desktop app accepts it).
 - **DuckDNS gets an IPv4 record only,** which every client can reach.

@@ -58,3 +58,10 @@ type PublicProbe interface {
 type DynamicDNS interface {
 	Point(ctx context.Context, domain string, ip netip.Addr) error
 }
+
+// DNSChallenge publishes the TXT record of Let's Encrypt's DNS check under a
+// dynamic DNS domain.
+type DNSChallenge interface {
+	SetTXT(ctx context.Context, domain, value string) error
+	ClearTXT(ctx context.Context, domain string) error
+}
