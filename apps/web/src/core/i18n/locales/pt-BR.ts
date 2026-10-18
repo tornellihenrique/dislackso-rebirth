@@ -881,6 +881,9 @@ export const ptBR: Messages = {
           hint: 'Um <nome>.duckdns.org gratuito. O hub aponta o nome para esta máquina ao iniciar e de novo sempre que o IP público mudar.',
         },
       },
+      dynamicDnsName: 'Nome no DuckDNS (opcional)',
+      dynamicDnsNameHint:
+        'Só quando o domínio acima é seu: o <nome>.duckdns.org que o hub mantém apontando para cá. No DNS do seu domínio, crie um registro CNAME do domínio para ele.',
       dnsToken: 'Token do DuckDNS',
       dnsTokenHint: 'No duckdns.org, depois de entrar: o token no topo da página.',
       directEmail: 'Email de contato (opcional)',
@@ -945,6 +948,8 @@ export const ptBR: Messages = {
       address_in_use: 'Outro programa usa essa porta. Feche-o ou escolha outro endereço.',
       certificate_failed:
         'Não foi possível obter um certificado. Verifique se o domínio aponta para esta máquina e se a porta 443 chega até ela.',
+      certificate_check_failed:
+        "O Let's Encrypt não conseguiu verificar o domínio pela internet; o motivo está abaixo. Normalmente a porta 443 não chega a esta máquina. O hub tenta de novo em 15 minutos, ou agora quando você salvar.",
       certificate_rate_limited:
         "O Let's Encrypt não está emitindo certificado para este nome agora, depois de tentativas demais que falharam. O hub tenta de novo quando ele permitir; a mensagem abaixo diz quando.",
       dynamic_dns_failed:

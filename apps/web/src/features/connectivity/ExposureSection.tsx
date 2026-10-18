@@ -185,6 +185,18 @@ export function ExposureSection({ settings, status }: ExposureSectionProps) {
             />
             {form.dynamicDns === 'duckdns' && (
               <TextField
+                label={t('connectivity.exposure.dynamicDnsName')}
+                hint={t('connectivity.exposure.dynamicDnsNameHint')}
+                placeholder="team.duckdns.org"
+                value={form.dynamicDnsName}
+                error={field('dynamic_dns_name')}
+                onChange={(e) => {
+                  set({ dynamicDnsName: e.target.value });
+                }}
+              />
+            )}
+            {form.dynamicDns === 'duckdns' && (
+              <TextField
                 label={t('connectivity.exposure.dnsToken')}
                 hint={
                   settings?.dnsTokenSet === true

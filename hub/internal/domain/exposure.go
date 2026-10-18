@@ -63,14 +63,24 @@ type ExposureSettings struct {
 	DirectDomain string
 	DirectEmail  string
 	DirectAddr   string
-	// DynamicDNS keeps DirectDomain pointed at this machine.
-	DynamicDNS DynamicDNSKind
+	// DynamicDNS keeps DirectDomain pointed at this machine: the domain
+	// itself, or DynamicDNSName when the domain is a CNAME to that name.
+	DynamicDNS     DynamicDNSKind
+	DynamicDNSName string
 	// LANAddr is the address on this machine's network the hub listens on,
 	// with a self-signed certificate.
 	LANAddr string
 }
 
 const DefaultTailscaleHostname = "dislackso"
+
+// DynamicDNSHost is the name dynamic DNS keeps pointed at this machine.
+func (s ExposureSettings) DynamicDNSHost() string {
+	if s.DynamicDNSName != "" {
+		return s.DynamicDNSName
+	}
+	return s.DirectDomain
+}
 
 func DefaultExposureSettings() ExposureSettings {
 	return ExposureSettings{
@@ -104,6 +114,7 @@ const (
 	ProblemAddressInUse      = "address_in_use"
 	ProblemCertificate       = "certificate_failed"
 	ProblemCertificateLimit  = "certificate_rate_limited"
+	ProblemCertificateCheck  = "certificate_check_failed"
 	ProblemDynamicDNS        = "dynamic_dns_failed"
 	ProblemExposureFailed    = "exposure_failed"
 )
@@ -158,8 +169,7 @@ func ValidateExposure(prefix string, s ExposureSettings, tunnelTokenSet, dnsToke
 			out = append(out, v)
 		}
 	case ExposureDirect:
-		_, duck := DuckDNSName(s.DirectDomain)
-		if !validDomain(s.DirectDomain) || s.DynamicDNS == DynamicDNSDuckDNS && !duck {
+		if !validDomain(s.DirectDomain) {
 			out = append(out, &FieldViolation{prefix + "direct_domain", ReasonFieldInvalidFormat})
 		}
 		if s.DirectEmail != "" {
@@ -171,8 +181,11 @@ func ValidateExposure(prefix string, s ExposureSettings, tunnelTokenSet, dnsToke
 		if !s.DynamicDNS.Valid() {
 			out = append(out, &FieldViolation{prefix + "dynamic_dns", ReasonFieldInvalid})
 		}
-		if s.DynamicDNS == DynamicDNSDuckDNS && !dnsTokenSet {
-			out = append(out, &FieldViolation{prefix + "dns_token", ReasonFieldRequired})
+		if s.DynamicDNS == DynamicDNSDuckDNS {
+			out = append(out, validateDuckDNSHost(prefix, s)...)
+			if !dnsTokenSet {
+				out = append(out, &FieldViolation{prefix + "dns_token", ReasonFieldRequired})
+			}
 		}
 	case ExposureLAN:
 		if !validListenAddr(s.LANAddr) {
@@ -181,6 +194,21 @@ func ValidateExposure(prefix string, s ExposureSettings, tunnelTokenSet, dnsToke
 	case ExposureLocal, ExposureCloudflareQuick:
 	}
 	return out
+}
+
+// validateDuckDNSHost blames the field the DuckDNS name came from; an
+// invalid domain already has its own violation.
+func validateDuckDNSHost(prefix string, s ExposureSettings) []*FieldViolation {
+	if _, ok := DuckDNSName(s.DynamicDNSHost()); ok {
+		return nil
+	}
+	switch {
+	case s.DynamicDNSName != "":
+		return []*FieldViolation{{prefix + "dynamic_dns_name", ReasonFieldInvalidFormat}}
+	case validDomain(s.DirectDomain):
+		return []*FieldViolation{{prefix + "direct_domain", ReasonFieldInvalidFormat}}
+	}
+	return nil
 }
 
 // DuckDNSName is the name DuckDNS knows a domain by: "team" for

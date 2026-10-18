@@ -140,6 +140,7 @@ func (s *Service) Update(ctx context.Context, p Patch) (domain.InstanceSettings,
 		next.Exposure = *p.Exposure
 		next.Exposure.TailscaleHostname = strings.ToLower(strings.TrimSpace(next.Exposure.TailscaleHostname))
 		next.Exposure.DirectDomain = strings.ToLower(strings.TrimSpace(next.Exposure.DirectDomain))
+		next.Exposure.DynamicDNSName = strings.ToLower(strings.TrimSpace(next.Exposure.DynamicDNSName))
 		next.Exposure.TunnelURL = domain.NormalizePublicURL(next.Exposure.TunnelURL)
 		if next.Exposure.DynamicDNS == "" {
 			next.Exposure.DynamicDNS = domain.DynamicDNSNone

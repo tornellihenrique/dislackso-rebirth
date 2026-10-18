@@ -37,6 +37,9 @@ const (
 	// A home connection's public address changes rarely; a few minutes of
 	// a stale name after a change is the cost of not asking constantly.
 	defaultDNSCheck = 5 * time.Minute
+	// Let's Encrypt allows a name 5 failed checks an hour; retrying sooner
+	// only ends in its rate limit.
+	failedCheckWait = 15 * time.Minute
 )
 
 // Public serves on a public address with a certificate from Let's Encrypt,
@@ -46,10 +49,11 @@ type Public struct {
 	Email    string
 	Addr     string
 	CacheDir string
-	// DNS keeps Domain pointed at this machine; nil when the domain's own
-	// DNS already does. PublicIP is then this machine's address as the
-	// internet sees it.
+	// DNS keeps DNSName pointed at this machine: Domain itself, or the name
+	// Domain is a CNAME to. It is nil when the domain's own DNS already
+	// points here. PublicIP is this machine's address as the internet sees it.
 	DNS      ports.DynamicDNS
+	DNSName  string
 	PublicIP func(ctx context.Context) (netip.Addr, error)
 	DNSCheck time.Duration
 	Logger   *slog.Logger
@@ -89,13 +93,18 @@ func (p *Public) Run(ctx context.Context, handler http.Handler, report func(doma
 	}
 	starting(domain.StageCertificate)
 	certs := p.certs
+	var checks *checkLog
 	if certs == nil {
+		checks = &checkLog{base: http.DefaultTransport}
 		certs = &autocert.Manager{
 			Prompt:     autocert.AcceptTOS,
 			HostPolicy: autocert.HostWhitelist(p.Domain),
 			Cache:      autocert.DirCache(p.CacheDir),
 			Email:      p.Email,
-			Client:     &acme.Client{DirectoryURL: autocert.DefaultACMEDirectory, RetryBackoff: acmeBackoff},
+			Client: &acme.Client{
+				DirectoryURL: autocert.DefaultACMEDirectory, RetryBackoff: acmeBackoff,
+				HTTPClient: &http.Client{Transport: checks},
+			},
 		}
 	}
 	ln, err := listen(ctx, p.Addr)
@@ -114,7 +123,7 @@ func (p *Public) Run(ctx context.Context, handler http.Handler, report func(doma
 	if _, err := certs.GetCertificate(browserHello(p.Domain)); err != nil {
 		cancel()
 		<-served
-		return certificateError(err, p.Clock.Now())
+		return certificateError(err, checks.last(), p.Clock.Now())
 	}
 	report(domain.ExposureStatus{
 		Kind: domain.ExposureDirect, State: domain.ExposureRunning, Since: p.Clock.Now(),
@@ -133,15 +142,22 @@ func acmeBackoff(n int, _ *http.Request, res *http.Response) time.Duration {
 	return time.Duration(n) * time.Second
 }
 
-func certificateError(err error, now time.Time) *ports.ExposureError {
-	ae, ok := errors.AsType[*acme.Error](err)
-	if !ok || ae.StatusCode != http.StatusTooManyRequests {
-		return &ports.ExposureError{Problem: domain.ProblemCertificate, Err: err}
+// certificateError explains a failed certificate request; failedCheck is
+// Let's Encrypt's reason when its check of the domain failed.
+func certificateError(err error, failedCheck string, now time.Time) *ports.ExposureError {
+	if ae, ok := errors.AsType[*acme.Error](err); ok && ae.StatusCode == http.StatusTooManyRequests {
+		return &ports.ExposureError{
+			Problem: domain.ProblemCertificateLimit, Err: err,
+			RetryAfter: retryAfter(ae.Header.Get("Retry-After"), now),
+		}
 	}
-	return &ports.ExposureError{
-		Problem: domain.ProblemCertificateLimit, Err: err,
-		RetryAfter: retryAfter(ae.Header.Get("Retry-After"), now),
+	if failedCheck != "" {
+		return &ports.ExposureError{
+			Problem: domain.ProblemCertificateCheck, Err: &checkError{reason: failedCheck, err: err},
+			RetryAfter: failedCheckWait,
+		}
 	}
+	return &ports.ExposureError{Problem: domain.ProblemCertificate, Err: err}
 }
 
 // retryAfter reads a Retry-After header, in seconds or as a date.
@@ -171,7 +187,7 @@ func (p *Public) point(ctx context.Context) (netip.Addr, error) {
 	if err != nil {
 		return netip.Addr{}, fmt.Errorf("find the public address: %w", err)
 	}
-	if err := p.DNS.Point(ctx, p.Domain, ip); err != nil {
+	if err := p.DNS.Point(ctx, p.DNSName, ip); err != nil {
 		return netip.Addr{}, err
 	}
 	return ip, nil
@@ -196,13 +212,13 @@ func (p *Public) keepPointed(ctx context.Context, last netip.Addr) {
 		if err != nil || ip == last {
 			continue
 		}
-		if err := p.DNS.Point(ctx, p.Domain, ip); err != nil {
+		if err := p.DNS.Point(ctx, p.DNSName, ip); err != nil {
 			p.Logger.WarnContext(ctx, "point the domain at the new public address",
-				slog.String("domain", p.Domain), slog.Any("error", err))
+				slog.String("domain", p.DNSName), slog.Any("error", err))
 			continue
 		}
 		p.Logger.InfoContext(ctx, "the domain points at the new public address",
-			slog.String("domain", p.Domain), slog.String("ip", ip.String()))
+			slog.String("domain", p.DNSName), slog.String("ip", ip.String()))
 		last = ip
 	}
 }

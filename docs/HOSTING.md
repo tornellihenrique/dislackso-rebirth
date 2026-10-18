@@ -103,6 +103,16 @@ hub keeps it pointed at your public IP, also after the provider changes it.
 On the hub machine itself keep using `http://localhost:7300`: some routers do not loop the public
 address back to the inside.
 
+**Your own domain, kept pointed by DuckDNS.** To use a subdomain of a domain you own (say
+`chat.example.com`) and still follow a changing public IP: in your domain's DNS add a **CNAME**
+record from `chat` to `<name>.duckdns.org`. In the hub, enter `chat.example.com` as the domain,
+keep DuckDNS, and put `<name>.duckdns.org` in **DuckDNS name**. The hub keeps the DuckDNS name
+pointed here, and your subdomain follows it.
+
+If a certificate check fails, the status shows Let's Encrypt's reason (usually that port 443 does
+not reach this machine) and the hub waits 15 minutes before the next check, since Let's Encrypt
+allows a name only 5 failed checks an hour. **Save and restart** checks again at once.
+
 ### Other choices
 
 - **Public address with your own domain**: the machine has a public IP, your domain's DNS points
@@ -191,6 +201,7 @@ The app updates itself from new releases (on macOS it shows where to download th
 | "Could not download cloudflared" | The hub retries; check that GitHub is reachable from this machine. |
 | "Could not point the domain at this machine" | Check the DuckDNS token and that the name is one you added on duckdns.org. |
 | "Let's Encrypt is not issuing a certificate for this name right now" | Too many failed tries recently. Leave the hub running; it tries again at the time in the message. |
+| "Let's Encrypt could not check the domain" | Its reason is under the message. "Timeout during connect" or "Connection refused": port 443 does not reach this machine (router forward, Windows Firewall, or a provider that blocks it). |
 | "Could not get a certificate" | Port 443 must reach this machine: router DMZ or forward, and Windows Firewall allowing the hub. Test port 443 with an online port checker while the hub runs. |
 | "Another program uses that port" | Something else listens on the address (443, 7443 or 7301); stop it or choose another. |
 | Calls connect at home but not for friends | Run the reachability test; add a relay; allow the firewall rule. |

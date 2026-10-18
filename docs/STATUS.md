@@ -204,6 +204,12 @@ mode. Phase 6 (drawing) is merged and in use.
   the hub waits for the Retry-After it gave (an hour at most) before the next try. The ACME client
   used to sleep through the Retry-After inside the request, so the page stayed on "Getting an
   HTTPS certificate…" while every try timed out after 5 minutes.
+- **A failed certificate check shows Let's Encrypt's reason** (`certificate_check_failed`): a
+  transport around the ACME client keeps the error of an invalid authorization, which autocert
+  replaces with "no viable challenge type found". The next check waits 15 minutes, under Let's
+  Encrypt's 5 failed checks per name per hour.
+- **An own domain can follow DuckDNS:** `ExposureSettings.dynamic_dns_name` is the DuckDNS name the
+  hub keeps pointed when the direct domain is a CNAME to it; empty keeps the domain itself.
 
 ### Phase 7 — After the first evening with the desktop app
 
