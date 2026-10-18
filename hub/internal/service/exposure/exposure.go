@@ -23,6 +23,9 @@ const (
 	maxBackoff = time.Minute
 	// A provider that ran this long failed for a new reason; retry soon.
 	stableAfter = 5 * time.Minute
+	// The longest a provider's own retry time is honored, so a far end
+	// asking for days does not need a hub restart once it relents.
+	maxRetryAfter = time.Hour
 )
 
 type Settings interface {
@@ -150,16 +153,20 @@ func (s *Service) runConfigured(ctx context.Context, handler http.Handler) {
 		if err == nil {
 			err = errors.New("stopped")
 		}
-		s.d.Logger.WarnContext(ctx, "exposure provider stopped; retrying",
-			slog.String("provider", string(provider.Kind())), slog.Any("error", err), slog.Duration("in", backoff))
-		s.report(ctx, failed(provider.Kind(), err, s.d.Clock.Now()))
 		if s.d.Clock.Now().Sub(started) >= stableAfter {
 			backoff = minBackoff
 		}
+		wait := backoff
+		if ee, ok := errors.AsType[*ports.ExposureError](err); ok {
+			wait = max(wait, min(ee.RetryAfter, maxRetryAfter))
+		}
+		s.d.Logger.WarnContext(ctx, "exposure provider stopped; retrying",
+			slog.String("provider", string(provider.Kind())), slog.Any("error", err), slog.Duration("in", wait))
+		s.report(ctx, failed(provider.Kind(), err, s.d.Clock.Now()))
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.After(backoff):
+		case <-time.After(wait):
 		}
 		backoff = min(backoff*2, maxBackoff)
 	}

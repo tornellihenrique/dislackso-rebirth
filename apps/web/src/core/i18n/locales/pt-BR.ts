@@ -945,6 +945,8 @@ export const ptBR: Messages = {
       address_in_use: 'Outro programa usa essa porta. Feche-o ou escolha outro endereço.',
       certificate_failed:
         'Não foi possível obter um certificado. Verifique se o domínio aponta para esta máquina e se a porta 443 chega até ela.',
+      certificate_rate_limited:
+        "O Let's Encrypt não está emitindo certificado para este nome agora, depois de tentativas demais que falharam. O hub tenta de novo quando ele permitir; a mensagem abaixo diz quando.",
       dynamic_dns_failed:
         'Não foi possível apontar o domínio para esta máquina. Verifique o token do DuckDNS e se o nome é um que você criou no duckdns.org; o hub tenta de novo.',
       exposure_failed: 'Algo deu errado; o hub tenta de novo. Os detalhes abaixo podem ajudar.',

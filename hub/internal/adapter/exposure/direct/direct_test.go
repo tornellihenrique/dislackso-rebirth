@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"golang.org/x/crypto/acme"
 
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/domain"
 	"github.com/tornellihenrique/dislackso-rebirth/hub/internal/fakes"
@@ -185,5 +186,47 @@ func TestPublicServesWhileTheCertificateIsIssued(t *testing.T) {
 	cancel()
 	if err := <-done; err != nil {
 		t.Errorf("Run after cancel = %v", err)
+	}
+}
+
+func TestCertificateError(t *testing.T) {
+	now := time.Date(2026, 10, 18, 3, 0, 0, 0, time.UTC)
+	limited := func(retryAfter string) error {
+		return fmt.Errorf("authorize: %w", &acme.Error{
+			StatusCode: http.StatusTooManyRequests, Detail: "too many failed authorizations",
+			Header: http.Header{"Retry-After": {retryAfter}},
+		})
+	}
+	tests := []struct {
+		name    string
+		err     error
+		problem string
+		wait    time.Duration
+	}{
+		{"rate limit in seconds", limited("720"), domain.ProblemCertificateLimit, 12 * time.Minute},
+		{"rate limit as a date", limited("Sun, 18 Oct 2026 03:35:00 GMT"), domain.ProblemCertificateLimit, 35 * time.Minute},
+		{"rate limit without a time", limited(""), domain.ProblemCertificateLimit, 0},
+		{"failed check", &acme.Error{StatusCode: http.StatusForbidden}, domain.ProblemCertificate, 0},
+		{"no answer", errors.New("context deadline exceeded"), domain.ProblemCertificate, 0},
+	}
+	for _, tt := range tests {
+		got := certificateError(tt.err, now)
+		if got.Problem != tt.problem || got.RetryAfter != tt.wait || !errors.Is(got, tt.err) {
+			t.Errorf("%s: certificateError = %s, %v; want %s, %v", tt.name, got.Problem, got.RetryAfter, tt.problem, tt.wait)
+		}
+	}
+}
+
+func TestACMEBackoffGivesUpOnRateLimits(t *testing.T) {
+	limited := &http.Response{StatusCode: http.StatusTooManyRequests}
+	unavailable := &http.Response{StatusCode: http.StatusServiceUnavailable}
+	if d := acmeBackoff(1, nil, limited); d != 0 {
+		t.Errorf("rate limited: backoff = %v, want none", d)
+	}
+	if d := acmeBackoff(1, nil, unavailable); d <= 0 {
+		t.Errorf("unavailable: backoff = %v, want a retry", d)
+	}
+	if d := acmeBackoff(4, nil, unavailable); d != 0 {
+		t.Errorf("fourth retry: backoff = %v, want none", d)
 	}
 }

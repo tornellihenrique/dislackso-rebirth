@@ -21,6 +21,9 @@ type ExposureProvider interface {
 type ExposureError struct {
 	Problem string
 	Err     error
+	// RetryAfter is how long a new Run would fail for the same reason, when
+	// the far end says so.
+	RetryAfter time.Duration
 }
 
 func (e *ExposureError) Error() string { return e.Problem + ": " + e.Err.Error() }

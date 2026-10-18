@@ -103,6 +103,7 @@ const (
 	ProblemTunnelToken       = "tunnel_token_missing"
 	ProblemAddressInUse      = "address_in_use"
 	ProblemCertificate       = "certificate_failed"
+	ProblemCertificateLimit  = "certificate_rate_limited"
 	ProblemDynamicDNS        = "dynamic_dns_failed"
 	ProblemExposureFailed    = "exposure_failed"
 )
