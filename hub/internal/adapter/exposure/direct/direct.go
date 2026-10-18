@@ -52,11 +52,24 @@ type Public struct {
 	DNSCheck time.Duration
 	Logger   *slog.Logger
 	Clock    ports.Clock
+
+	// certs replaces Let's Encrypt in tests.
+	certs certSource
+}
+
+// certSource is what Run needs from autocert.Manager.
+type certSource interface {
+	GetCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, error)
+	TLSConfig() *tls.Config
 }
 
 func (p *Public) Kind() domain.ExposureKind { return domain.ExposureDirect }
 
 func (p *Public) Run(ctx context.Context, handler http.Handler, report func(domain.ExposureStatus)) error {
+	// A failed run is retried with a new Run; what this one started must not
+	// stay behind.
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	starting := func(stage string) {
 		report(domain.ExposureStatus{
 			Kind: domain.ExposureDirect, State: domain.ExposureStarting, Stage: stage,
@@ -70,35 +83,52 @@ func (p *Public) Run(ctx context.Context, handler http.Handler, report func(doma
 		if err != nil {
 			return &ports.ExposureError{Problem: domain.ProblemDynamicDNS, Err: err}
 		}
-		// A failed run is retried with a new Run; its updater must not stay.
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithCancel(ctx)
-		defer cancel()
 		go p.keepPointed(ctx, ip)
 	}
 	starting(domain.StageCertificate)
-	m := &autocert.Manager{
-		Prompt:     autocert.AcceptTOS,
-		HostPolicy: autocert.HostWhitelist(p.Domain),
-		Cache:      autocert.DirCache(p.CacheDir),
-		Email:      p.Email,
+	certs := p.certs
+	if certs == nil {
+		certs = &autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist(p.Domain),
+			Cache:      autocert.DirCache(p.CacheDir),
+			Email:      p.Email,
+		}
 	}
 	ln, err := listen(ctx, p.Addr)
 	if err != nil {
 		return err
 	}
+	// Let's Encrypt checks the domain with a TLS handshake on this port
+	// (TLS-ALPN), so it must be served while the certificate is requested.
+	served := make(chan error, 1)
+	go func() {
+		info := ingress.Info{Name: string(domain.ExposureDirect), Secure: true, HSTS: true}
+		served <- serve(ctx, tls.NewListener(ln, certs.TLSConfig()), handler, info, p.Logger)
+	}()
 	// The first certificate is requested now, so a wrong domain or a closed
 	// port shows in the admin panel instead of failing the first visitor.
-	if _, err := m.GetCertificate(&tls.ClientHelloInfo{ServerName: p.Domain}); err != nil {
-		_ = ln.Close()
+	if _, err := certs.GetCertificate(browserHello(p.Domain)); err != nil {
+		cancel()
+		<-served
 		return &ports.ExposureError{Problem: domain.ProblemCertificate, Err: err}
 	}
 	report(domain.ExposureStatus{
 		Kind: domain.ExposureDirect, State: domain.ExposureRunning, Since: p.Clock.Now(),
 		URL: "https://" + hostPort(p.Domain, p.Addr),
 	})
-	info := ingress.Info{Name: string(domain.ExposureDirect), Secure: true, HSTS: true}
-	return serve(ctx, tls.NewListener(ln, m.TLSConfig()), handler, info, p.Logger)
+	return <-served
+}
+
+// browserHello asks for the ECDSA certificate browsers get; autocert would
+// issue an RSA one for a bare hello, and a second one for the first visitor.
+func browserHello(serverName string) *tls.ClientHelloInfo {
+	return &tls.ClientHelloInfo{
+		ServerName:       serverName,
+		SignatureSchemes: []tls.SignatureScheme{tls.ECDSAWithP256AndSHA256},
+		SupportedCurves:  []tls.CurveID{tls.CurveP256},
+		CipherSuites:     []uint16{tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256},
+	}
 }
 
 func (p *Public) point(ctx context.Context) (netip.Addr, error) {

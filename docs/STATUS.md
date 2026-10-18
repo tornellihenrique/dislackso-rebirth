@@ -196,6 +196,10 @@ mode. Phase 6 (drawing) is merged and in use.
   `<name>.duckdns.org` and the token is required.
 - **Connectivity page:** "Keep the domain pointed here" and the DuckDNS token under "Public
   address with a domain"; HOSTING.md has the steps.
+- **Direct mode serves its port while the first certificate is requested.** It used to ask for the
+  certificate before serving, so Let's Encrypt's TLS-ALPN handshake on port 443 was never answered
+  and the first certificate could not be issued. The request also asks for the ECDSA certificate
+  browsers use, so the first visitor does not cause a second issuance.
 
 ### Phase 7 — After the first evening with the desktop app
 
@@ -916,6 +920,9 @@ token.
 3. From a phone on mobile data, open the address and sign in; join a call.
 4. Restart the hub: it comes back without a new certificate (the `acme/` folder in the data
    folder keeps it).
+5. If the status shows Let's Encrypt's "too many failed authorizations", earlier failed attempts
+   hit its limit (5 per name per hour): leave the hub running and it gets the certificate once the
+   hour passes.
 
 ### Phase 7 (part 1)
 

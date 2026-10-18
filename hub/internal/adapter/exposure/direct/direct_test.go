@@ -2,8 +2,11 @@ package direct
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
+	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/netip"
 	"sync"
@@ -113,5 +116,74 @@ func TestKeepPointedFollowsTheAddress(t *testing.T) {
 	<-done
 	if diff := cmp.Diff([]netip.Addr{second}, dns.pointed(), cmp.Comparer(func(a, b netip.Addr) bool { return a == b })); diff != "" {
 		t.Errorf("points (-want +got):\n%s", diff)
+	}
+}
+
+// fakeACME stands in for Let's Encrypt: the certificate is issued only if a
+// TLS-ALPN handshake on the hub's port completes while it is requested.
+type fakeACME struct {
+	addr string
+	cert tls.Certificate
+}
+
+const acmeALPN = "acme-tls/1"
+
+func (f *fakeACME) TLSConfig() *tls.Config {
+	return &tls.Config{
+		NextProtos:     []string{acmeALPN},
+		GetCertificate: func(*tls.ClientHelloInfo) (*tls.Certificate, error) { return &f.cert, nil },
+		MinVersion:     tls.VersionTLS12,
+	}
+}
+
+func (f *fakeACME) GetCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	d := tls.Dialer{Config: &tls.Config{
+		ServerName: hello.ServerName, NextProtos: []string{acmeALPN},
+		InsecureSkipVerify: true, MinVersion: tls.VersionTLS12,
+	}}
+	conn, err := d.DialContext(ctx, "tcp", f.addr)
+	if err != nil {
+		return nil, fmt.Errorf("validation: %w", err)
+	}
+	_ = conn.Close()
+	return &f.cert, nil
+}
+
+func TestPublicServesWhileTheCertificateIsIssued(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr := ln.Addr().String()
+	_ = ln.Close()
+	cert, err := selfSigned(t.TempDir(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := &Public{
+		Domain: "hub.example.test", Addr: addr, certs: &fakeACME{addr: addr, cert: cert},
+		Logger: slog.New(slog.DiscardHandler), Clock: fakes.NewClock(),
+	}
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	running := make(chan struct{}, 1)
+	done := make(chan error, 1)
+	go func() {
+		done <- p.Run(ctx, http.NotFoundHandler(), func(s domain.ExposureStatus) {
+			if s.State == domain.ExposureRunning {
+				running <- struct{}{}
+			}
+		})
+	}()
+	select {
+	case <-running:
+	case err := <-done:
+		t.Fatalf("Run = %v, want it running", err)
+	}
+	cancel()
+	if err := <-done; err != nil {
+		t.Errorf("Run after cancel = %v", err)
 	}
 }
