@@ -392,9 +392,12 @@ type ExposureSettings struct {
 	// Write-only: the dynamic DNS provider's token. Empty keeps the stored one.
 	DnsToken string `protobuf:"bytes,11,opt,name=dns_token,json=dnsToken,proto3" json:"dns_token,omitempty"`
 	// Read-only: whether a dynamic DNS token is stored.
-	DnsTokenSet   bool `protobuf:"varint,12,opt,name=dns_token_set,json=dnsTokenSet,proto3" json:"dns_token_set,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	DnsTokenSet bool `protobuf:"varint,12,opt,name=dns_token_set,json=dnsTokenSet,proto3" json:"dns_token_set,omitempty"`
+	// The name dynamic DNS keeps pointed, when direct_domain is a CNAME to it.
+	// Empty: direct_domain itself.
+	DynamicDnsName string `protobuf:"bytes,13,opt,name=dynamic_dns_name,json=dynamicDnsName,proto3" json:"dynamic_dns_name,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ExposureSettings) Reset() {
@@ -509,6 +512,13 @@ func (x *ExposureSettings) GetDnsTokenSet() bool {
 		return x.DnsTokenSet
 	}
 	return false
+}
+
+func (x *ExposureSettings) GetDynamicDnsName() string {
+	if x != nil {
+		return x.DynamicDnsName
+	}
+	return ""
 }
 
 type ExposureStatus struct {
@@ -1764,7 +1774,7 @@ var File_dislackso_v1_connectivity_proto protoreflect.FileDescriptor
 
 const file_dislackso_v1_connectivity_proto_rawDesc = "" +
 	"\n" +
-	"\x1fdislackso/v1/connectivity.proto\x12\fdislackso.v1\x1a\x18dislackso/v1/voice.proto\"\xe1\x03\n" +
+	"\x1fdislackso/v1/connectivity.proto\x12\fdislackso.v1\x1a\x18dislackso/v1/voice.proto\"\x8b\x04\n" +
 	"\x10ExposureSettings\x12.\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x1a.dislackso.v1.ExposureKindR\x04kind\x12-\n" +
 	"\x12tailscale_hostname\x18\x02 \x01(\tR\x11tailscaleHostname\x12\x1d\n" +
@@ -1781,7 +1791,8 @@ const file_dislackso_v1_connectivity_proto_rawDesc = "" +
 	" \x01(\x0e2\x1c.dislackso.v1.DynamicDnsKindR\n" +
 	"dynamicDns\x12\x1b\n" +
 	"\tdns_token\x18\v \x01(\tR\bdnsToken\x12\"\n" +
-	"\rdns_token_set\x18\f \x01(\bR\vdnsTokenSet\"\x85\x02\n" +
+	"\rdns_token_set\x18\f \x01(\bR\vdnsTokenSet\x12(\n" +
+	"\x10dynamic_dns_name\x18\r \x01(\tR\x0edynamicDnsName\"\x85\x02\n" +
 	"\x0eExposureStatus\x12.\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x1a.dislackso.v1.ExposureKindR\x04kind\x121\n" +
 	"\x05state\x18\x02 \x01(\x0e2\x1b.dislackso.v1.ExposureStateR\x05state\x12\x10\n" +

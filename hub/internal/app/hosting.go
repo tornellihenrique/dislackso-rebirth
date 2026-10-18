@@ -59,6 +59,7 @@ func exposureProviders(dataDir string, clk ports.Clock, logger *slog.Logger) exp
 			}
 			if s.DynamicDNS == domain.DynamicDNSDuckDNS {
 				p.DNS = ddns.DuckDNS{Token: secrets.DNSToken, Client: dnsClient}
+				p.DNSName = s.DynamicDNSHost()
 				p.PublicIP = publicIPv4
 			}
 			return p

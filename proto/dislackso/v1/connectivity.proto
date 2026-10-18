@@ -68,6 +68,9 @@ message ExposureSettings {
   string dns_token = 11;
   // Read-only: whether a dynamic DNS token is stored.
   bool dns_token_set = 12;
+  // The name dynamic DNS keeps pointed, when direct_domain is a CNAME to it.
+  // Empty: direct_domain itself.
+  string dynamic_dns_name = 13;
 }
 
 enum ExposureState {

@@ -85,6 +85,10 @@ func TestValidateExposureDirect(t *testing.T) {
 		s.Kind, s.DirectDomain, s.DynamicDNS = ExposureDirect, domain, dns
 		return s
 	}
+	withName := func(s ExposureSettings, name string) ExposureSettings {
+		s.DynamicDNSName = name
+		return s
+	}
 	tests := []struct {
 		name        string
 		settings    ExposureSettings
@@ -98,6 +102,9 @@ func TestValidateExposureDirect(t *testing.T) {
 		{"duckdns nested name", direct("a.team.duckdns.org", DynamicDNSDuckDNS), true, []string{"e.direct_domain"}},
 		{"empty domain once", direct("", DynamicDNSDuckDNS), true, []string{"e.direct_domain"}},
 		{"unknown provider", direct("hub.example.com", "noip"), false, []string{"e.dynamic_dns"}},
+		{"own domain on a duckdns name", withName(direct("chat.example.com", DynamicDNSDuckDNS), "team.duckdns.org"), true, nil},
+		{"duckdns name elsewhere", withName(direct("chat.example.com", DynamicDNSDuckDNS), "team.example.org"), true, []string{"e.dynamic_dns_name"}},
+		{"invalid domain with a duckdns name", withName(direct("", DynamicDNSDuckDNS), "team.duckdns.org"), true, []string{"e.direct_domain"}},
 	}
 	for _, tt := range tests {
 		var got []string

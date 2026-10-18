@@ -64,6 +64,7 @@ type exposureJSON struct {
 	DirectEmail       string `json:"direct_email"`
 	DirectAddr        string `json:"direct_addr"`
 	DynamicDNS        string `json:"dynamic_dns"`
+	DynamicDNSName    string `json:"dynamic_dns_name"`
 	LANAddr           string `json:"lan_addr"`
 }
 
@@ -177,6 +178,7 @@ func sections(s domain.InstanceSettings) settingsJSON {
 			DirectEmail:       e.DirectEmail,
 			DirectAddr:        e.DirectAddr,
 			DynamicDNS:        string(e.DynamicDNS),
+			DynamicDNSName:    e.DynamicDNSName,
 			LANAddr:           e.LANAddr,
 		},
 		turn: turnJSON{
@@ -221,6 +223,7 @@ func (s settingsJSON) settings() domain.InstanceSettings {
 			DirectEmail:       e.DirectEmail,
 			DirectAddr:        e.DirectAddr,
 			DynamicDNS:        dynamicDNS(e.DynamicDNS),
+			DynamicDNSName:    e.DynamicDNSName,
 			LANAddr:           e.LANAddr,
 		},
 		TURN: domain.TURNSettings{

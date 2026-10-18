@@ -59,6 +59,8 @@ export interface ExposureForm {
   readonly directEmail: string;
   readonly directAddr: string;
   readonly dynamicDns: DynamicDnsChoice;
+  /** Empty: the domain itself is the DuckDNS name. */
+  readonly dynamicDnsName: string;
   /** Empty keeps the stored token. */
   readonly dnsToken: string;
   readonly lanAddr: string;
@@ -74,6 +76,7 @@ export function exposureFormFrom(s: ExposureSettings | undefined): ExposureForm 
     directEmail: s?.directEmail ?? '',
     directAddr: s?.directAddr ?? '',
     dynamicDns: dynamicDnsChoice(s?.dynamicDns ?? DynamicDnsKind.NONE),
+    dynamicDnsName: s?.dynamicDnsName ?? '',
     dnsToken: '',
     lanAddr: s?.lanAddr ?? '',
   };
@@ -91,6 +94,7 @@ export function exposureSettingsFrom(
     directEmail: f.directEmail.trim(),
     directAddr: f.directAddr.trim(),
     dynamicDns: dynamicDnsKinds[f.dynamicDns],
+    dynamicDnsName: f.dynamicDnsName.trim().toLowerCase(),
     dnsToken: f.dnsToken.trim(),
     lanAddr: f.lanAddr.trim(),
   };

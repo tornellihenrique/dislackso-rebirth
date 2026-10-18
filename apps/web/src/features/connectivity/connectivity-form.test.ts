@@ -59,6 +59,25 @@ describe('exposure form', () => {
     });
   });
 
+  it('keeps an own domain pointed through a DuckDNS name', () => {
+    const form = exposureFormFrom(
+      create(ExposureSettingsSchema, {
+        kind: ExposureKind.DIRECT,
+        directDomain: 'chat.example.com',
+        dynamicDns: DynamicDnsKind.DUCKDNS,
+        dynamicDnsName: 'team.duckdns.org',
+      }),
+    );
+    expect(form).toMatchObject({
+      directDomain: 'chat.example.com',
+      dynamicDnsName: 'team.duckdns.org',
+    });
+    expect(exposureSettingsFrom({ ...form, dynamicDnsName: ' Team.DuckDNS.org ' })).toMatchObject({
+      directDomain: 'chat.example.com',
+      dynamicDnsName: 'team.duckdns.org',
+    });
+  });
+
   it('starts local when nothing is configured', () => {
     expect(exposureFormFrom(undefined)).toMatchObject({ choice: 'local', dynamicDns: 'none' });
   });

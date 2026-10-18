@@ -5,10 +5,13 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"net/netip"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -197,23 +200,67 @@ func TestCertificateError(t *testing.T) {
 			Header: http.Header{"Retry-After": {retryAfter}},
 		})
 	}
+	noViable := errors.New("acme/autocert: no viable challenge type found")
+	const refused = "186.195.214.169: Connection refused"
 	tests := []struct {
-		name    string
-		err     error
-		problem string
-		wait    time.Duration
+		name        string
+		err         error
+		failedCheck string
+		problem     string
+		wait        time.Duration
+		detail      string
 	}{
-		{"rate limit in seconds", limited("720"), domain.ProblemCertificateLimit, 12 * time.Minute},
-		{"rate limit as a date", limited("Sun, 18 Oct 2026 03:35:00 GMT"), domain.ProblemCertificateLimit, 35 * time.Minute},
-		{"rate limit without a time", limited(""), domain.ProblemCertificateLimit, 0},
-		{"failed check", &acme.Error{StatusCode: http.StatusForbidden}, domain.ProblemCertificate, 0},
-		{"no answer", errors.New("context deadline exceeded"), domain.ProblemCertificate, 0},
+		{"rate limit in seconds", limited("720"), "", domain.ProblemCertificateLimit, 12 * time.Minute, ""},
+		{"rate limit as a date", limited("Sun, 18 Oct 2026 03:35:00 GMT"), "", domain.ProblemCertificateLimit, 35 * time.Minute, ""},
+		{"rate limit without a time", limited(""), "", domain.ProblemCertificateLimit, 0, ""},
+		{"failed check", noViable, refused, domain.ProblemCertificateCheck, failedCheckWait, refused},
+		{"refused order", &acme.Error{StatusCode: http.StatusForbidden}, "", domain.ProblemCertificate, 0, ""},
+		{"no answer", errors.New("context deadline exceeded"), "", domain.ProblemCertificate, 0, ""},
 	}
 	for _, tt := range tests {
-		got := certificateError(tt.err, now)
+		got := certificateError(tt.err, tt.failedCheck, now)
 		if got.Problem != tt.problem || got.RetryAfter != tt.wait || !errors.Is(got, tt.err) {
 			t.Errorf("%s: certificateError = %s, %v; want %s, %v", tt.name, got.Problem, got.RetryAfter, tt.problem, tt.wait)
 		}
+		if tt.detail != "" && got.Err.Error() != tt.detail {
+			t.Errorf("%s: detail = %q, want %q", tt.name, got.Err.Error(), tt.detail)
+		}
+	}
+}
+
+func TestCheckLogKeepsLetsEncryptsReason(t *testing.T) {
+	const invalid = `{"identifier":{"type":"dns","value":"team.duckdns.org"},"status":"invalid",
+		"challenges":[{"type":"tls-alpn-01","status":"invalid",
+		"error":{"type":"urn:ietf:params:acme:error:connection","detail":"186.195.214.169: Timeout during connect (likely firewall problem)"}}]}`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "/authz/") {
+			_, _ = io.WriteString(w, invalid)
+			return
+		}
+		_, _ = io.WriteString(w, `{"status":"pending"}`)
+	}))
+	defer srv.Close()
+	log := &checkLog{base: http.DefaultTransport}
+	client := &http.Client{Transport: log}
+	for _, path := range []string{"/acme/order/1", "/acme/authz/1/2"} {
+		res, err := client.Get(srv.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, _ := io.ReadAll(res.Body)
+		_ = res.Body.Close()
+		if path == "/acme/authz/1/2" && string(body) != invalid {
+			t.Errorf("the authorization reached autocert changed: %s", body)
+		}
+	}
+	if got, want := log.last(), "186.195.214.169: Timeout during connect (likely firewall problem)"; got != want {
+		t.Errorf("last = %q, want %q", got, want)
+	}
+	if got := (*checkLog)(nil).last(); got != "" {
+		t.Errorf("nil log: last = %q", got)
+	}
+	if got := failedCheck([]byte(`{"status":"valid","challenges":[{"error":{"detail":"old"}}]}`)); got != "" {
+		t.Errorf("a valid authorization has no failed check, got %q", got)
 	}
 }
 
