@@ -15,8 +15,16 @@ export const en = {
     delete: 'Delete',
     edit: 'Edit',
     chooseImage: 'Choose image',
+    crop: {
+      title: 'Crop your picture',
+      zoom: 'Zoom',
+      apply: 'Apply',
+      preview: 'Preview',
+      hint: 'Drag the picture to move it; scroll or use the slider to zoom.',
+    },
   },
   shell: {
+    resizeSidebar: 'Resize the channel list',
     home: 'Home',
     servers: 'Servers',
     serversEmpty: 'Servers you create or join will show up here.',
@@ -54,6 +62,7 @@ export const en = {
   },
   userPanel: {
     setStatus: 'Set status',
+    profile: 'Your profile and status',
   },
   guild: {
     create: {
@@ -351,6 +360,14 @@ export const en = {
       memberSince: 'Member since',
       role: 'Role',
       status: 'Status',
+      inVoice: 'In {{channel}}',
+      sharing: 'Sharing their screen',
+      watch: 'Watch',
+      stopWatching: 'Stop watching',
+      joinAndWatch: 'Join and watch',
+      openStage: 'Open',
+      editProfile: 'Edit profile',
+      settings: 'Settings',
     },
     actions: {
       makeAdmin: 'Make admin',
@@ -787,11 +804,6 @@ export const en = {
       avatar: 'Avatar',
       changeAvatar: 'Change avatar',
       removeAvatar: 'Remove avatar',
-      crop: {
-        title: 'Crop your picture',
-        zoom: 'Zoom',
-        apply: 'Apply',
-      },
     },
     appearance: {
       title: 'Appearance',

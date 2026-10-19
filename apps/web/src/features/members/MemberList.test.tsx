@@ -82,4 +82,14 @@ describe('MemberList', () => {
     expect(within(card).getByRole('button', { name: 'Kick Bruno' })).toBeVisible();
     expect(within(card).getByRole('button', { name: 'Ban Bruno' })).toBeVisible();
   });
+
+  it('opens the context menu on right-click, around the card', async () => {
+    await renderWithProviders(<MemberList guildId="10" />);
+    await userEvent.pointer({
+      keys: '[MouseRight]',
+      target: screen.getByRole('button', { name: /Bruno/ }),
+    });
+    expect(await screen.findByRole('menuitem', { name: 'Make admin' })).toBeVisible();
+    expect(screen.queryByRole('dialog', { name: 'Bruno' })).not.toBeInTheDocument();
+  });
 });

@@ -1,5 +1,6 @@
 import { Outlet, useParams } from '@tanstack/react-router';
 import { Home } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { HubStatusBadge } from '@/features/health/HubStatusBadge';
@@ -11,6 +12,7 @@ import { useEntities } from '@/stores/entities';
 import { useUi } from '@/stores/ui';
 
 import { ConnectionBanner } from './ConnectionBanner';
+import { SidebarResizer } from './SidebarResizer';
 import { UserPanel } from './UserPanel';
 
 /**
@@ -21,12 +23,18 @@ export function AppShell() {
   const { guildId, channelId } = useParams({ strict: false });
   const inGuild = useEntities((s) => guildId !== undefined && guildId in s.guilds);
   const memberListOpen = useUi((s) => s.memberListOpen);
+  const [width, setWidth] = useState<number | null>(null);
+  const savedWidth = useUi((s) => s.sidebarWidth);
+  const sidebarWidth = width ?? savedWidth;
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <ConnectionBanner />
       <div className="flex min-h-0 flex-1">
-        <div className="flex w-[312px] shrink-0 flex-col">
+        <div
+          className="relative flex shrink-0 flex-col"
+          style={{ width: `calc(${String(sidebarWidth)}px + 72px)` }}
+        >
           <div className="flex min-h-0 flex-1">
             <GuildRail />
             <aside className="flex min-w-0 flex-1 flex-col bg-sidebar">
@@ -39,6 +47,7 @@ export function AppShell() {
           </div>
           <VoicePanel />
           <UserPanel />
+          <SidebarResizer width={sidebarWidth} onLive={setWidth} />
         </div>
         <main className="flex min-w-0 flex-1 flex-col bg-main">
           <Outlet />

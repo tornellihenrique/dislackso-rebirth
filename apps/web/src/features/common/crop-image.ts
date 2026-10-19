@@ -41,3 +41,38 @@ export async function cropToBlob(src: string, area: CropArea): Promise<Blob> {
     }, 'image/png');
   });
 }
+
+/** A cropped picture, ready to upload. */
+export interface CroppedImage {
+  readonly blob: Blob;
+  readonly name: string;
+  /** Set when the hub crops the file itself. */
+  readonly crop?: CropArea;
+}
+
+/** The upload for `area` of `file`, whose object URL is `src`. */
+export async function croppedImage(
+  file: File,
+  src: string,
+  area: CropArea,
+  name: string,
+): Promise<CroppedImage> {
+  if (cropsOnHub(file)) return { blob: file, name: file.name, crop: area };
+  return { blob: await cropToBlob(src, area), name };
+}
+
+/**
+ * CSS that shows `area` (in percent of the image, as the cropper reports it)
+ * of the image at `src` filling an element, for live previews.
+ */
+export function previewStyle(
+  src: string,
+  area: CropArea,
+): { backgroundImage: string; backgroundSize: string; backgroundPosition: string } {
+  const pos = (start: number, size: number) => (size >= 100 ? 0 : (start / (100 - size)) * 100);
+  return {
+    backgroundImage: `url("${src}")`,
+    backgroundSize: `${String(10_000 / area.width)}% ${String(10_000 / area.height)}%`,
+    backgroundPosition: `${String(pos(area.x, area.width))}% ${String(pos(area.y, area.height))}%`,
+  };
+}

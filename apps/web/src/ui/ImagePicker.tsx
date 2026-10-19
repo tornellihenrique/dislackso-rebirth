@@ -11,7 +11,8 @@ interface ImagePickerProps {
   currentUrl?: string | undefined;
   /** Shown when there is no image at all. */
   placeholder: ReactNode;
-  file: File | null;
+  /** The picked image, shown instead of the current one. */
+  file: Blob | null;
   onPick: (file: File | null) => void;
   hint?: string;
   error?: string | undefined;

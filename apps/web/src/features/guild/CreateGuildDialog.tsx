@@ -12,6 +12,8 @@ import { Alert } from '@/ui/Alert';
 import { Button } from '@/ui/Button';
 import { Dialog, DialogFooter } from '@/ui/Dialog';
 import { TextField } from '@/ui/Fields';
+import type { CroppedImage } from '@/features/common/crop-image';
+import { ImageCropDialog } from '@/features/common/ImageCropDialog';
 import { ImagePicker } from '@/ui/ImagePicker';
 
 import { acceptInvite, createGuild } from './actions';
@@ -75,10 +77,13 @@ function CreateForm({ onDone }: { onDone: () => void }) {
   const navigate = useNavigate();
   const username = useSession((s) => s.me?.user?.displayName ?? '');
   const [name, setName] = useState(() => t('guild.create.defaultName', { name: username }));
-  const [icon, setIcon] = useState<File | null>(null);
+  const [picked, setPicked] = useState<File | null>(null);
+  const [icon, setIcon] = useState<CroppedImage | null>(null);
   const mutation = useMutation({
     mutationFn: async () => {
-      const iconFileId = icon ? (await uploads.upload('guild_icon', icon, icon.name)).id : '';
+      const iconFileId = icon
+        ? (await uploads.upload('guild_icon', icon.blob, icon.name, icon.crop)).id
+        : '';
       return createGuild(hub, name, iconFileId);
     },
     onSuccess: (guildId) => {
@@ -101,9 +106,21 @@ function CreateForm({ onDone }: { onDone: () => void }) {
       <ImagePicker
         label={t('guild.create.icon')}
         placeholder={<Camera aria-hidden className="size-6" />}
-        file={icon}
-        onPick={setIcon}
+        file={icon?.blob ?? null}
+        onPick={setPicked}
         error={errors.field('file') ?? errors.field('icon_file_id')}
+      />
+      <ImageCropDialog
+        file={picked}
+        shape="icon"
+        name="icon.png"
+        onCancel={() => {
+          setPicked(null);
+        }}
+        onApply={(image) => {
+          setIcon(image);
+          setPicked(null);
+        }}
       />
       <TextField
         label={t('guild.create.name')}

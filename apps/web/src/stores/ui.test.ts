@@ -18,6 +18,17 @@ describe('reduceUi', () => {
   });
 });
 
+describe('sidebar width', () => {
+  it('stays within the limits', () => {
+    expect(reduceUi(initialUiState, { type: 'sidebarResized', width: 999 }).sidebarWidth).toBe(420);
+    expect(reduceUi(initialUiState, { type: 'sidebarResized', width: 10 }).sidebarWidth).toBe(200);
+    expect(reduceUi(initialUiState, { type: 'sidebarResized', width: 300.4 }).sidebarWidth).toBe(
+      300,
+    );
+    expect(reduceUi(initialUiState, { type: 'sidebarResized', width: 240 })).toBe(initialUiState);
+  });
+});
+
 describe('orderGuilds', () => {
   it('puts the chosen order first and keeps new guilds in join order', () => {
     expect(orderGuilds(['1', '2', '3', '4'], ['3', '1', '9'])).toEqual(['3', '1', '2', '4']);

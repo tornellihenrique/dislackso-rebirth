@@ -12,19 +12,29 @@ export interface UiState {
   readonly lastChannel: Readonly<Record<string, string>>;
   /** Rail order the user dragged into; guilds missing from it follow in join order. */
   readonly guildOrder: readonly string[];
+  /** The channel sidebar's width in pixels (ARCHITECTURE §15.1). */
+  readonly sidebarWidth: number;
+}
+
+export const SIDEBAR_WIDTH = { min: 200, max: 420, initial: 240 } as const;
+
+export function clampSidebarWidth(width: number): number {
+  return Math.round(Math.min(SIDEBAR_WIDTH.max, Math.max(SIDEBAR_WIDTH.min, width)));
 }
 
 export type UiEvent =
   | { readonly type: 'memberListToggled' }
   | { readonly type: 'categoryToggled'; readonly categoryId: string }
   | { readonly type: 'channelVisited'; readonly guildId: string; readonly channelId: string }
-  | { readonly type: 'guildsReordered'; readonly order: readonly string[] };
+  | { readonly type: 'guildsReordered'; readonly order: readonly string[] }
+  | { readonly type: 'sidebarResized'; readonly width: number };
 
 export const initialUiState: UiState = {
   memberListOpen: true,
   collapsed: {},
   lastChannel: {},
   guildOrder: [],
+  sidebarWidth: SIDEBAR_WIDTH.initial,
 };
 
 /** The rail order: the user's chosen order first, then any other guilds as given. */
@@ -54,6 +64,10 @@ export function reduceUi(state: UiState, event: UiEvent): UiState {
         : { ...state, lastChannel: { ...state.lastChannel, [event.guildId]: event.channelId } };
     case 'guildsReordered':
       return { ...state, guildOrder: event.order };
+    case 'sidebarResized': {
+      const sidebarWidth = clampSidebarWidth(event.width);
+      return sidebarWidth === state.sidebarWidth ? state : { ...state, sidebarWidth };
+    }
   }
 }
 
@@ -78,6 +92,10 @@ const uiStorage = stored<UiState>('dsx.ui', 1, initialUiState, (data) => {
     guildOrder: Array.isArray(d.guildOrder)
       ? d.guildOrder.filter((id): id is string => typeof id === 'string')
       : [],
+    sidebarWidth:
+      typeof d.sidebarWidth === 'number' && Number.isFinite(d.sidebarWidth)
+        ? clampSidebarWidth(d.sidebarWidth)
+        : SIDEBAR_WIDTH.initial,
   };
 });
 
