@@ -421,7 +421,7 @@ if (!app.requestSingleInstanceLock()) {
     strings = shellStrings(app.getLocale());
     registerIpc();
     buildMenu();
-    await tray.create(strings);
+    tray.create(strings);
     updater.start();
     const forced = process.env.DSX_INSTANCE_URL;
     const direct = forced === undefined ? undefined : normalizeAddress(forced);

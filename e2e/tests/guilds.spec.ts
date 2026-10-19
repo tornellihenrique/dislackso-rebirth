@@ -115,8 +115,10 @@ test('role and presence changes appear live', async () => {
   await admin.page.getByRole('menuitem', { name: 'Make admin' }).click();
   await expect(members(ana.page).getByRole('heading', { name: 'Admins — 1' })).toBeVisible(LIVE);
 
-  await ana.page.getByRole('button', { name: 'Set status' }).click();
-  await ana.page.getByRole('menuitem', { name: 'Do not disturb' }).click();
+  // One's own card, from the user panel, sets the status.
+  await ana.page.getByRole('button', { name: 'Your profile and status' }).click();
+  await ana.page.getByTestId('user-card').getByRole('button', { name: 'Do not disturb' }).click();
+  await ana.page.keyboard.press('Escape');
   await expect(
     members(admin.page).getByRole('button', { name: new RegExp(MEMBER.username) }),
   ).toContainText('Do not disturb', LIVE);
@@ -235,6 +237,25 @@ test('servers reorder by dragging in the rail without leaving the page', async (
   await expect.poll(order).toEqual(['Home', 'Ops', SERVER]);
   // The release neither opened the dragged server nor reloaded the app.
   expect(page.url()).toBe(url);
+  expect(await page.evaluate(() => (window as unknown as { stayed?: boolean }).stayed)).toBe(true);
+
+  // The open server, let go on itself: the click that ends the drag lands on
+  // its own link, which once loaded the whole app again.
+  // A click within 50 ms of a drag is swallowed on purpose, like dnd-kit's own.
+  await expect(async () => {
+    await servers(page).getByRole('link', { name: SERVER }).click();
+    await expect(page).not.toHaveURL(url, { timeout: 500 });
+  }).toPass();
+  const open = page.url();
+  const own = await servers(page).getByRole('link', { name: SERVER }).boundingBox();
+  const top = await servers(page).getByRole('link', { name: 'Ops' }).boundingBox();
+  if (!own || !top) throw new Error('rail icons not laid out');
+  await page.mouse.move(own.x + own.width / 2, own.y + own.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(own.x + own.width / 2, top.y + top.height / 4, { steps: 10 });
+  await page.mouse.up();
+  await expect.poll(order).toEqual(['Home', SERVER, 'Ops']);
+  expect(page.url()).toBe(open);
   expect(await page.evaluate(() => (window as unknown as { stayed?: boolean }).stayed)).toBe(true);
   expect(admin.errors).toEqual([]);
 });

@@ -54,6 +54,7 @@ export function VoiceMemberItems({ guildId, userId }: VoiceMemberItemsProps) {
   const voiceChannels = useChannelTree(guildId)
     .flatMap((g) => g.channels)
     .filter((c) => c.type === ChannelType.VOICE);
+  const elsewhere = voiceChannels.filter((c) => c.id !== target?.channelId);
   const run = useMutation({
     mutationFn: (a: Action) => {
       switch (a.kind) {
@@ -141,10 +142,9 @@ export function VoiceMemberItems({ guildId, userId }: VoiceMemberItemsProps) {
           </ContextCheckItem>
           {target !== undefined && (
             <>
-              <ContextSub label={t('voice.member.moveTo')}>
-                {voiceChannels
-                  .filter((c) => c.id !== target.channelId)
-                  .map((c) => (
+              {elsewhere.length > 0 && (
+                <ContextSub label={t('voice.member.moveTo')}>
+                  {elsewhere.map((c) => (
                     <ContextItem
                       key={c.id}
                       onSelect={() => {
@@ -154,7 +154,8 @@ export function VoiceMemberItems({ guildId, userId }: VoiceMemberItemsProps) {
                       {c.name}
                     </ContextItem>
                   ))}
-              </ContextSub>
+                </ContextSub>
+              )}
               <ContextItem
                 danger
                 onSelect={() => {

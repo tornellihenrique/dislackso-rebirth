@@ -11,6 +11,8 @@ import { initials } from '@/core/format/initials';
 import { Alert } from '@/ui/Alert';
 import { Button } from '@/ui/Button';
 import { TextField } from '@/ui/Fields';
+import type { CroppedImage } from '@/features/common/crop-image';
+import { ImageCropDialog } from '@/features/common/ImageCropDialog';
 import { ImagePicker } from '@/ui/ImagePicker';
 
 import { useSettingsGuildId } from './use-settings-guild';
@@ -40,12 +42,15 @@ function OverviewForm({
   const { t } = useTranslation();
   const { hub, uploads } = useServices();
   const [name, setName] = useState(current);
-  const [icon, setIcon] = useState<File | null>(null);
+  const [picked, setPicked] = useState<File | null>(null);
+  const [icon, setIcon] = useState<CroppedImage | null>(null);
   const save = useMutation({
     mutationFn: async (removeIcon: boolean) => {
       const patch: GuildPatch = { name };
       if (removeIcon) patch.iconFileId = '';
-      else if (icon) patch.iconFileId = (await uploads.upload('guild_icon', icon, icon.name)).id;
+      else if (icon) {
+        patch.iconFileId = (await uploads.upload('guild_icon', icon.blob, icon.name, icon.crop)).id;
+      }
       await updateGuild(hub, guildId, patch);
     },
     onSuccess: () => {
@@ -71,9 +76,21 @@ function OverviewForm({
           hint={t('guildSettings.overview.iconHint')}
           currentUrl={iconUrl}
           placeholder={<span className="text-2xl font-semibold">{initials(current)}</span>}
-          file={icon}
-          onPick={setIcon}
+          file={icon?.blob ?? null}
+          onPick={setPicked}
           error={errors.field('file') ?? errors.field('icon_file_id')}
+        />
+        <ImageCropDialog
+          file={picked}
+          shape="icon"
+          name="icon.png"
+          onCancel={() => {
+            setPicked(null);
+          }}
+          onApply={(image) => {
+            setIcon(image);
+            setPicked(null);
+          }}
         />
         {iconUrl !== '' && icon === null && (
           <Button

@@ -17,8 +17,16 @@ export const ptBR: Messages = {
     delete: 'Excluir',
     edit: 'Editar',
     chooseImage: 'Escolher imagem',
+    crop: {
+      title: 'Recorte sua imagem',
+      zoom: 'Zoom',
+      apply: 'Aplicar',
+      preview: 'Prévia',
+      hint: 'Arraste a imagem para movê-la; role ou use o controle para dar zoom.',
+    },
   },
   shell: {
+    resizeSidebar: 'Redimensionar a lista de canais',
     home: 'Início',
     servers: 'Servidores',
     serversEmpty: 'Os servidores que você criar ou entrar aparecerão aqui.',
@@ -56,6 +64,7 @@ export const ptBR: Messages = {
   },
   userPanel: {
     setStatus: 'Definir status',
+    profile: 'Seu perfil e status',
   },
   guild: {
     create: {
@@ -353,6 +362,14 @@ export const ptBR: Messages = {
       memberSince: 'Membro desde',
       role: 'Função',
       status: 'Status',
+      inVoice: 'Em {{channel}}',
+      sharing: 'Compartilhando a tela',
+      watch: 'Assistir',
+      stopWatching: 'Parar de assistir',
+      joinAndWatch: 'Entrar e assistir',
+      openStage: 'Abrir',
+      editProfile: 'Editar perfil',
+      settings: 'Configurações',
     },
     actions: {
       makeAdmin: 'Tornar admin',
@@ -796,11 +813,6 @@ export const ptBR: Messages = {
       avatar: 'Avatar',
       changeAvatar: 'Trocar avatar',
       removeAvatar: 'Remover avatar',
-      crop: {
-        title: 'Recorte sua foto',
-        zoom: 'Zoom',
-        apply: 'Aplicar',
-      },
     },
     appearance: {
       title: 'Aparência',

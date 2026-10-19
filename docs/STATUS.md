@@ -184,6 +184,24 @@ mode. Phase 6 (drawing) is merged and in use.
 
 ## Done
 
+### Phase 7 — Profile cards, moving people, sidebar width
+
+- **Profile card everywhere:** clicking someone in the member list or in a voice channel, or
+  oneself in the user panel, opens the same card (`UserPopover`): profile, member since and role,
+  their voice channel, and while they share Watch / Stop watching / Join and watch / Open with a
+  live preview (copied from the stage when the share shows there). One's own card sets the status
+  and links to Edit profile and Settings.
+- **Moderators drag people between voice channels** in the sidebar (native drag and drop onto a
+  voice channel row, which moves them through the hub); "Move to" no longer shows empty when
+  there is no other voice channel.
+- **Resizable channel sidebar**, 200–420 px as §15.1 says, saved on the device; double-click resets
+  it, arrow keys move it.
+- **Crop with previews:** one crop dialog for avatars and server icons (which had none), with live
+  previews at the sizes they show, drag, wheel zoom and 1–4× zoom.
+- **Fixed:** dragging a server icon or a channel reloaded the app (see decisions); an avatar
+  picture stretched its voice row and turned the speaking ring into a capsule; the tray icon was
+  empty.
+
 ### Phase 7 — Live share options, speaking as heard, tray
 
 - **Quality and sound change during a share** from the share button's menu, without restarting it:
@@ -789,6 +807,14 @@ mode. Phase 6 (drawing) is merged and in use.
   does not fall back to it, and Apple Silicon refuses unsigned apps.
 - **The app's version is the release tag** (`extraMetadata.version`); local builds use
   `git describe`.
+- **The click that ends a dnd-kit drag is cancelled from window** (`drag-click.ts`): dnd-kit only
+  stops its propagation, so React never saw it while the browser still followed the dragged
+  item's link, a full page load that dropped the call. Reproduced in the browser and fixed for the
+  rail and the channel list.
+- **The speaking ring wraps the avatar in a flex box:** as an inline box it sat on the text
+  baseline, which a picture puts at its bottom edge, so the line grew and the ring followed it.
+- **The tray icon is the app's PNG bundled with the main process** (`?asset`), scaled to 16 px
+  with a 32 px copy; the executable's own icon came back empty.
 - **Live quality changes keep the codec.** Another codec needs a new publication, which viewers
   would see as a new share (focus, drawings and the share's SID would reset).
 - **Speaking ring uses local levels only,** as the spec already allowed ("active-speaker + local
@@ -955,6 +981,17 @@ mode. Phase 6 (drawing) is merged and in use.
 - **DuckDNS gets an IPv4 record only,** which every client can reach.
 
 ## Manual test script
+
+### Profile cards, moving people, sidebar width
+
+1. Click someone in the member list, in a voice channel, and yourself in the bottom-left panel: the
+   same card opens; yours changes the status and links to Edit profile and Settings.
+2. While a friend shares: their card shows Watch / Stop watching (with a preview) or Join and
+   watch, and Open takes you to the stage with the share in focus.
+3. As an admin, drag someone in voice onto another voice channel: they move there.
+4. Drag the sidebar's right edge wider and narrower; reload: the width stays.
+5. Change your avatar and a server icon: drag, zoom with the wheel, and check the previews.
+6. Drag a server icon in the rail while in a call: the order changes and the call stays.
 
 ### Live share options and tray
 

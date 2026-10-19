@@ -37,6 +37,8 @@ import { errorText } from '@/core/i18n/error-text';
 import { ChannelSettingsDialog } from '@/features/channel/ChannelSettingsDialog';
 import { useApiErrors } from '@/features/common/useApiErrors';
 import { InviteDialog } from '@/features/invites/InviteDialog';
+import { guardDragClick, releaseDragClick } from '@/features/common/drag-click';
+import { useMemberDrop } from '@/features/voice/useMemberDrop';
 import { VoiceOccupants } from '@/features/voice/VoiceOccupants';
 import { pushNotice } from '@/stores/notices';
 import { dispatchUi, useUi } from '@/stores/ui';
@@ -89,6 +91,7 @@ export function ChannelSidebar({ guildId }: { guildId: string }) {
     setModal(null);
   };
   const onDragEnd = ({ active, over }: DragEndEvent) => {
+    releaseDragClick();
     if (!over) return;
     const next = moveItem(shown, String(active.id), String(over.id));
     if (!next) return;
@@ -100,7 +103,13 @@ export function ChannelSidebar({ guildId }: { guildId: string }) {
     <div className="flex min-h-0 flex-1 flex-col">
       <GuildHeader guildId={guildId} name={guild.name} onOpen={setModal} />
       <nav className="flex-1 overflow-y-auto px-2 py-3" aria-label={t('channel.list')}>
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={guardDragClick}
+          onDragEnd={onDragEnd}
+          onDragCancel={releaseDragClick}
+        >
           <SortableContext
             items={flatIds(visible)}
             strategy={verticalListSortingStrategy}
@@ -350,6 +359,7 @@ function ChannelRow({ channel, manage, onInvite, onEdit }: ChannelRowProps) {
     disabled: !manage,
   });
   const { voice } = useServices();
+  const drop = useMemberDrop(channel.guildId, channel.id);
   const active = channelId === channel.id;
   const isVoice = channel.type === ChannelType.VOICE;
   const Icon = isVoice ? Volume2 : Hash;
@@ -394,7 +404,9 @@ function ChannelRow({ channel, manage, onInvite, onEdit }: ChannelRowProps) {
           ref={setNodeRef}
           style={{ transform: CSS.Translate.toString(transform), transition }}
           {...(manage ? { ...attributes, ...listeners } : {})}
-          className={`group flex h-row items-center gap-1.5 rounded-sm px-2 ${active ? 'bg-hover text-fg' : 'text-fg-muted hover:bg-hover/60 hover:text-fg'} ${isDragging ? 'opacity-50' : ''}`}
+          {...(isVoice ? drop.handlers : {})}
+          data-drop-target={drop.over || undefined}
+          className={`group flex h-row items-center gap-1.5 rounded-sm px-2 ${active ? 'bg-hover text-fg' : 'text-fg-muted hover:bg-hover/60 hover:text-fg'} ${isDragging ? 'opacity-50' : ''} ${drop.over ? 'ring-2 ring-accent' : ''}`}
         >
           <Link
             to="/channels/$guildId/$channelId"

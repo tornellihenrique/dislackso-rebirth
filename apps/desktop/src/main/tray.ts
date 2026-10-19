@@ -1,6 +1,10 @@
-import { app, Menu, nativeImage, Tray } from 'electron';
+import { Menu, nativeImage, Tray } from 'electron';
 
+import iconPath from '../../build/icon.png?asset';
 import type { ShellStrings } from '../shared/pages';
+
+/** The tray draws icons at 16 px, twice that on high-density screens. */
+const TRAY_EDGE = 16;
 
 /**
  * The tray icon. Closing the window hides it there and the app keeps
@@ -16,12 +20,8 @@ export class AppTray {
     private readonly quit: () => void,
   ) {}
 
-  async create(strings: ShellStrings): Promise<void> {
-    // The executable carries the app icon in every size the tray needs.
-    const icon = await app
-      .getFileIcon(process.execPath, { size: 'small' })
-      .catch(() => nativeImage.createEmpty());
-    const tray = new Tray(icon);
+  create(strings: ShellStrings): void {
+    const tray = new Tray(trayIcon());
     tray.setToolTip(strings.appName);
     tray.setContextMenu(
       Menu.buildFromTemplate([
@@ -39,4 +39,15 @@ export class AppTray {
   get active(): boolean {
     return this.tray !== undefined && !this.tray.isDestroyed();
   }
+}
+
+/** The app icon at the tray's size, with a sharper copy for high-density screens. */
+function trayIcon() {
+  const full = nativeImage.createFromPath(iconPath);
+  const icon = full.resize({ width: TRAY_EDGE, height: TRAY_EDGE, quality: 'best' });
+  icon.addRepresentation({
+    scaleFactor: 2,
+    buffer: full.resize({ width: TRAY_EDGE * 2, height: TRAY_EDGE * 2, quality: 'best' }).toPNG(),
+  });
+  return icon;
 }

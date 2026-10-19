@@ -93,6 +93,16 @@ test('people in voice show in every member sidebar, and switching is fast', asyn
       CONNECT,
     )
     .toBeGreaterThan(0);
+  // Her ring follows that audio as the admin's page plays it.
+  await expect(occupant(admin.page, MEMBER.username)).toHaveAttribute(
+    'data-speaking',
+    'true',
+    CONNECT,
+  );
+  // Clicking her in the voice list opens her card.
+  await occupant(admin.page, MEMBER.username).getByRole('button').click();
+  await expect(admin.page.getByTestId('user-card')).toContainText('In General');
+  await admin.page.keyboard.press('Escape');
 
   const started = Date.now();
   await channels(ana.page).getByRole('link', { name: 'Focus', exact: true }).click();
