@@ -23,6 +23,7 @@ import { AnnotationLayer } from '@/features/drawing/AnnotationLayer';
 import { DrawToolbar } from '@/features/drawing/DrawToolbar';
 import { useCanDraw, useNameOf, useShareTarget } from '@/features/drawing/hooks';
 import { copyOrSave, snapshotPng } from '@/features/drawing/snapshot';
+import { useWindowFocused } from '@/features/common/useWindowFocused';
 import { displayName } from '@/features/members/member-groups';
 import { useDrawing } from '@/stores/drawing';
 import { drawingSettingsStore } from '@/stores/drawing-settings';
@@ -72,6 +73,7 @@ export function ShareTile({
   onFullscreen,
 }: ShareTileProps) {
   const { t } = useTranslation();
+  const appFocused = useWindowFocused();
   const { voice, drawing } = useServices();
   const user = useEntities((s) => s.users[tile.userId]);
   const name = displayName(user);
@@ -217,6 +219,11 @@ export function ShareTile({
             self={tile.self}
             drawing={drawMode}
           />
+        )}
+        {tile.self && !appFocused && (
+          <div className="absolute inset-0 flex items-center justify-center bg-rail p-4 text-center text-sm text-fg-muted">
+            {compact ? t('stage.tile.previewPausedShort') : t('stage.tile.previewPaused')}
+          </div>
         )}
         {!watching ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-rail p-4 text-center">

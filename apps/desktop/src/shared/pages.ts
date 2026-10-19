@@ -24,6 +24,14 @@ export interface ShellStrings {
   readonly restart: string;
   readonly download: string;
   readonly later: string;
+  readonly trayOpen: string;
+  readonly trayQuit: string;
+  readonly trayCheckUpdates: string;
+  /** {version} is replaced in the update check results. */
+  readonly upToDate: string;
+  readonly updateDownloading: string;
+  readonly updatesUnavailable: string;
+  readonly updateCheckFailed: string;
 }
 
 export type ConnectProblem = 'invalid' | 'insecure' | 'unreachable';

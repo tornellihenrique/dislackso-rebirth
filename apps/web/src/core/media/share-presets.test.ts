@@ -5,6 +5,7 @@ import {
   captureConstraints,
   pickCodec,
   presetsUpTo,
+  retunedEncodings,
   shareEncoding,
   tuningFor,
   type ShareCodec,
@@ -95,5 +96,33 @@ describe('shareEncoding', () => {
       backupCodec: 'vp8',
     });
     expect(shareEncoding('1080p30', 'vp8').backupCodec).toBeUndefined();
+  });
+});
+
+describe('retunedEncodings', () => {
+  it('moves both layers to the new preset and leaves whether each is active alone', () => {
+    const live: RTCRtpEncodingParameters[] = [
+      {
+        rid: 'q',
+        active: false,
+        maxBitrate: 1_750_000,
+        maxFramerate: 30,
+        scaleResolutionDownBy: 2,
+      },
+      { rid: 'h', active: true, maxBitrate: 7_000_000, maxFramerate: 60, scaleResolutionDownBy: 1 },
+    ];
+    const enc = shareEncoding('720p30', 'vp9');
+    expect(retunedEncodings(live, enc, 720)).toEqual([
+      { rid: 'q', active: false, maxBitrate: 375_000, maxFramerate: 30, scaleResolutionDownBy: 2 },
+      { rid: 'h', active: true, maxBitrate: 1_500_000, maxFramerate: 30, scaleResolutionDownBy: 1 },
+    ]);
+  });
+
+  it('scales the low layer from what the capture really gives', () => {
+    const enc = shareEncoding('1080p60', 'vp8');
+    const [low] = retunedEncodings([{ rid: 'q' }, { rid: 'h' }], enc, 1440);
+    expect(low?.scaleResolutionDownBy).toBeCloseTo(1440 / 540);
+    const [tiny] = retunedEncodings([{ rid: 'q' }, { rid: 'h' }], enc, 400);
+    expect(tiny?.scaleResolutionDownBy).toBe(1);
   });
 });

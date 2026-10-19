@@ -13,6 +13,7 @@ import { ShareError, type ShareFailure } from './share-error';
 import {
   captureConstraints,
   pickCodec,
+  retunedEncodings,
   shareEncoding,
   tuningFor,
   type CodecChoice,
@@ -24,6 +25,8 @@ export interface ShareRequest {
   /** Read again once the user picked what to share: a picker may change it. */
   readonly preset: () => SharePreset;
   readonly codec: CodecChoice;
+  /** Whether the captured sound starts on; read once the user picked. */
+  readonly audio: () => boolean;
 }
 
 export interface LocalShare {
@@ -31,8 +34,8 @@ export interface LocalShare {
   readonly audio: LocalAudioTrack | undefined;
   readonly codec: ShareCodec;
   readonly preset: SharePreset;
-  /** Audio is shared but the browser cannot keep this call's voices out of it. */
-  readonly ownAudioWarning: boolean;
+  /** The captured sound would carry this call's voices: the browser cannot keep them out. */
+  readonly ownAudioRisk: boolean;
   /** The user ended it with the browser's own "Stop sharing". */
   readonly stoppedInBrowser: () => boolean;
 }
@@ -67,7 +70,9 @@ interface DisplayOptions extends DisplayMediaStreamOptions {
  * Asks the user what to share and publishes it to the room: the video in
  * two simulcast layers with the preset's caps, and tab or system audio as a
  * stereo track of its own (ARCHITECTURE §9.5). Audio is always asked for: the
- * browser's picker has its own checkbox for it, which decides.
+ * browser's picker has its own checkbox for it, which decides whether there
+ * is any; req.audio decides whether it starts on, so it can be turned on
+ * and off during the share.
  */
 export async function startShare(room: Room, req: ShareRequest): Promise<LocalShare> {
   if (typeof navigator.mediaDevices.getDisplayMedia !== 'function') {
@@ -156,6 +161,7 @@ export async function startShare(room: Room, req: ShareRequest): Promise<LocalSh
         forceStereo: true,
         audioPreset: { maxBitrate: 128_000 },
       });
+      if (!req.audio()) await audio.mute();
     }
   } catch {
     await stopShare(room, { video, audio });
@@ -166,9 +172,43 @@ export async function startShare(room: Room, req: ShareRequest): Promise<LocalSh
     audio,
     codec: enc.codec,
     preset,
-    ownAudioWarning: audio !== undefined && !restrictOwnAudio,
+    ownAudioRisk: audio !== undefined && !restrictOwnAudio,
     stoppedInBrowser: () => stoppedInBrowser,
   };
+}
+
+/** What retuning needs from the published video; LiveKit's LocalVideoTrack fits. */
+export interface TunableVideo {
+  readonly mediaStreamTrack: MediaStreamTrack;
+  readonly sender: RTCRtpSender | undefined;
+  readonly simulcastCodecs: ReadonlyMap<unknown, { readonly sender?: RTCRtpSender | undefined }>;
+  setDegradationPreference(preference: RTCDegradationPreference): Promise<void>;
+}
+
+/**
+ * Moves a live share to another preset in place: the capture's size and
+ * rate, and every sent layer's caps, the backup codec's included. Viewers
+ * keep the same share. The codec stays: another one needs a new publication.
+ */
+export async function retuneShare(
+  video: TunableVideo,
+  codec: ShareCodec,
+  preset: SharePreset,
+): Promise<void> {
+  const enc = shareEncoding(preset, codec);
+  const track = video.mediaStreamTrack;
+  track.contentHint = enc.contentHint;
+  await track.applyConstraints(captureConstraints(preset)).catch(() => undefined);
+  const height = track.getSettings().height ?? enc.full.height;
+  const senders = [video.sender, ...[...video.simulcastCodecs.values()].map((c) => c.sender)];
+  for (const sender of senders) {
+    if (!sender) continue;
+    const params = sender.getParameters();
+    if (params.encodings.length === 0) continue;
+    params.encodings = retunedEncodings(params.encodings, enc, height);
+    await sender.setParameters(params);
+  }
+  await video.setDegradationPreference(enc.degradation);
 }
 
 type PublishableTrack = Parameters<Room['localParticipant']['publishTrack']>[0];

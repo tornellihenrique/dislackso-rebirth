@@ -27,6 +27,7 @@ import { AppearancePage } from '@/features/settings/AppearancePage';
 import { ProfilePage } from '@/features/settings/ProfilePage';
 import { SessionsPage } from '@/features/settings/SessionsPage';
 import { SettingsLayout } from '@/features/settings/SettingsLayout';
+import { DesktopPage } from '@/features/settings/DesktopPage';
 import { DrawingPage } from '@/features/settings/DrawingPage';
 import { SharePage } from '@/features/settings/SharePage';
 import { VoicePage } from '@/features/settings/VoicePage';
@@ -269,6 +270,12 @@ const settingsDrawingRoute = createRoute({
   component: DrawingPage,
 });
 
+const settingsDesktopRoute = createRoute({
+  getParentRoute: () => settingsRoute,
+  path: 'desktop',
+  component: DesktopPage,
+});
+
 const settingsSessionsRoute = createRoute({
   getParentRoute: () => settingsRoute,
   path: 'sessions',
@@ -316,6 +323,7 @@ const routeTree = rootRoute.addChildren([
         settingsDrawingRoute,
         settingsAppearanceRoute,
         settingsSessionsRoute,
+        settingsDesktopRoute,
         settingsInstanceRoute,
         settingsConnectivityRoute,
       ]),

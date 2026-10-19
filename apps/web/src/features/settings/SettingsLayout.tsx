@@ -18,6 +18,7 @@ interface NavItemProps {
     | '/settings/share'
     | '/settings/drawing'
     | '/settings/sessions'
+    | '/settings/desktop'
     | '/settings/instance'
     | '/settings/connectivity';
   children: ReactNode;
@@ -38,7 +39,7 @@ function NavItem({ to, children }: NavItemProps) {
 /** Full-screen settings with a section list on the left; Escape closes it. */
 export function SettingsLayout() {
   const { t } = useTranslation();
-  const { hub } = useServices();
+  const { hub, desktop } = useServices();
   const router = useRouter();
   const admin = useSession((s) => s.me?.instanceAdmin ?? false);
   const logout = useMutation({
@@ -76,6 +77,9 @@ export function SettingsLayout() {
           <NavItem to="/settings/drawing">{t('settings.nav.drawing')}</NavItem>
           <NavItem to="/settings/appearance">{t('settings.nav.appearance')}</NavItem>
           <NavItem to="/settings/sessions">{t('settings.nav.sessions')}</NavItem>
+          {desktop?.updates && (
+            <NavItem to="/settings/desktop">{t('settings.nav.desktop')}</NavItem>
+          )}
           {admin && (
             <>
               <h2 className="mt-4 px-2.5 pb-1 text-xs font-semibold tracking-wide text-fg-muted uppercase">

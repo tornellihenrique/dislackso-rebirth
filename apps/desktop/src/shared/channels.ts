@@ -12,6 +12,8 @@ export const Channel = {
   overlayState: 'desktop:overlay-state',
   overlayInput: 'desktop:overlay-input',
   overlayAction: 'desktop:overlay-action',
+  appVersion: 'desktop:app-version',
+  updatesCheck: 'desktop:updates-check',
 
   launcherStrings: 'launcher:strings',
   launcherNotice: 'launcher:notice',

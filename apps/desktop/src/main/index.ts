@@ -11,6 +11,7 @@ import {
 import {
   app,
   BrowserWindow,
+  dialog,
   ipcMain,
   Menu,
   net,
@@ -35,8 +36,9 @@ import {
 import { OverlayWindow } from './overlay';
 import { ScreenPicker } from './picker';
 import { allowPermission, externalLink, sameOrigin } from './security';
-import { shellStrings } from './strings';
-import { watchForUpdates } from './updates';
+import { shellStrings, updateCheckText } from './strings';
+import { AppTray } from './tray';
+import { Updater } from './updates';
 
 const here = import.meta.dirname;
 const preloadPath = (name: string) => join(here, '..', 'preload', `${name}.cjs`);
@@ -60,6 +62,8 @@ let strings: ShellStrings = shellStrings('en');
 let instance: { win: BrowserWindow; origin: string } | undefined;
 let launcher: BrowserWindow | undefined;
 let launcherNotice = '';
+/** Set once the app is really quitting, so closing windows stops hiding them. */
+let quitting = false;
 const configured = new WeakSet<Session>();
 const savedFile = () => join(app.getPath('userData'), 'instances.json');
 
@@ -72,6 +76,39 @@ const overlay = new OverlayWindow({
   preload: preloadPath('overlay'),
   load: (win) => loadPage(win, 'overlay'),
 });
+const updater = new Updater(
+  () => strings,
+  () => instance?.win ?? launcher,
+);
+const tray = new AppTray(
+  () => {
+    showWindow();
+  },
+  () => {
+    void checkFromTray();
+  },
+  () => {
+    app.quit();
+  },
+);
+
+/** The tray has no page to show the result on, so it gets a dialog. */
+async function checkFromTray(): Promise<void> {
+  const text = updateCheckText(await updater.check(), strings);
+  if (text !== undefined) void dialog.showMessageBox({ type: 'info', message: text });
+}
+
+/** Brings the app back from the tray, the taskbar or a second launch. */
+function showWindow(): void {
+  const win = instance?.win ?? launcher;
+  if (!win || win.isDestroyed()) {
+    showLauncher();
+    return;
+  }
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+}
 
 async function readSaved(): Promise<SavedInstances> {
   try {
@@ -138,6 +175,9 @@ function openInstance(origin: string): void {
       nodeIntegration: false,
       webSecurity: true,
       spellcheck: true,
+      // A call goes on while the window hides in the tray; throttled timers
+      // there would let the gateway's heartbeats lapse.
+      backgroundThrottling: false,
     },
   });
   instance = { win, origin };
@@ -167,6 +207,11 @@ function openInstance(origin: string): void {
   });
   win.once('ready-to-show', () => {
     win.show();
+  });
+  win.on('close', (e) => {
+    if (quitting || !tray.active) return;
+    e.preventDefault();
+    win.hide();
   });
   win.on('closed', () => {
     if (instance?.win === win) {
@@ -235,6 +280,10 @@ function registerIpc(): void {
     e.returnValue = fromInstance(e);
   });
   ipcMain.handle(Channel.sources, (e) => (fromInstance(e) ? picker.list() : []));
+  ipcMain.handle(Channel.appVersion, () => app.getVersion());
+  ipcMain.handle(Channel.updatesCheck, (e) =>
+    fromInstance(e) ? updater.check() : { status: 'failed' },
+  );
   ipcMain.on(Channel.choose, (e, id: unknown, opts: unknown) => {
     if (!fromInstance(e)) return;
     const audio =
@@ -357,11 +406,13 @@ if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on('second-instance', () => {
-    const win = instance?.win ?? launcher;
-    if (win && !win.isDestroyed()) {
-      if (win.isMinimized()) win.restore();
-      win.focus();
-    }
+    showWindow();
+  });
+  app.on('activate', () => {
+    showWindow();
+  });
+  app.on('before-quit', () => {
+    quitting = true;
   });
   app.on('window-all-closed', () => {
     app.quit();
@@ -370,10 +421,8 @@ if (!app.requestSingleInstanceLock()) {
     strings = shellStrings(app.getLocale());
     registerIpc();
     buildMenu();
-    watchForUpdates(
-      () => strings,
-      () => instance?.win ?? launcher,
-    );
+    await tray.create(strings);
+    updater.start();
     const forced = process.env.DSX_INSTANCE_URL;
     const direct = forced === undefined ? undefined : normalizeAddress(forced);
     if (direct && 'origin' in direct) {

@@ -22,19 +22,35 @@ interface View {
  */
 export class ShareViews {
   private readonly views = new Map<string, View>();
+  private readonly paused = new Set<string>();
 
   constructor(private readonly doc: Document = document) {}
 
   setTrack(key: string, track: AttachableTrack | undefined): void {
     const v = this.view(key);
     if (v.track === track) return;
-    v.track?.detach(v.el);
+    if (!this.paused.has(key)) v.track?.detach(v.el);
     v.track = track;
-    if (track) {
+    if (track && !this.paused.has(key)) {
       track.attach(v.el);
       this.play(v);
     }
     this.prune(key, v);
+  }
+
+  /** Stops drawing a share without forgetting its track, while nobody looks at it. */
+  setPaused(key: string, paused: boolean): void {
+    if (this.paused.has(key) === paused) return;
+    if (paused) this.paused.add(key);
+    else this.paused.delete(key);
+    const v = this.views.get(key);
+    if (!v?.track) return;
+    if (paused) {
+      v.track.detach(v.el);
+    } else {
+      v.track.attach(v.el);
+      this.play(v);
+    }
   }
 
   /** Shows the share in container until the returned function runs. */
@@ -67,7 +83,7 @@ export class ShareViews {
   /** Detaches every track; elements stay in their tiles for the next ones. */
   detachAll(): void {
     for (const [key, v] of [...this.views]) {
-      v.track?.detach(v.el);
+      if (!this.paused.has(key)) v.track?.detach(v.el);
       v.track = undefined;
       this.prune(key, v);
     }

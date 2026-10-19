@@ -37,7 +37,7 @@ export function ScreenPicker({ desktop }: ScreenPickerProps) {
   const [sources, setSources] = useState<readonly CaptureSource[] | null>(null);
   const [kind, setKind] = useState<'screen' | 'window'>('screen');
   const [selected, setSelected] = useState('');
-  const [audio, setAudio] = useState(true);
+  const shareAudio = useShareSettings((s) => s.shareAudio);
 
   useEffect(
     () =>
@@ -71,9 +71,11 @@ export function ScreenPicker({ desktop }: ScreenPickerProps) {
     };
   }, [request, desktop]);
 
+  // The sound is captured whenever it can be, so the share can turn it on
+  // later; the checkbox decides whether it starts on.
   const withAudio = request !== null && request.audioRequested && request.systemAudio;
   const close = (share: boolean) => {
-    if (share && selected !== '') desktop.screen.choose(selected, { audio: withAudio && audio });
+    if (share && selected !== '') desktop.screen.choose(selected, { audio: withAudio });
     else desktop.screen.cancel();
     setRequest(null);
   };
@@ -120,7 +122,7 @@ export function ScreenPicker({ desktop }: ScreenPickerProps) {
                 }}
                 onDoubleClick={() => {
                   setSelected(s.id);
-                  desktop.screen.choose(s.id, { audio: withAudio && audio });
+                  desktop.screen.choose(s.id, { audio: withAudio });
                   setRequest(null);
                 }}
                 className={`flex w-full flex-col gap-1.5 rounded-md p-1.5 text-left hover:bg-hover ${selected === s.id ? 'ring-2 ring-accent' : ''}`}
@@ -157,9 +159,9 @@ export function ScreenPicker({ desktop }: ScreenPickerProps) {
         {withAudio && (
           <CheckboxField
             label={t('desktop.picker.audio')}
-            checked={audio}
+            checked={shareAudio}
             onChange={(e) => {
-              setAudio(e.target.checked);
+              voice.setShareSettings({ shareAudio: e.target.checked });
             }}
           />
         )}

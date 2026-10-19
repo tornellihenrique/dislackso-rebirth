@@ -221,6 +221,19 @@ test('a viewer can stop watching and watch again', async () => {
   await expect.poll(async () => (await video(page)).playing, CONNECT).toBe(true);
 });
 
+test('the sharer changes the quality during the share without restarting it', async () => {
+  const page = admin.page;
+  await stage(page).getByRole('button', { name: 'Screen share options' }).click();
+  await expect(page.getByRole('menuitemcheckbox', { name: 'Share sound' })).toBeVisible();
+  await page.getByRole('menuitemradio', { name: '720p · 30 fps' }).click();
+  await page.keyboard.press('Escape');
+
+  // The same share keeps playing for the viewer, now at 720p at most.
+  await expect.poll(async () => (await video(ana.page)).width, CONNECT).toBeLessThanOrEqual(1280);
+  expect(await video(ana.page)).toMatchObject({ tagged: 'first', playing: true });
+  await expect(shareTile(page)).toContainText('You are sharing');
+});
+
 test('two people draw at once on two shares and everyone sees it on the same content', async () => {
   // A second share, and another window size: tiles and their letterboxing differ.
   await ana.page.setViewportSize({ width: 980, height: 820 });

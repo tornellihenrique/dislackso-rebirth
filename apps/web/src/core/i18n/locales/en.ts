@@ -213,7 +213,8 @@ export const en = {
     share: {
       options: 'Screen share options',
       quality: 'Quality',
-      whileLive: 'Stop sharing to change these.',
+      audio: 'Share sound',
+      noAudio: 'This share has no sound. Share again with sound to turn it on.',
       more: 'More screen share settings',
     },
     presets: {
@@ -239,6 +240,9 @@ export const en = {
       screenOf: "{{name}}'s screen",
       yourScreen: 'Your screen',
       youAreSharing: 'You are sharing',
+      previewPaused:
+        'Your preview pauses while Dislackso is in the background, to save resources. Everyone still sees your screen.',
+      previewPausedShort: 'Preview paused',
       loading: 'Loading the stream…',
       notWatching: "You stopped watching {{name}}'s screen.",
       watch: 'Watch',
@@ -649,6 +653,25 @@ export const en = {
       instance: 'Instance',
       connectivity: 'Connectivity',
       drawing: 'Drawing',
+      desktop: 'Desktop app',
+    },
+    desktop: {
+      title: 'Desktop app',
+      notDesktop: 'These settings are in the desktop app.',
+      updates: 'Updates',
+      version: 'Version {{version}}',
+      check: 'Check for updates',
+      checking: 'Checking…',
+      results: {
+        current: 'You have the latest version.',
+        downloading:
+          "Version {{version}} is downloading. You'll be asked to restart when it's ready.",
+        ready: 'Version {{version}} is ready. Restart the app to update.',
+        manual: 'Version {{version}} is out. Download it from the releases page.',
+        unavailable: 'Updates work in the installed app only.',
+        failed:
+          "Couldn't check for updates. Check your connection, or there may be no release to update from yet.",
+      },
     },
     voice: {
       title: 'Voice & audio',

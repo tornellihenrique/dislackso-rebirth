@@ -14,6 +14,8 @@ export interface ShareSettings {
   /** Capped by the instance and the channel when sharing starts. */
   readonly preset: SharePreset;
   readonly codec: CodecChoice;
+  /** Share the captured sound; can change during a share. */
+  readonly shareAudio: boolean;
   /** Focus the first share that starts while the stage shows the grid. */
   readonly autoFocus: boolean;
   /** Show this device's own share on the stage. */
@@ -30,6 +32,7 @@ export interface ShareSettings {
 export const defaultShareSettings: ShareSettings = {
   preset: '1080p60',
   codec: 'auto',
+  shareAudio: true,
   autoFocus: true,
   selfPreview: true,
   hideNoVideo: false,
@@ -76,6 +79,7 @@ function parse(data: unknown): ShareSettings | undefined {
   return {
     preset: preset ?? def.preset,
     codec: codec ?? def.codec,
+    shareAudio: flag('shareAudio', def.shareAudio),
     autoFocus: flag('autoFocus', def.autoFocus),
     selfPreview: flag('selfPreview', def.selfPreview),
     hideNoVideo: flag('hideNoVideo', def.hideNoVideo),

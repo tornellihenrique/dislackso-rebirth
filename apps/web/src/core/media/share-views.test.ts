@@ -73,4 +73,23 @@ describe('ShareViews', () => {
     expect(box.querySelector('video')).toBe(views.element('cy'));
     expect(views.element('dee')).toBeUndefined();
   });
+
+  it('pauses a share without forgetting its track, also across a new track', () => {
+    vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+    const views = new ShareViews();
+    const box = document.createElement('div');
+    document.body.append(box);
+    views.mount('self', box);
+    const first = fakeTrack();
+    views.setTrack('self', first);
+    views.setPaused('self', true);
+    expect(first.attached).toEqual([]);
+
+    const second = fakeTrack();
+    views.setTrack('self', second);
+    expect(second.attached).toEqual([]);
+    views.setPaused('self', false);
+    expect(second.attached).toEqual([views.element('self')]);
+    expect(first.attached).toEqual([]);
+  });
 });

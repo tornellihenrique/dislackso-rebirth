@@ -6,7 +6,14 @@ import { useServices } from '@/app/services';
 import { capPreset, presetsUpTo, type SharePreset } from '@/core/media/share-presets';
 import { useCall } from '@/stores/call';
 import { useShareSettings } from '@/stores/share-settings';
-import { Menu, MenuLabel, MenuRadioGroup, MenuRadioItem, MenuSeparator } from '@/ui/Menu';
+import {
+  Menu,
+  MenuCheckItem,
+  MenuLabel,
+  MenuRadioGroup,
+  MenuRadioItem,
+  MenuSeparator,
+} from '@/ui/Menu';
 import { Tooltip } from '@/ui/Tooltip';
 
 import { useShareCap } from './hooks';
@@ -19,18 +26,23 @@ interface ShareButtonProps {
 
 const roundClass = 'flex h-12 items-center justify-center bg-floating text-fg hover:bg-hover';
 
-/** Starts or stops this device's share; the arrow opens the quality for the next share. */
+/**
+ * Starts or stops this device's share; the arrow opens its quality and
+ * sound, which also change a share that is on.
+ */
 export function ShareButton({ channelId, round = false }: ShareButtonProps) {
   const { t } = useTranslation();
   const { voice } = useServices();
   const local = useCall((s) => s.localShare);
   const connected = useCall((s) => s.status === 'connected' || s.status === 'reconnecting');
   const preset = useShareSettings((v) => v.preset);
+  const shareAudio = useShareSettings((v) => v.shareAudio);
   const cap = useShareCap(channelId);
   const live = local?.status === 'live';
   const starting = local?.status === 'starting';
   const label = live ? t('stage.controls.stopShare') : t('stage.controls.share');
   const effective = capPreset(preset, cap);
+  const noSound = live && !local.audioCaptured;
 
   const toggle = () => {
     void (live ? voice.stopShare() : voice.startShare());
@@ -45,13 +57,23 @@ export function ShareButton({ channelId, round = false }: ShareButtonProps) {
         }}
       >
         {presetsUpTo(cap).map((p) => (
-          <MenuRadioItem key={p} value={p} checked={p === effective} disabled={live}>
+          <MenuRadioItem key={p} value={p} checked={p === effective}>
             {t(`stage.presets.${p}`)}
           </MenuRadioItem>
         ))}
       </MenuRadioGroup>
-      {live && (
-        <p className="max-w-56 px-2 py-1.5 text-xs text-fg-muted">{t('stage.share.whileLive')}</p>
+      <MenuSeparator />
+      <MenuCheckItem
+        checked={live ? local.audio : shareAudio}
+        disabled={noSound}
+        onCheckedChange={(on) => {
+          voice.setShareSettings({ shareAudio: on });
+        }}
+      >
+        {t('stage.share.audio')}
+      </MenuCheckItem>
+      {noSound && (
+        <p className="max-w-56 px-2 py-1.5 text-xs text-fg-muted">{t('stage.share.noAudio')}</p>
       )}
       <MenuSeparator />
       <Link

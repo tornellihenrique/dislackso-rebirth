@@ -402,7 +402,7 @@ Switching channels is the same call; target ≤ 1 s. Use `Room.prepareConnection
 - Settings: input device, output device (`room.switchActiveDevice('audiooutput')`), input volume, output volume, mic test with level meter and loopback playback, input mode (voice activity / push-to-talk + key + release delay), echo cancellation, auto gain control, noise suppression mode.
 - Encoding: mic Opus mono, 48 kbps default (instance cap ≤ 96 kbps), DTX on, RED on. Screen audio Opus stereo 128 kbps, DTX off.
 - Remote playback through `<audio>` elements by default (keeps Chromium AEC effective). Volumes > 100 % route that user through WebAudio (note in UI: echo cancellation may degrade; headphones recommended).
-- Speaking indicator: LiveKit active-speaker + local level, 400 ms hangover. Sounds: join/leave/mute/unmute/deafen/undeafen/stream start/stop (toggleable).
+- Speaking indicator: local levels read every 50 ms, 400 ms hangover. Others from the audio this device plays (Web Audio analyser per voice track), after this device's per-user volume, mute and deafen, so only someone actually heard lights up; the local user from the microphone signal sent (gate open, not muted). Threshold -50 dBFS. Sounds: join/leave/mute/unmute/deafen/undeafen/stream start/stop (toggleable).
 - Device hot-plug: listen to `devicechange`; fall back to default device if the selected one disappears.
 - PTT: browser = while window focused (release on `blur`); desktop = global (shell bridge).
 
@@ -417,6 +417,8 @@ Room options: `adaptiveStream: true`, `dynacast: true`.
 | `1440p30` | 2560×1440 | 30 | Text | 4 Mbps |
 | `1440p60` (max) | 2560×1440 | 60 | Motion | 10 Mbps |
 
+- The quality and the sound change during a share without restarting it: a new preset applies new capture constraints and new caps (bitrate, frame rate, low layer scale) to every sender in place, keeping the publication, its SID and dynacast's active layers; the codec stays. The share's sound is captured whenever the picker gives it and published muted when "Share sound" is off, so it can be turned on and off live.
+- This device's own share preview is drawn only while the app has the focus and is visible; otherwise the tile says the preview is paused (the real screen is what the user sees anyway).
 - The preset's frame rate sets the tuning; there is no separate choice. **Text** (30 fps presets: `contentHint: 'detail'`, `degradationPreference: 'maintain-resolution'`) keeps text sharp and drops frames first; **Motion** (60 fps presets: `contentHint: 'motion'`, `maintain-framerate`) keeps the frame rate and lowers detail first.
 - Codec: **Automatic** picks **AV1 for Text** (else VP9, else VP8) and **VP9 for Motion** (else VP8), from measurements ([ADR 0002](adr/0002-screen-share-codecs.md)); a **VP8 backup codec** serves viewers that cannot decode the choice. H.264 (hardware encoders), VP8, VP9 and AV1 can be chosen in Settings → Screen share.
 - Every codec is published as **two simulcast layers**: full size and half size (≤ 30 fps, a quarter of the bitrate, at least 300 kbps); VP9 and AV1 use `L1T3` in each layer. Single-stream SVC is not used: LiveKit's client publishes a VP9 *screen share* with one spatial layer (and forces the motion hint) when asked for SVC, and dynacast pauses whole simulcast layers but not SVC layers.
@@ -641,7 +643,7 @@ Instance launcher (saved instances, each in its own `persist:` partition; https,
 `contextIsolation: true`, `sandbox: true`, `nodeIntegration: false`, strict navigation guard (external links → OS browser), permission handler grants media/display-capture/notifications only to instance origins, no remote module, CSP for local shell pages, bridge methods validate arguments.
 
 ### 16.3 Bridge (`window.desktop`, versioned `bridgeVersion`)
-Types and argument validation live in `packages/desktop-bridge`, shared by the web app and the shell. The web app uses the bridge only when its version is the one it knows. Built so far: `screen` and `overlay` (version 1); the rest is planned.
+Types and argument validation live in `packages/desktop-bridge`, shared by the web app and the shell. The web app uses the bridge only when its version is the one it knows. Built so far: `screen` and `overlay` (version 1), and the optional `updates` (`version()`, `check()` returning what a check found), which older apps lack and the web app then leaves out; the rest is planned.
 ```ts
 interface DesktopBridge {
   bridgeVersion: number;
@@ -652,12 +654,13 @@ interface DesktopBridge {
   notify(n: NativeNotification): void; setBadge(count: number): void; flashFrame(): void;
   idle: { onIdleChange(cb: (idle: boolean) => void): Unsubscribe };
   host: { status(): Promise<HostStatus>; start(): Promise<void>; stop(): Promise<void>; openSetup(): void };
-  app: { version(): string; checkForUpdates(): Promise<UpdateInfo>; openExternal(url: string): void };
+  updates?: { version(): Promise<string>; check(): Promise<UpdateCheck> };
+  app: { openExternal(url: string): void };
 }
 ```
 
 ### 16.4 Screen picker & system audio
-`session.setDisplayMediaRequestHandler` → bridge emits `onPickRequested` → web app renders its own picker (screens/windows tabs with thumbnails from `desktopCapturer`, refreshed every 2 s, the quality preset, "share your computer's sound" checkbox; the share reads the preset after the choice) → `choose(id, {audio})`. An unanswered request is refused after 2 minutes; only the instance's origin may ask. Windows: `audio: 'loopback'` for system audio (screen sources). macOS/Linux system audio: best effort per current Electron capabilities; otherwise hide the checkbox. On macOS 15+, optionally use the system picker.
+`session.setDisplayMediaRequestHandler` → bridge emits `onPickRequested` → web app renders its own picker (screens/windows tabs with thumbnails from `desktopCapturer`, refreshed every 2 s, the quality preset, "share your computer's sound" checkbox; the share reads the preset after the choice) → `choose(id, {audio})`, with the sound captured whenever it is available and the checkbox (the same saved "Share sound" as the quality menu) deciding whether it starts on. An unanswered request is refused after 2 minutes; only the instance's origin may ask. Windows: `audio: 'loopback'` for system audio (screen sources). macOS/Linux system audio: best effort per current Electron capabilities; otherwise hide the checkbox. On macOS 15+, optionally use the system picker.
 
 ### 16.5 Drawing overlay (sharer's real screen)
 - One transparent, frameless, non-focusable, always-on-top (`screen-saver` level), click-through (`setIgnoreMouseEvents(true, {forward: true})`) window covering the shared display; `setContentProtection(true)` so it is excluded from capture (verify per OS; macOS 15+ capture may ignore it — acceptable).
@@ -666,10 +669,10 @@ interface DesktopBridge {
 - Window shares: overlay follows the target window bounds (polling via `get-windows`, 10 Hz); hidden when the window is minimized (Phase 7b).
 
 ### 16.6 Other native features
-Global hotkeys including PTT key-down/key-up via `uiohook-napi` (macOS needs Accessibility permission; Wayland unsupported → fall back to focused-window PTT) · tray icon (mute/deafen/quit) · close-to-tray · start at login · native notifications + taskbar badge/overlay icon · deep links `dislackso://` · window state persistence · hardware acceleration toggle · auto-update via `electron-updater` from GitHub Releases (repo must be public; macOS unsigned builds cannot auto-update — show "download new version" instead) · **Host mode**: bundles the hub binary; "Host an instance" spawns it with a data dir under app data and opens the setup wizard.
+Global hotkeys including PTT key-down/key-up via `uiohook-napi` (macOS needs Accessibility permission; Wayland unsupported → fall back to focused-window PTT) · tray icon (built: open and quit; mute/deafen to come) · close-to-tray (built: closing the window hides it and the call goes on, with background throttling off for the instance window; the tray's Quit, an update restart or the OS quitting ends the app) · start at login · native notifications + taskbar badge/overlay icon · deep links `dislackso://` · window state persistence · hardware acceleration toggle · auto-update via `electron-updater` from GitHub Releases (repo must be public; macOS unsigned builds cannot auto-update — show "download new version" instead) · **Host mode**: bundles the hub binary; "Host an instance" spawns it with a data dir under app data and opens the setup wizard.
 
 ### 16.7 Installers and updates
-`electron-builder` (`apps/desktop/electron-builder.yml`, `task desktop:dist`): Windows NSIS one-click installer for the current user (no admin rights), macOS dmg for x64 and arm64 (ad-hoc signed), Linux AppImage and deb. electron-vite bundles everything the app runs into `out/`, so the package carries no `node_modules`. The release workflow builds them on a tag, with the tag as the app's version, and adds them and the updater's `latest*.yml` and blockmaps to the draft release. A packaged app checks the latest published release at start and every 6 hours: Windows and the AppImage download in the background, then offer to restart (or install on quit); macOS shows a download link; the deb updates through reinstalling.
+`electron-builder` (`apps/desktop/electron-builder.yml`, `task desktop:dist`): Windows NSIS one-click installer for the current user (no admin rights), macOS dmg for x64 and arm64 (ad-hoc signed), Linux AppImage and deb. electron-vite bundles everything the app runs into `out/`, so the package carries no `node_modules`. The release workflow builds them on a tag, with the tag as the app's version, and adds them and the updater's `latest*.yml` and blockmaps to the draft release. A packaged app checks the latest published release at start and every 6 hours, and when the user asks (Settings → Desktop app, or the tray's "Check for updates"): Windows and the AppImage download in the background, then offer to restart (or install on quit); macOS shows a download link; the deb updates through reinstalling.
 
 ---
 
