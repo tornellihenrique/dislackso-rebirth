@@ -15,7 +15,7 @@ import { errorText } from '@/core/i18n/error-text';
 import { listAudioDevices, resolveDevice, watchDevices } from '@/core/media/devices';
 import { startPushToTalk, type PushToTalk } from '@/core/media/push-to-talk';
 import { ShareError } from '@/core/media/share-error';
-import { capPreset } from '@/core/media/share-presets';
+import { capPreset, type SharePreset } from '@/core/media/share-presets';
 import { SELF_SHARE, ShareViews } from '@/core/media/share-views';
 import type { SoundKind, SoundPlayer } from '@/core/media/sounds';
 import { SpeakingTracker } from '@/core/media/speaking';
@@ -24,6 +24,7 @@ import { TransportMeter } from '@/core/media/transport-meter';
 import type {
   AudioPrefs,
   CallEnd,
+  LocalShareInfo,
   MicFailure,
   RemoteShareStats,
   ShareEnd,
@@ -267,6 +268,7 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
     this.stops.push(() => {
       window.removeEventListener('keydown', onKey);
     });
+    this.stops.push(this.watchFocus());
     this.syncPushToTalk(voiceSettingsStore.getState());
     return () => {
       for (const stop of this.stops.splice(0)) stop();
@@ -395,30 +397,18 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
       return;
     }
     const s = shareSettingsStore.getState();
-    const channel = entitiesStore.getState().channels[call.channelId];
-    const preset = () =>
-      capPreset(
-        shareSettingsStore.getState().preset,
-        instance?.maxSharePreset ?? '',
-        channel?.maxShareQuality ?? '',
-      );
     const gen = this.generation;
     dispatchCall({ type: 'localShare', share: { status: 'starting' } });
     try {
-      const info = await session.startShare({ preset, codec: s.codec });
-      if (gen !== this.generation) return;
-      dispatchCall({
-        type: 'localShare',
-        share: {
-          status: 'live',
-          trackSid: info.trackSid,
-          preset: info.preset,
-          codec: info.codec,
-          audio: info.audio,
-        },
+      const info = await session.startShare({
+        preset: () => this.sharePreset(),
+        codec: s.codec,
+        audio: () => shareSettingsStore.getState().shareAudio,
       });
+      if (gen !== this.generation) return;
+      this.shareLive(info);
       this.play('streamStart');
-      if (info.ownAudioWarning) this.notice(this.d.t('stage.notices.ownAudio'));
+      if (info.audio && info.ownAudioRisk) this.notice(this.d.t('stage.notices.ownAudio'));
     } catch (err) {
       if (gen !== this.generation) return;
       dispatchCall({ type: 'localShare', share: null });
@@ -451,6 +441,9 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
 
   setShareSettings(settings: Partial<Omit<ShareSettings, 'streamVolumes'>>): void {
     dispatchShareSettings({ type: 'changed', settings });
+    if (callStore.getState().localShare?.status !== 'live') return;
+    if (settings.preset !== undefined) void this.retuneShare();
+    if (settings.shareAudio !== undefined) void this.switchShareAudio(settings.shareAudio);
   }
 
   mountShare(userId: string, el: HTMLElement): () => void {
@@ -605,6 +598,64 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
       bytesReceived: BigInt(bytesReceived),
       rttMs,
     });
+  }
+
+  /** The saved preset under the instance's and the channel's caps. */
+  private sharePreset(): SharePreset {
+    const channelId = callStore.getState().channelId;
+    return capPreset(
+      shareSettingsStore.getState().preset,
+      realtimeStore.getState().instance?.maxSharePreset ?? '',
+      entitiesStore.getState().channels[channelId]?.maxShareQuality ?? '',
+    );
+  }
+
+  private shareLive(info: LocalShareInfo): void {
+    dispatchCall({
+      type: 'localShare',
+      share: {
+        status: 'live',
+        trackSid: info.trackSid,
+        preset: info.preset,
+        codec: info.codec,
+        audio: info.audio,
+        audioCaptured: info.audioCaptured,
+      },
+    });
+  }
+
+  private async retuneShare(): Promise<void> {
+    const info = await this.session?.setSharePreset(this.sharePreset()).catch(() => undefined);
+    if (info && callStore.getState().localShare?.status === 'live') this.shareLive(info);
+  }
+
+  private async switchShareAudio(on: boolean): Promise<void> {
+    const before = callStore.getState().localShare;
+    const info = await this.session?.setShareAudio(on).catch(() => undefined);
+    if (!info || callStore.getState().localShare?.status !== 'live') return;
+    this.shareLive(info);
+    const wasOn = before?.status === 'live' && before.audio;
+    if (info.audio && !wasOn && info.ownAudioRisk) this.notice(this.d.t('stage.notices.ownAudio'));
+  }
+
+  /**
+   * Draws this device's own share only while the app has the focus: the
+   * picture costs rendering, and while the user is in another window they
+   * see the real screen anyway.
+   */
+  private watchFocus(): () => void {
+    const update = () => {
+      this.views.setPaused(SELF_SHARE, document.hidden || !document.hasFocus());
+    };
+    window.addEventListener('focus', update);
+    window.addEventListener('blur', update);
+    document.addEventListener('visibilitychange', update);
+    update();
+    return () => {
+      window.removeEventListener('focus', update);
+      window.removeEventListener('blur', update);
+      document.removeEventListener('visibilitychange', update);
+    };
   }
 
   private shareEnded(reason: ShareEnd): void {

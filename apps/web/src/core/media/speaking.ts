@@ -1,10 +1,16 @@
 /** How long someone keeps showing as speaking after they stop (ARCHITECTURE §9.4). */
 export const SPEAKING_HANGOVER_MS = 400;
 
+/** Audio this loud, as heard on this device, counts as speaking; quiet rooms sit near -70. */
+export const SPEAKING_THRESHOLD_DB = -50;
+
+/** How often the levels are read. */
+export const SPEAKING_POLL_MS = 50;
+
 /**
- * Turns the media server's active-speaker reports into a steady speaking
- * set: a participant stays in it for a short hangover after the last report,
- * so the indicator does not flicker between words.
+ * Turns level readings into a steady speaking set: a participant stays in
+ * it for a short hangover after the last reading above the threshold, so
+ * the indicator does not flicker between words.
  */
 export class SpeakingTracker {
   private readonly heard = new Map<string, number>();

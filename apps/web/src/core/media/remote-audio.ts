@@ -1,7 +1,15 @@
 import type { RemoteAudioTrack } from 'livekit-client';
 
+import { levelDb } from './voice-gate';
+
 /** A participant's microphone, or the audio of their screen share. */
 export type AudioKind = 'voice' | 'stream';
+
+/** Reads a track's current level in dBFS. */
+export interface Meter {
+  read(): number;
+  close(): void;
+}
 
 interface Entry {
   readonly track: RemoteAudioTrack;
@@ -9,7 +17,10 @@ interface Entry {
   readonly kind: AudioKind;
   readonly el: HTMLMediaElement;
   boost: { readonly source: MediaStreamAudioSourceNode; readonly gain: GainNode } | undefined;
+  meter: Meter | undefined;
 }
+
+const METER_FFT_SIZE = 1024;
 
 /** Per-user volume runs from silent to twice the original level. */
 export const MAX_USER_VOLUME = 2;
@@ -34,14 +45,18 @@ export class RemoteAudio {
   private output = '';
   private ctx: AudioContext | undefined;
 
-  constructor(private readonly host: HTMLElement) {}
+  /** meter measures a track; tests replace the Web Audio one. */
+  constructor(
+    private readonly host: HTMLElement,
+    private readonly meter: (track: MediaStreamTrack) => Meter = (t) => this.webAudioMeter(t),
+  ) {}
 
   add(track: RemoteAudioTrack, identity: string, kind: AudioKind = 'voice'): void {
     if (this.entries.has(track)) return;
     const el = track.attach();
     el.hidden = true;
     this.host.append(el);
-    const entry: Entry = { track, identity, kind, el, boost: undefined };
+    const entry: Entry = { track, identity, kind, el, boost: undefined, meter: undefined };
     this.entries.set(track, entry);
     if (this.output !== '') void this.sink(el, this.output);
     this.apply(entry);
@@ -51,6 +66,7 @@ export class RemoteAudio {
     const entry = this.entries.get(track);
     if (!entry) return;
     this.unboost(entry);
+    entry.meter?.close();
     track.detach(entry.el);
     entry.el.remove();
     this.entries.delete(track);
@@ -94,6 +110,23 @@ export class RemoteAudio {
     await Promise.all([...this.entries.values()].map((e) => e.el.play().catch(() => undefined)));
   }
 
+  /**
+   * Who is heard speaking here now: voices playing above thresholdDb after
+   * this device's own volume, so someone muted, turned to zero or deafened
+   * away is not. It measures the audio played, not the sender's report.
+   */
+  audible(thresholdDb: number): string[] {
+    if (this.ctx?.state === 'suspended') void this.ctx.resume().catch(() => undefined);
+    const out = new Set<string>();
+    for (const e of this.entries.values()) {
+      const volume = this.volumeOf(e);
+      if (e.kind !== 'voice' || this.silent(e) || volume <= 0 || out.has(e.identity)) continue;
+      e.meter ??= this.meter(e.track.mediaStreamTrack);
+      if (e.meter.read() + 20 * Math.log10(volume) >= thresholdDb) out.add(e.identity);
+    }
+    return [...out];
+  }
+
   clear(): void {
     for (const track of [...this.entries.keys()]) this.remove(track);
     void this.ctx?.close();
@@ -108,15 +141,37 @@ export class RemoteAudio {
     for (const e of this.entries.values()) if (e.identity === identity) this.apply(e);
   }
 
+  private volumeOf(e: Entry): number {
+    return Math.min(MAX_USER_VOLUME, (this.volumes[e.kind].get(e.identity) ?? 1) * this.master);
+  }
+
+  private silent(e: Entry): boolean {
+    return e.kind === 'voice'
+      ? this.deafened || this.mutedUsers.has(e.identity)
+      : this.deafened && this.deafenStreams;
+  }
+
+  private webAudioMeter(track: MediaStreamTrack): Meter {
+    this.ctx ??= new AudioContext();
+    const source = this.ctx.createMediaStreamSource(new MediaStream([track]));
+    const analyser = this.ctx.createAnalyser();
+    analyser.fftSize = METER_FFT_SIZE;
+    source.connect(analyser);
+    const samples = new Float32Array(analyser.fftSize);
+    return {
+      read: () => {
+        analyser.getFloatTimeDomainData(samples);
+        return levelDb(samples);
+      },
+      close: () => {
+        source.disconnect();
+      },
+    };
+  }
+
   private apply(e: Entry): void {
-    const volume = Math.min(
-      MAX_USER_VOLUME,
-      (this.volumes[e.kind].get(e.identity) ?? 1) * this.master,
-    );
-    const silent =
-      e.kind === 'voice'
-        ? this.deafened || this.mutedUsers.has(e.identity)
-        : this.deafened && this.deafenStreams;
+    const volume = this.volumeOf(e);
+    const silent = this.silent(e);
     if (volume > 1 && !silent) {
       this.boostTo(e, volume);
       return;

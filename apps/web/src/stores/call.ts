@@ -18,7 +18,10 @@ export type LocalShareState =
       readonly trackSid: string;
       readonly preset: SharePreset;
       readonly codec: ShareCodec;
+      /** The share's sound is on. */
       readonly audio: boolean;
+      /** The share captured sound that can be turned on. */
+      readonly audioCaptured: boolean;
     };
 
 /** This device's own call. */

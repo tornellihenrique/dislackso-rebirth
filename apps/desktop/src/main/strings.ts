@@ -22,6 +22,8 @@ const en: ShellStrings = {
   restart: 'Restart now',
   download: 'Download',
   later: 'Later',
+  trayOpen: 'Open Dislackso',
+  trayQuit: 'Quit Dislackso',
 };
 
 const ptBR: ShellStrings = {
@@ -47,6 +49,8 @@ const ptBR: ShellStrings = {
   restart: 'Reiniciar agora',
   download: 'Baixar',
   later: 'Depois',
+  trayOpen: 'Abrir o Dislackso',
+  trayQuit: 'Sair do Dislackso',
 };
 
 /** Portuguese for any pt locale, English otherwise. */

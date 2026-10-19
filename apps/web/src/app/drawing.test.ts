@@ -108,7 +108,14 @@ afterEach(() => {
 function shareLive() {
   dispatchCall({
     type: 'localShare',
-    share: { status: 'live', trackSid: 'TR_me', preset: '1080p60', codec: 'vp9', audio: false },
+    share: {
+      status: 'live',
+      trackSid: 'TR_me',
+      preset: '1080p60',
+      codec: 'vp9',
+      audio: false,
+      audioCaptured: false,
+    },
   });
 }
 

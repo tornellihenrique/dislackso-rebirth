@@ -24,6 +24,8 @@ export interface ShellStrings {
   readonly restart: string;
   readonly download: string;
   readonly later: string;
+  readonly trayOpen: string;
+  readonly trayQuit: string;
 }
 
 export type ConnectProblem = 'invalid' | 'insecure' | 'unreachable';

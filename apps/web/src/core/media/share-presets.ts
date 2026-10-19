@@ -109,6 +109,29 @@ export interface ShareEncoding {
 const LOW_LAYER_MIN_BITRATE = 300_000;
 
 /**
+ * A live sender's encodings for another preset: the last is the full layer,
+ * the ones before it the low layer, scaled down from the captured height.
+ * Only the caps change; whether a layer is active stays the media server's
+ * call (dynacast).
+ */
+export function retunedEncodings(
+  encodings: readonly RTCRtpEncodingParameters[],
+  enc: ShareEncoding,
+  captureHeight: number,
+): RTCRtpEncodingParameters[] {
+  const last = encodings.length - 1;
+  return encodings.map((e, i) => {
+    const layer = i === last ? enc.full : enc.low;
+    return {
+      ...e,
+      maxBitrate: layer.bitrate,
+      maxFramerate: layer.fps,
+      scaleResolutionDownBy: i === last ? 1 : Math.max(1, captureHeight / layer.height),
+    };
+  });
+}
+
+/**
  * Every codec is published as two simulcast layers, so the media server can
  * send the half-size one to small tiles and the publisher stops encoding a
  * layer nobody watches (dynacast). Single-stream SVC would keep encoding

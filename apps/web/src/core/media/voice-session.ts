@@ -19,10 +19,17 @@ import {
 import { DEFAULT_DEVICE } from './devices';
 import { MicProcessor, type MicLevel, type MicSettings } from './mic-processor';
 import { RemoteAudio } from './remote-audio';
-import { startShare, stopShare, type LocalShare, type ShareRequest } from './screen-share';
+import {
+  retuneShare,
+  startShare,
+  stopShare,
+  type LocalShare,
+  type ShareRequest,
+} from './screen-share';
 import { ShareError } from './share-error';
 import type { ShareCodec, SharePreset } from './share-presets';
 import { SELF_SHARE, type ShareViews } from './share-views';
+import { SPEAKING_POLL_MS, SPEAKING_THRESHOLD_DB } from './speaking';
 import {
   readConnection,
   readInboundVideo,
@@ -60,8 +67,12 @@ export interface LocalShareInfo {
   readonly trackSid: string;
   readonly codec: ShareCodec;
   readonly preset: SharePreset;
+  /** The share's sound is on. */
   readonly audio: boolean;
-  readonly ownAudioWarning: boolean;
+  /** The share captured sound that can be turned on. */
+  readonly audioCaptured: boolean;
+  /** The captured sound would carry this call's voices. */
+  readonly ownAudioRisk: boolean;
 }
 
 export interface RemoteShareStats extends InboundVideoStats {
@@ -73,7 +84,10 @@ export interface RemoteShareStats extends InboundVideoStats {
 export interface VoiceSessionListener {
   onConnection(state: 'connected' | 'reconnecting'): void;
   onEnded(reason: CallEnd): void;
-  /** Identities the media server reports as speaking, the local user included. */
+  /**
+   * Who is speaking as heard here, the local user included, about 20 times
+   * a second.
+   */
   onSpeaking(identities: readonly string[]): void;
   onQuality(quality: Quality): void;
   onPeerQuality?(identity: string, quality: Quality): void;
@@ -164,6 +178,10 @@ export class VoiceSession {
   private pttPressed = false;
   private publishing = false;
   private share: LocalShare | undefined;
+  /** Preset changes run one at a time: each reads and writes the senders. */
+  private retuning = Promise.resolve();
+  private selfLevel: MicLevel | undefined;
+  private speakingTimer: ReturnType<typeof setInterval> | undefined;
   /** Identities whose share has a view. */
   private shareOwners = new Set<string>();
   /** Shares the user stopped watching, by track. */
@@ -214,6 +232,7 @@ export class VoiceSession {
     if (this.room !== room) return;
     this.listener.onAudioBlocked(!room.canPlaybackAudio);
     this.emitShares(room);
+    this.watchSpeaking(room);
     await this.publishMic(room);
   }
 
@@ -321,13 +340,34 @@ export class VoiceSession {
     this.share = share;
     this.outCounters = new Map();
     this.views.setTrack(SELF_SHARE, share.video);
-    return {
-      trackSid: share.video.sid ?? '',
-      codec: share.codec,
-      preset: share.preset,
-      audio: share.audio !== undefined,
-      ownAudioWarning: share.ownAudioWarning,
-    };
+    return this.shareInfo(share);
+  }
+
+  /** Moves the live share to another preset without restarting it. */
+  async setSharePreset(preset: SharePreset): Promise<LocalShareInfo | undefined> {
+    const run = this.retuning.then(async () => {
+      const share = this.share;
+      if (!share) return undefined;
+      if (share.preset === preset) return this.shareInfo(share);
+      await retuneShare(share.video, share.codec, preset);
+      if (this.share !== share) return undefined;
+      const next = { ...share, preset };
+      this.share = next;
+      return this.shareInfo(next);
+    });
+    this.retuning = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    return run;
+  }
+
+  /** Turns the live share's sound on or off, when it captured any. */
+  async setShareAudio(on: boolean): Promise<LocalShareInfo | undefined> {
+    const share = this.share;
+    if (!share) return undefined;
+    if (share.audio) await (on ? share.audio.unmute() : share.audio.mute());
+    return this.shareInfo(share);
   }
 
   async stopShare(): Promise<void> {
@@ -420,6 +460,34 @@ export class VoiceSession {
     return out;
   }
 
+  private shareInfo(share: LocalShare): LocalShareInfo {
+    return {
+      trackSid: share.video.sid ?? '',
+      codec: share.codec,
+      preset: share.preset,
+      audio: share.audio !== undefined && !share.audio.isMuted,
+      audioCaptured: share.audio !== undefined,
+      ownAudioRisk: share.ownAudioRisk,
+    };
+  }
+
+  /**
+   * Reports who is heard speaking: everyone else from the audio this device
+   * plays, the local user from the microphone signal actually sent.
+   */
+  private watchSpeaking(room: Room): void {
+    clearInterval(this.speakingTimer);
+    this.speakingTimer = setInterval(() => {
+      if (this.room !== room) return;
+      const ids = this.remote.audible(SPEAKING_THRESHOLD_DB);
+      const level = this.selfLevel;
+      if (this.mic && !this.local.muted && level?.open && level.db >= SPEAKING_THRESHOLD_DB) {
+        ids.push(room.localParticipant.identity);
+      }
+      this.listener.onSpeaking(ids);
+    }, SPEAKING_POLL_MS);
+  }
+
   private captureOptions(prefs: AudioPrefs) {
     const deviceId = deviceConstraint(prefs.inputDevice);
     return {
@@ -456,7 +524,10 @@ export class VoiceSession {
         audioPreset: { maxBitrate: this.bitrateKbps * 1000 },
       });
       // A processor needs the room's audio context, which publishing sets.
-      const processor = new MicProcessor(prefs.mic, this.listener.onMicLevel?.bind(this.listener));
+      const processor = new MicProcessor(prefs.mic, (level) => {
+        this.selfLevel = level;
+        this.listener.onMicLevel?.(level);
+      });
       processor.setPushToTalk(this.pttPressed);
       await track.setProcessor(processor);
       this.mic = track;
@@ -470,6 +541,10 @@ export class VoiceSession {
 
   /** Forgets the call's media: microphone, share, remote audio and video. */
   private dropMedia(): void {
+    clearInterval(this.speakingTimer);
+    this.speakingTimer = undefined;
+    this.selfLevel = undefined;
+    this.listener.onSpeaking([]);
     this.mic = undefined;
     this.processor = undefined;
     const share = this.share;
@@ -497,7 +572,7 @@ export class VoiceSession {
         identity: p.identity,
         trackSid: video.trackSid,
         hasVideo: video.videoTrack !== undefined && !video.isMuted,
-        hasAudio: p.getTrackPublication(Track.Source.ScreenShareAudio) !== undefined,
+        hasAudio: p.getTrackPublication(Track.Source.ScreenShareAudio)?.isMuted === false,
         watching: !this.unwatched.has(video.trackSid),
         width: video.dimensions?.width ?? 0,
         height: video.dimensions?.height ?? 0,
@@ -537,6 +612,9 @@ export class VoiceSession {
       })
       .on(RoomEvent.Reconnected, () => {
         l.onConnection('connected');
+        // A full reconnect publishes the share again with its first preset.
+        const share = this.share;
+        if (share) void retuneShare(share.video, share.codec, share.preset).catch(() => undefined);
       })
       .on(RoomEvent.Connected, () => {
         l.onConnection('connected');
@@ -546,9 +624,6 @@ export class VoiceSession {
         this.room = undefined;
         this.dropMedia();
         l.onEnded(endReason(reason));
-      })
-      .on(RoomEvent.ActiveSpeakersChanged, (speakers: Participant[]) => {
-        l.onSpeaking(speakers.map((p) => p.identity));
       })
       .on(RoomEvent.ConnectionQualityChanged, (q: ConnectionQuality, p: Participant) => {
         if (p.isLocal) l.onQuality(qualities[q]);

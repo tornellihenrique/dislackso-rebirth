@@ -184,6 +184,24 @@ mode. Phase 6 (drawing) is merged and in use.
 
 ## Done
 
+### Phase 7 — Live share options, speaking as heard, tray
+
+- **Quality and sound change during a share** from the share button's menu, without restarting it:
+  `retuneShare` applies the preset's capture constraints and each layer's caps to every sender in
+  place (the publication, its SID and drawings stay); a full reconnect applies the current preset
+  again. The menu has a "Share sound" checkbox, the same saved setting as the desktop picker's.
+- **Share sound:** the sound is captured whenever the picker gives it (the desktop app on Windows
+  always asks for the loopback) and published muted when off. In the browser, Chrome's own picker
+  still decides whether there is any sound; without it the checkbox explains why it is off.
+- **Speaking ring from the audio heard here:** levels read every 50 ms from what this device plays,
+  after per-user volume, mute and deafen, and from the microphone signal sent; the media server's
+  delayed active-speaker reports are no longer used. The 400 ms hangover stays.
+- **Own preview pauses** while the app is in the background or another window has the focus; the
+  tile says so.
+- **Desktop tray:** closing the window hides it in the tray and the call goes on; the tray opens it
+  again or quits. Background throttling is off for the instance window, so a hidden call keeps its
+  heartbeats.
+
 ### Phase 7 — Direct address with a free DuckDNS name
 
 - **Direct exposure keeps a DuckDNS name pointed at the hub** (`adapter/ddns`, behind
@@ -768,6 +786,12 @@ mode. Phase 6 (drawing) is merged and in use.
   does not fall back to it, and Apple Silicon refuses unsigned apps.
 - **The app's version is the release tag** (`extraMetadata.version`); local builds use
   `git describe`.
+- **Live quality changes keep the codec.** Another codec needs a new publication, which viewers
+  would see as a new share (focus, drawings and the share's SID would reset).
+- **Speaking ring uses local levels only,** as the spec already allowed ("active-speaker + local
+  level"): the server's reports arrive late and keep showing people this device does not hear.
+- **The tray reuses the executable's icon** (`app.getFileIcon`), so no loose image ships with the
+  app.
 - **Direct mode with DuckDNS** for hosts with a public IP, so the team's address no longer
   depends on Tailscale's relays. No ledger change: D7 already lists direct as an alternative and
   DuckDNS is free. It is a dynamic DNS port, so other providers fit without touching the direct
@@ -917,6 +941,10 @@ mode. Phase 6 (drawing) is merged and in use.
 - Without `restrictOwnAudio` (older Chromium, other browsers) shared system audio can carry the
   call's voices back; the sharer gets a warning.
 - The stage shortcuts (G, F, arrows, Ctrl+Shift+S) are fixed until the Keybinds page.
+- **The tray has no mute or deafen yet,** only open and quit; on macOS its icon is the colored app
+  icon, not a template image.
+- **In the browser, sound must be picked when the share starts:** Chrome's picker decides whether
+  the share captures any; "Share sound" can then turn it off and on, but cannot add it later.
 - **Direct mode without dynamic DNS needs port 443 reachable from abroad** for Let's Encrypt's
   TLS-ALPN check; with DuckDNS the DNS check needs no open port for the certificate.
 - **The public address may not open from the hub machine itself** when the router has no NAT
@@ -924,6 +952,20 @@ mode. Phase 6 (drawing) is merged and in use.
 - **DuckDNS gets an IPv4 record only,** which every client can reach.
 
 ## Manual test script
+
+### Live share options and tray
+
+Prerequisites: the hub and the desktop app built from this branch, a friend in a call.
+
+1. Share your screen. Open the arrow next to the share button: pick another quality. Your friend's
+   view changes within a second or two without the share stopping; their drawings stay.
+2. In the same menu, untick and tick "Share sound" while playing a video: your friend hears it go
+   away and come back.
+3. Talk, then mute a friend locally (right-click → Mute): their ring stops lighting while they talk.
+   Deafen: nobody's ring lights.
+4. Click into another window: your own preview says it is paused; click back and it plays.
+5. Desktop app: close the window during a call. The call goes on; the tray icon opens the window
+   again; right-click → Quit Dislackso ends it.
 
 ### Direct address with DuckDNS
 

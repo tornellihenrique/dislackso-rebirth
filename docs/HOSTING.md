@@ -196,7 +196,12 @@ shares their screen from it sees the drawings on their real monitor.
    right-click it → **Open** the first time.
 3. Paste the hub's address (the one you open in the browser) and press **Connect**, then sign in.
 
-The app updates itself from new releases (on macOS it shows where to download the new one).
+Closing the window keeps the app (and a call) running in the tray, next to the clock; right-click
+its icon → **Quit Dislackso** to close it for good.
+
+The app updates itself from new releases (on macOS it shows where to download the new one). Most
+changes need no new release at all: the app shows the web app the hub serves, so updating the hub
+updates everyone.
 
 ## Troubleshooting
 
