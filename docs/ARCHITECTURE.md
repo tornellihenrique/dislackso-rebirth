@@ -643,7 +643,7 @@ Instance launcher (saved instances, each in its own `persist:` partition; https,
 `contextIsolation: true`, `sandbox: true`, `nodeIntegration: false`, strict navigation guard (external links → OS browser), permission handler grants media/display-capture/notifications only to instance origins, no remote module, CSP for local shell pages, bridge methods validate arguments.
 
 ### 16.3 Bridge (`window.desktop`, versioned `bridgeVersion`)
-Types and argument validation live in `packages/desktop-bridge`, shared by the web app and the shell. The web app uses the bridge only when its version is the one it knows. Built so far: `screen` and `overlay` (version 1); the rest is planned.
+Types and argument validation live in `packages/desktop-bridge`, shared by the web app and the shell. The web app uses the bridge only when its version is the one it knows. Built so far: `screen` and `overlay` (version 1), and the optional `updates` (`version()`, `check()` returning what a check found), which older apps lack and the web app then leaves out; the rest is planned.
 ```ts
 interface DesktopBridge {
   bridgeVersion: number;
@@ -654,7 +654,8 @@ interface DesktopBridge {
   notify(n: NativeNotification): void; setBadge(count: number): void; flashFrame(): void;
   idle: { onIdleChange(cb: (idle: boolean) => void): Unsubscribe };
   host: { status(): Promise<HostStatus>; start(): Promise<void>; stop(): Promise<void>; openSetup(): void };
-  app: { version(): string; checkForUpdates(): Promise<UpdateInfo>; openExternal(url: string): void };
+  updates?: { version(): Promise<string>; check(): Promise<UpdateCheck> };
+  app: { openExternal(url: string): void };
 }
 ```
 
@@ -671,7 +672,7 @@ interface DesktopBridge {
 Global hotkeys including PTT key-down/key-up via `uiohook-napi` (macOS needs Accessibility permission; Wayland unsupported → fall back to focused-window PTT) · tray icon (built: open and quit; mute/deafen to come) · close-to-tray (built: closing the window hides it and the call goes on, with background throttling off for the instance window; the tray's Quit, an update restart or the OS quitting ends the app) · start at login · native notifications + taskbar badge/overlay icon · deep links `dislackso://` · window state persistence · hardware acceleration toggle · auto-update via `electron-updater` from GitHub Releases (repo must be public; macOS unsigned builds cannot auto-update — show "download new version" instead) · **Host mode**: bundles the hub binary; "Host an instance" spawns it with a data dir under app data and opens the setup wizard.
 
 ### 16.7 Installers and updates
-`electron-builder` (`apps/desktop/electron-builder.yml`, `task desktop:dist`): Windows NSIS one-click installer for the current user (no admin rights), macOS dmg for x64 and arm64 (ad-hoc signed), Linux AppImage and deb. electron-vite bundles everything the app runs into `out/`, so the package carries no `node_modules`. The release workflow builds them on a tag, with the tag as the app's version, and adds them and the updater's `latest*.yml` and blockmaps to the draft release. A packaged app checks the latest published release at start and every 6 hours: Windows and the AppImage download in the background, then offer to restart (or install on quit); macOS shows a download link; the deb updates through reinstalling.
+`electron-builder` (`apps/desktop/electron-builder.yml`, `task desktop:dist`): Windows NSIS one-click installer for the current user (no admin rights), macOS dmg for x64 and arm64 (ad-hoc signed), Linux AppImage and deb. electron-vite bundles everything the app runs into `out/`, so the package carries no `node_modules`. The release workflow builds them on a tag, with the tag as the app's version, and adds them and the updater's `latest*.yml` and blockmaps to the draft release. A packaged app checks the latest published release at start and every 6 hours, and when the user asks (Settings → Desktop app, or the tray's "Check for updates"): Windows and the AppImage download in the background, then offer to restart (or install on quit); macOS shows a download link; the deb updates through reinstalling.
 
 ---
 

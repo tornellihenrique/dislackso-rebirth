@@ -656,6 +656,25 @@ export const ptBR: Messages = {
       instance: 'Instância',
       connectivity: 'Conectividade',
       drawing: 'Desenho',
+      desktop: 'App para desktop',
+    },
+    desktop: {
+      title: 'App para desktop',
+      notDesktop: 'Estas configurações ficam no app para desktop.',
+      updates: 'Atualizações',
+      version: 'Versão {{version}}',
+      check: 'Procurar atualizações',
+      checking: 'Procurando…',
+      results: {
+        current: 'Você tem a versão mais recente.',
+        downloading:
+          'A versão {{version}} está sendo baixada. Você será avisado para reiniciar quando estiver pronta.',
+        ready: 'A versão {{version}} está pronta. Reinicie o app para atualizar.',
+        manual: 'A versão {{version}} saiu. Baixe na página de versões.',
+        unavailable: 'As atualizações funcionam só no app instalado.',
+        failed:
+          'Não foi possível procurar atualizações. Confira sua conexão, ou talvez ainda não haja uma versão para atualizar.',
+      },
     },
     voice: {
       title: 'Voz e áudio',

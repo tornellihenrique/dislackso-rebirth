@@ -85,11 +85,32 @@ export interface OverlayApi {
   onAction(cb: (action: OverlayAction) => void): Unsubscribe;
 }
 
+/** What a check for a new version of the app found. */
+export type UpdateCheck =
+  | { readonly status: 'current'; readonly version: string }
+  /** A new version downloads; the app asks to restart when it is in. */
+  | { readonly status: 'downloading'; readonly version: string }
+  /** A new version is in and waits for a restart, which the app offers again. */
+  | { readonly status: 'ready'; readonly version: string }
+  /** A new version is out; this build cannot install it, so the app points to the download. */
+  | { readonly status: 'manual'; readonly version: string }
+  /** Not an installed app: a development run never updates. */
+  | { readonly status: 'unavailable' }
+  | { readonly status: 'failed' };
+
+export interface UpdatesApi {
+  /** The app's own version. */
+  version(): Promise<string>;
+  check(): Promise<UpdateCheck>;
+}
+
 export interface DesktopBridge {
   readonly bridgeVersion: number;
   readonly platform: DesktopPlatform;
   readonly screen: ScreenApi;
   readonly overlay: OverlayApi;
+  /** Missing in apps older than it; the web app then offers no update check. */
+  readonly updates?: UpdatesApi;
 }
 
 /** What the shell sends its overlay page. */

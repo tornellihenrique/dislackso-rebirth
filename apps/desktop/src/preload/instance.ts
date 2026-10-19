@@ -47,6 +47,10 @@ if (ipcRenderer.sendSync(Channel.bridgeAllowed) === true) {
       onInput: (cb) => on(Channel.overlayInput, cb),
       onAction: (cb) => on(Channel.overlayAction, cb),
     },
+    updates: {
+      version: () => ipcRenderer.invoke(Channel.appVersion),
+      check: () => ipcRenderer.invoke(Channel.updatesCheck),
+    },
   };
   contextBridge.exposeInMainWorld('desktop', bridge);
 }

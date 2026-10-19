@@ -199,7 +199,9 @@ shares their screen from it sees the drawings on their real monitor.
 Closing the window keeps the app (and a call) running in the tray, next to the clock; right-click
 its icon → **Quit Dislackso** to close it for good.
 
-The app updates itself from new releases (on macOS it shows where to download the new one). Most
+The app updates itself from new releases (on macOS it shows where to download the new one). To
+check right away: Settings → **Desktop app** → **Check for updates**, or right-click the tray icon →
+**Check for updates**. Most
 changes need no new release at all: the app shows the web app the hub serves, so updating the hub
 updates everyone.
 

@@ -199,7 +199,10 @@ mode. Phase 6 (drawing) is merged and in use.
 - **Own preview pauses** while the app is in the background or another window has the focus; the
   tile says so.
 - **Desktop tray:** closing the window hides it in the tray and the call goes on; the tray opens it
-  again or quits. Background throttling is off for the instance window, so a hidden call keeps its
+  again, checks for updates or quits.
+- **Check for updates on demand:** Settings → Desktop app (listed only in the app) shows the version
+  and checks now, through the bridge's optional `updates`; the tray's item does the same and says
+  what it found in a dialog. Background throttling is off for the instance window, so a hidden call keeps its
   heartbeats.
 
 ### Phase 7 — Direct address with a free DuckDNS name
@@ -966,6 +969,9 @@ Prerequisites: the hub and the desktop app built from this branch, a friend in a
 4. Click into another window: your own preview says it is paused; click back and it plays.
 5. Desktop app: close the window during a call. The call goes on; the tray icon opens the window
    again; right-click → Quit Dislackso ends it.
+6. Settings → Desktop app shows the version; Check for updates says what it found (in the installed
+   app; a run from the project says updates work in the installed app only). The tray's Check for
+   updates answers in a dialog.
 
 ### Direct address with DuckDNS
 

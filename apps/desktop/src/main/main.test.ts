@@ -9,7 +9,7 @@ import {
   remember,
 } from './instances';
 import { allowPermission, externalLink, sameOrigin } from './security';
-import { shellStrings } from './strings';
+import { shellStrings, updateCheckText } from './strings';
 
 describe('server addresses', () => {
   it('take what people paste and keep only the origin', () => {
@@ -74,5 +74,20 @@ describe('shell strings', () => {
     expect(shellStrings('pt-BR').connect).toBe('Conectar');
     expect(shellStrings('en-US').connect).toBe('Connect');
     expect(shellStrings('de').connect).toBe('Connect');
+  });
+});
+
+describe('update check results', () => {
+  it('get a sentence for the tray, except where the updater shows its own dialog', () => {
+    const en = shellStrings('en');
+    expect(updateCheckText({ status: 'current', version: '0.7.0' }, en)).toBe(
+      'Dislackso 0.7.0 is the latest version.',
+    );
+    expect(updateCheckText({ status: 'downloading', version: '0.8.0' }, en)).toContain('0.8.0');
+    expect(updateCheckText({ status: 'failed' }, shellStrings('pt-BR'))).toContain(
+      'Não foi possível',
+    );
+    expect(updateCheckText({ status: 'ready', version: '0.8.0' }, en)).toBeUndefined();
+    expect(updateCheckText({ status: 'manual', version: '0.8.0' }, en)).toBeUndefined();
   });
 });

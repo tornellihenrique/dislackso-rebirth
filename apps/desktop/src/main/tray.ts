@@ -12,6 +12,7 @@ export class AppTray {
 
   constructor(
     private readonly open: () => void,
+    private readonly checkUpdates: () => void,
     private readonly quit: () => void,
   ) {}
 
@@ -25,6 +26,7 @@ export class AppTray {
     tray.setContextMenu(
       Menu.buildFromTemplate([
         { label: strings.trayOpen, click: this.open },
+        { label: strings.trayCheckUpdates, click: this.checkUpdates },
         { type: 'separator' },
         { label: strings.trayQuit, click: this.quit },
       ]),

@@ -653,6 +653,25 @@ export const en = {
       instance: 'Instance',
       connectivity: 'Connectivity',
       drawing: 'Drawing',
+      desktop: 'Desktop app',
+    },
+    desktop: {
+      title: 'Desktop app',
+      notDesktop: 'These settings are in the desktop app.',
+      updates: 'Updates',
+      version: 'Version {{version}}',
+      check: 'Check for updates',
+      checking: 'Checking…',
+      results: {
+        current: 'You have the latest version.',
+        downloading:
+          "Version {{version}} is downloading. You'll be asked to restart when it's ready.",
+        ready: 'Version {{version}} is ready. Restart the app to update.',
+        manual: 'Version {{version}} is out. Download it from the releases page.',
+        unavailable: 'Updates work in the installed app only.',
+        failed:
+          "Couldn't check for updates. Check your connection, or there may be no release to update from yet.",
+      },
     },
     voice: {
       title: 'Voice & audio',
