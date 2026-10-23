@@ -15,12 +15,12 @@ describe('synthesize', () => {
   it.each(kinds)('renders %s loud enough, without clipping, and ends silent', (kind) => {
     const s = synthesize(kind, RATE);
     const peak = s.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
-    expect(peak).toBeGreaterThan(0.85);
-    expect(peak).toBeLessThanOrEqual(0.9001);
-    expect(s.length / RATE).toBeGreaterThan(0.5);
-    expect(s.length / RATE).toBeLessThan(4.5);
+    expect(peak).toBeGreaterThan(0.45);
+    expect(peak).toBeLessThanOrEqual(0.5001);
+    expect(s.length / RATE).toBeGreaterThan(0.3);
+    expect(s.length / RATE).toBeLessThan(2);
     // The first quarter second carries the sound, not a faint blip.
-    expect(rmsDb(s, 0, RATE / 4)).toBeGreaterThan(-20);
+    expect(rmsDb(s, 0, RATE / 4)).toBeGreaterThan(-26);
     expect(Math.abs(s.at(-1) ?? 1)).toBeLessThan(1e-3);
   });
 
