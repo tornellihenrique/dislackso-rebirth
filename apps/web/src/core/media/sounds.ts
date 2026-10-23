@@ -48,28 +48,28 @@ const timbres = {
   bell: {
     attack: 0.004,
     partials: [
-      [1, 1, 0.45],
-      [2, 0.42, 0.28],
-      [3, 0.2, 0.18],
-      [4.2, 0.09, 0.11],
-      [5.4, 0.04, 0.08],
+      [1, 1, 0.2],
+      [2, 0.42, 0.125],
+      [3, 0.2, 0.08],
+      [4.2, 0.09, 0.05],
+      [5.4, 0.04, 0.036],
     ],
   },
   pluck: {
     attack: 0.003,
     partials: [
-      [1, 1, 0.24],
-      [2, 0.2, 0.13],
-      [3.98, 0.12, 0.06],
-      [9.1, 0.035, 0.025],
+      [1, 1, 0.11],
+      [2, 0.2, 0.06],
+      [3.98, 0.12, 0.027],
+      [9.1, 0.035, 0.012],
     ],
   },
   soft: {
     attack: 0.01,
     partials: [
-      [1, 1, 0.17],
-      [2, 0.25, 0.1],
-      [3, 0.07, 0.07],
+      [1, 1, 0.085],
+      [2, 0.25, 0.05],
+      [3, 0.07, 0.035],
     ],
   },
 } as const satisfies Record<string, Timbre>;
@@ -151,11 +151,11 @@ const sounds: Record<SoundKind, SoundDef> = {
 };
 
 /** Every sound is scaled to this peak before its level applies. */
-const PEAK = 0.9;
-/** A note ends when its slowest overtone is ~60 dB down. */
-const DECAYS_TO_SILENCE = 7;
-const REVERB_TAIL_S = 0.35;
-const REVERB_WET = 0.16;
+const PEAK = 0.5;
+/** A note ends when its slowest overtone is ~50 dB down. */
+const DECAYS_TO_SILENCE = 6;
+const REVERB_TAIL_S = 0.2;
+const REVERB_WET = 0.1;
 
 function noteLength(n: Note): number {
   return Math.max(...timbres[n.timbre].partials.map(([, , decay]) => decay)) * DECAYS_TO_SILENCE;
