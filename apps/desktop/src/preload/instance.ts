@@ -2,6 +2,7 @@ import {
   BRIDGE_VERSION,
   type DesktopBridge,
   type DesktopPlatform,
+  type HotkeyAction,
   type Unsubscribe,
 } from '@dislackso/desktop-bridge';
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
@@ -50,6 +51,16 @@ if (ipcRenderer.sendSync(Channel.bridgeAllowed) === true) {
     updates: {
       version: () => ipcRenderer.invoke(Channel.appVersion),
       check: () => ipcRenderer.invoke(Channel.updatesCheck),
+    },
+    hotkeys: {
+      register: (bindings) => ipcRenderer.invoke(Channel.hotkeysRegister, bindings),
+      onAction: (cb) =>
+        on(Channel.hotkeyAction, (e: { action: HotkeyAction; pressed: boolean }) => {
+          cb(e.action, e.pressed);
+        }),
+      setTrayState: (state) => {
+        ipcRenderer.send(Channel.trayState, state);
+      },
     },
   };
   contextBridge.exposeInMainWorld('desktop', bridge);

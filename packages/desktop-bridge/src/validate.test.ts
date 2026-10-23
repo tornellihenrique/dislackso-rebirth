@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   isSourceId,
+  parseHotkeyBindings,
+  parseTrayVoiceState,
   parseOverlayAction,
   parseOverlayInput,
   parseOverlayOpen,
@@ -74,5 +76,30 @@ describe('sources and packets', () => {
     expect(parsePacket(new Uint8Array([1, 2]))).toEqual(new Uint8Array([1, 2]));
     expect(parsePacket(new Uint8Array(20_000))).toBeUndefined();
     expect(parsePacket('bytes')).toBeUndefined();
+  });
+});
+
+describe('global keys', () => {
+  it('keep well-formed bindings and refuse the rest', () => {
+    const mute = { action: 'toggleMute', keys: { code: 'KeyM', ctrl: true, shift: true } };
+    expect(parseHotkeyBindings([mute])).toEqual([
+      {
+        action: 'toggleMute',
+        keys: { code: 'KeyM', ctrl: true, shift: true, alt: false, meta: false },
+      },
+    ]);
+    expect(parseHotkeyBindings([{ ...mute, action: 'quit' }])).toBeUndefined();
+    expect(parseHotkeyBindings([{ ...mute, keys: { code: 'Key M' } }])).toBeUndefined();
+    expect(parseHotkeyBindings(Array.from({ length: 17 }, () => mute))).toBeUndefined();
+    expect(parseHotkeyBindings('KeyM')).toBeUndefined();
+  });
+
+  it('take the tray state only whole', () => {
+    expect(parseTrayVoiceState({ muted: true, deafened: false, inCall: true })).toEqual({
+      muted: true,
+      deafened: false,
+      inCall: true,
+    });
+    expect(parseTrayVoiceState({ muted: true })).toBeUndefined();
   });
 });

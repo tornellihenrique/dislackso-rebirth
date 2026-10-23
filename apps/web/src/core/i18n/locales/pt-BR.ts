@@ -27,6 +27,13 @@ export const ptBR: Messages = {
   },
   shell: {
     resizeSidebar: 'Redimensionar a lista de canais',
+    quickSwitcher: {
+      title: 'Ir para um servidor ou canal',
+      search: 'Nome do servidor ou canal',
+      placeholder: 'Para onde?',
+      none: 'Nada com esse nome.',
+      hint: '↑ ↓ para escolher, Enter para ir, Esc para fechar. Escolher um canal de voz entra nele.',
+    },
     home: 'Início',
     servers: 'Servidores',
     serversEmpty: 'Os servidores que você criar ou entrar aparecerão aqui.',
@@ -679,6 +686,7 @@ export const ptBR: Messages = {
       drawing: 'Desenho',
       desktop: 'App para desktop',
       sounds: 'Sons',
+      keybinds: 'Atalhos',
     },
     desktop: {
       title: 'App para desktop',
@@ -747,6 +755,43 @@ export const ptBR: Messages = {
       autoGainControl: 'Controle automático de ganho',
       boostWarning:
         'Acima de 100 %, esta pessoa toca pelo Web Audio, o que pode enfraquecer o cancelamento de eco. Fones ajudam.',
+    },
+    keybinds: {
+      title: 'Atalhos',
+      hintDesktop:
+        'Os atalhos de voz funcionam em qualquer lugar, também com outro app na frente; a tecla continua chegando a esse app. Os outros funcionam nesta janela.',
+      hintBrowser:
+        'Funcionam com esta aba na frente. No app para desktop, os de voz funcionam em qualquer lugar.',
+      group: {
+        voice: 'Voz',
+        navigation: 'Navegação',
+        stage: 'Transmissões de tela',
+      },
+      action: {
+        pushToTalk: 'Aperte para falar',
+        toggleMute: 'Silenciar ou ativar o microfone',
+        toggleDeafen: 'Desativar ou ativar o áudio',
+        toggleShare: 'Transmitir a tela ou parar',
+        disconnect: 'Sair do canal de voz',
+        quickSwitcher: 'Ir para um servidor ou canal',
+        previousChannel: 'Canal anterior',
+        nextChannel: 'Próximo canal',
+        previousServer: 'Servidor anterior',
+        nextServer: 'Próximo servidor',
+        back: 'Voltar',
+        addServer: 'Criar ou entrar em um servidor',
+        memberList: 'Mostrar ou ocultar a lista de membros',
+        settings: 'Abrir as configurações',
+        keybinds: 'Abrir os atalhos',
+        statsOverlay: 'Mostrar ou ocultar as estatísticas da transmissão',
+      },
+      pttOff: 'Usado quando o modo de entrada é aperte para falar (Voz e áudio).',
+      none: 'Sem atalho',
+      recording: 'Aperte as teclas…',
+      change: 'Alterar',
+      clear: 'Limpar',
+      reset: 'Restaurar todos',
+      taken: 'Teclas já usadas em outro lugar passam para a nova ação. Esc cancela a gravação.',
     },
     sounds: {
       title: 'Sons',

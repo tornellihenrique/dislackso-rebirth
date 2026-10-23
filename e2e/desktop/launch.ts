@@ -16,7 +16,8 @@ export function newUserData(): string {
 function withEnv(extra: Record<string, string>): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [k, v] of Object.entries(process.env)) if (v !== undefined) out[k] = v;
-  return { ...out, ...extra };
+  // The servers the app ships with stay out of tests: none, unless a test names some.
+  return { ...out, DSX_SERVERS: '', ...extra };
 }
 
 /**

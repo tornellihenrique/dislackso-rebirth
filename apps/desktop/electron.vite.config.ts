@@ -5,10 +5,14 @@ import { defineConfig } from 'electron-vite';
 export default defineConfig({
   main: {
     build: {
-      // The package holds no node_modules: workspace packages (TypeScript
-      // source) and the updater go into the bundle.
+      // Workspace packages (TypeScript source) and the updater go into the
+      // bundle. The keyboard hook is a native addon, so it stays a module of
+      // its own, the only one the package carries in node_modules.
       externalizeDeps: false,
-      rollupOptions: { input: { index: resolve('src/main/index.ts') } },
+      rollupOptions: {
+        input: { index: resolve('src/main/index.ts') },
+        external: ['uiohook-napi'],
+      },
     },
   },
   preload: {

@@ -52,9 +52,15 @@ export async function startApp(container: HTMLElement): Promise<void> {
       dispatchSession({ type: 'signedOut' });
     },
     (hub) => {
-      voice = new VoiceController({ hub, sounds: createSoundPlayer(), t: i18n.t, host: audioHost });
-      const v = voice;
       const desktop = desktopBridge();
+      voice = new VoiceController({
+        hub,
+        sounds: createSoundPlayer(),
+        t: i18n.t,
+        host: audioHost,
+        hotkeys: desktop?.hotkeys,
+      });
+      const v = voice;
       drawing = new DrawingController(
         v,
         desktop && {

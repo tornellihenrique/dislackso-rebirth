@@ -295,6 +295,60 @@ describe('VoiceController', () => {
     Reflect.deleteProperty(navigator, 'mediaDevices');
   });
 
+  it('hands the voice keys to the desktop shell and follows its keys and tray', async () => {
+    Object.defineProperty(navigator, 'mediaDevices', {
+      value: new EventTarget(),
+      configurable: true,
+    });
+    let fire: ((action: string, pressed: boolean) => void) | undefined;
+    const registered: unknown[] = [];
+    const trays: unknown[] = [];
+    const hotkeys = {
+      register: (b: readonly unknown[]) => {
+        registered.push(b.map((x) => (x as { action: string }).action));
+        return Promise.resolve(true);
+      },
+      onAction: (cb: (action: string, pressed: boolean) => void) => {
+        fire = cb;
+        return () => undefined;
+      },
+      setTrayState: (s: unknown) => trays.push(s),
+    };
+    const sounds = { play: () => undefined, setOutput: () => undefined };
+    const t = ((key: string) => key) as unknown as TFunction;
+    const hub = {} as HubClients;
+    const voice = new VoiceController({
+      hub,
+      sounds,
+      t,
+      host: document.createElement('div'),
+      hotkeys: hotkeys as never,
+    });
+    const stop = voice.start();
+    await vi.waitFor(() => {
+      expect(registered).toEqual([['toggleMute', 'toggleDeafen']]);
+    });
+    // The shell answers that it took them.
+    await new Promise((r) => setTimeout(r, 0));
+    expect(trays.at(-1)).toEqual({ muted: false, deafened: false, inCall: false });
+
+    fire?.('toggleDeafen', true);
+    expect(voiceSettingsStore.getState()).toMatchObject({ selfDeaf: true, selfMute: true });
+    expect(trays.at(-1)).toEqual({ muted: true, deafened: true, inCall: false });
+    // The window leaves the keys to the shell, so one press toggles once.
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', { code: 'KeyD', ctrlKey: true, shiftKey: true }),
+    );
+    expect(voiceSettingsStore.getState().selfDeaf).toBe(true);
+
+    voice.setPrefs({ inputMode: 'ptt', pttKey: 'Backquote' });
+    await vi.waitFor(() => {
+      expect(registered.at(-1)).toEqual(['toggleMute', 'toggleDeafen', 'pushToTalk']);
+    });
+    stop();
+    Reflect.deleteProperty(navigator, 'mediaDevices');
+  });
+
   it('mutes a share without losing its volume', async () => {
     const { voice, session } = setup();
     Object.defineProperty(navigator, 'mediaDevices', {

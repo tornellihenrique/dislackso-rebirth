@@ -25,6 +25,13 @@ export const en = {
   },
   shell: {
     resizeSidebar: 'Resize the channel list',
+    quickSwitcher: {
+      title: 'Go to a server or channel',
+      search: 'Server or channel name',
+      placeholder: 'Where to?',
+      none: 'Nothing by that name.',
+      hint: '↑ ↓ to pick, Enter to go, Esc to close. Picking a voice channel joins it.',
+    },
     home: 'Home',
     servers: 'Servers',
     serversEmpty: 'Servers you create or join will show up here.',
@@ -676,6 +683,7 @@ export const en = {
       drawing: 'Drawing',
       desktop: 'Desktop app',
       sounds: 'Sounds',
+      keybinds: 'Keybinds',
     },
     desktop: {
       title: 'Desktop app',
@@ -742,6 +750,43 @@ export const en = {
       autoGainControl: 'Automatic gain control',
       boostWarning:
         'Above 100 %, this person plays through Web Audio, which can weaken echo cancellation. Headphones help.',
+    },
+    keybinds: {
+      title: 'Keybinds',
+      hintDesktop:
+        'Voice keybinds work everywhere, also while another app is in front; the key still reaches that app. The others work in this window.',
+      hintBrowser:
+        'These work while this tab is in front. In the desktop app, the voice ones work everywhere.',
+      group: {
+        voice: 'Voice',
+        navigation: 'Navigation',
+        stage: 'Screen shares',
+      },
+      action: {
+        pushToTalk: 'Push to talk',
+        toggleMute: 'Mute or unmute',
+        toggleDeafen: 'Deafen or undeafen',
+        toggleShare: 'Share your screen or stop',
+        disconnect: 'Leave the voice channel',
+        quickSwitcher: 'Go to a server or channel',
+        previousChannel: 'Previous channel',
+        nextChannel: 'Next channel',
+        previousServer: 'Previous server',
+        nextServer: 'Next server',
+        back: 'Go back',
+        addServer: 'Create or join a server',
+        memberList: 'Show or hide the member list',
+        settings: 'Open settings',
+        keybinds: 'Open keybinds',
+        statsOverlay: 'Show or hide share stats',
+      },
+      pttOff: 'Used when the input mode is push to talk (Voice & audio).',
+      none: 'Not set',
+      recording: 'Press keys…',
+      change: 'Change',
+      clear: 'Clear',
+      reset: 'Reset all',
+      taken: 'Keys already used elsewhere move to the new action. Esc cancels recording.',
     },
     sounds: {
       title: 'Sounds',

@@ -1,3 +1,5 @@
+import type { KnownServer } from '../../shared/pages';
+
 const api = window.launcher;
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -28,6 +30,8 @@ async function main(): Promise<void> {
   const error = el('p', { className: 'error', role: 'alert' });
   const list = el('ul');
   const savedTitle = el('h2', { textContent: s.saved });
+  const knownTitle = el('h2', { textContent: s.knownTitle, hidden: true });
+  const knownList = el('ul', { className: 'known' });
 
   const problems = { invalid: s.invalid, insecure: s.insecure, unreachable: s.unreachable };
   const connect = async (address: string) => {
@@ -55,6 +59,32 @@ async function main(): Promise<void> {
     );
   };
 
+  const renderKnown = (servers: readonly KnownServer[] | undefined) => {
+    if (servers === undefined) {
+      knownTitle.hidden = false;
+      knownList.replaceChildren(el('li', { className: 'looking', textContent: s.knownLooking }));
+      return;
+    }
+    knownTitle.hidden = servers.length === 0;
+    // Those that answer come first.
+    const sorted = [...servers].sort((a, b) => Number(b.reachable) - Number(a.reachable));
+    knownList.replaceChildren(
+      ...sorted.map((server) => {
+        const open = el('button', {
+          type: 'button',
+          className: 'open',
+          textContent: server.origin,
+        });
+        open.addEventListener('click', () => void connect(server.origin));
+        const status = el('span', {
+          className: server.reachable ? 'status up' : 'status down',
+          textContent: server.reachable ? s.knownUp : s.knownDown,
+        });
+        return el('li', {}, el('span', { className: 'dot', ariaHidden: 'true' }), open, status);
+      }),
+    );
+  };
+
   const form = el(
     'form',
     {},
@@ -71,12 +101,16 @@ async function main(): Promise<void> {
     el('h1', { textContent: s.title }),
     el('p', { textContent: s.hint }),
     ...(notice !== '' ? [el('p', { className: 'notice', textContent: notice })] : []),
+    knownTitle,
+    knownList,
     form,
     savedTitle,
     list,
   );
   render(await api.saved());
   input.focus();
+  renderKnown(undefined);
+  renderKnown(await api.known());
 }
 
 void main();

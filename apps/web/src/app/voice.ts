@@ -5,6 +5,7 @@ import {
   VoiceForcedAction,
   type VoiceForced,
 } from '@dislackso/contracts/gen/dislackso/gateway/v1/gateway_pb';
+import type { HotkeyAction, HotkeyBinding, HotkeysApi } from '@dislackso/desktop-bridge';
 import type { VoiceState } from '@dislackso/contracts/gen/dislackso/v1/common_pb';
 import type { IceServer } from '@dislackso/contracts/gen/dislackso/v1/voice_pb';
 import type { TFunction } from 'i18next';
@@ -12,6 +13,7 @@ import type { TFunction } from 'i18next';
 import type { HubClients } from '@/core/api/clients';
 import { toApiError } from '@/core/api/errors';
 import { errorText } from '@/core/i18n/error-text';
+import { matches, shortcut, typingTarget } from '@/core/keys/shortcut';
 import { listAudioDevices, resolveDevice, watchDevices } from '@/core/media/devices';
 import { startPushToTalk, type PushToTalk } from '@/core/media/push-to-talk';
 import { ShareError } from '@/core/media/share-error';
@@ -33,6 +35,7 @@ import type {
 } from '@/core/media/voice-session';
 import { callStore, dispatchCall } from '@/stores/call';
 import { entitiesStore } from '@/stores/entities';
+import { keybindsStore, VOICE_ACTIONS, type VoiceKeyAction } from '@/stores/keybinds';
 import { pushNotice } from '@/stores/notices';
 import { realtimeStore } from '@/stores/realtime';
 import { sessionStore } from '@/stores/session';
@@ -119,7 +122,12 @@ export interface VoiceDeps {
   readonly t: TFunction;
   /** Holds the remote audio elements. */
   readonly host: HTMLElement;
+  /** The desktop shell's global keys and tray; undefined in a browser or an older app. */
+  readonly hotkeys?: HotkeysApi | undefined;
 }
+
+/** Keys this controller answers in the window; the others belong to the shell and pages. */
+const WINDOW_ACTIONS = [...VOICE_ACTIONS, 'statsOverlay'] as const;
 
 const micNotices = {
   denied: 'voice.notices.micDenied',
@@ -171,6 +179,9 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
   private readonly mine = new Set<string>();
   private inputDevice = '';
   private ptt: PushToTalk | undefined;
+  /** The desktop shell watches the voice keys system-wide, so the window leaves them alone. */
+  private globalKeys = false;
+  private pttRelease: ReturnType<typeof setTimeout> | undefined;
   private readonly stops: (() => void)[] = [];
   /** Who shared in the call at the last voice state change. */
   private streamers = new Set<string>();
@@ -263,18 +274,7 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
       }),
     );
     const onKey = (e: KeyboardEvent) => {
-      if (!e.ctrlKey || !e.shiftKey || e.altKey || e.metaKey) return;
-      if (e.code === 'KeyM') {
-        e.preventDefault();
-        this.toggleMute();
-      } else if (e.code === 'KeyD') {
-        e.preventDefault();
-        this.toggleDeafen();
-      } else if (e.code === 'KeyS') {
-        e.preventDefault();
-        const on = shareSettingsStore.getState().statsOverlay;
-        dispatchShareSettings({ type: 'changed', settings: { statsOverlay: !on } });
-      }
+      this.keyDown(e);
     };
     window.addEventListener('keydown', onKey);
     this.stops.push(() => {
@@ -283,6 +283,26 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
     this.stops.push(this.watchFocus());
     this.d.sounds.setOutput(voiceSettingsStore.getState().outputDevice);
     this.syncPushToTalk(voiceSettingsStore.getState());
+    const hotkeys = this.d.hotkeys;
+    if (hotkeys) {
+      this.stops.push(
+        hotkeys.onAction((action, pressed) => {
+          this.hotkey(action, pressed);
+        }),
+      );
+      this.stops.push(
+        keybindsStore.subscribe(() => {
+          void this.registerGlobalKeys();
+        }),
+      );
+      this.stops.push(
+        callStore.subscribe((next, prev) => {
+          if ((next.status === 'idle') !== (prev.status === 'idle')) this.syncTray();
+        }),
+      );
+      void this.registerGlobalKeys();
+      this.syncTray();
+    }
     return () => {
       for (const stop of this.stops.splice(0)) stop();
       this.ptt?.stop();
@@ -781,6 +801,7 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
 
   private settingsChanged(next: VoiceSettings, prev: VoiceSettings): void {
     if (next.outputDevice !== prev.outputDevice) this.d.sounds.setOutput(next.outputDevice);
+    if (next.selfMute !== prev.selfMute || next.selfDeaf !== prev.selfDeaf) this.syncTray();
     if (next.deafenStreams !== prev.deafenStreams) {
       this.session?.setDeafenStreams(next.deafenStreams);
     }
@@ -797,6 +818,8 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
       next.pttReleaseMs !== prev.pttReleaseMs
     ) {
       this.syncPushToTalk(next);
+      if (next.inputMode !== prev.inputMode || next.pttKey !== prev.pttKey)
+        void this.registerGlobalKeys();
     }
     if (callStore.getState().status === 'idle') return;
     void this.effectiveInput(next).then((input) => {
@@ -808,17 +831,102 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
   private syncPushToTalk(s: VoiceSettings): void {
     this.ptt?.stop();
     this.ptt = undefined;
-    this.pttPressed = false;
-    this.session?.setPushToTalk(false);
-    if (s.inputMode !== 'ptt' || s.pttKey === '') return;
+    clearTimeout(this.pttRelease);
+    this.pushToTalk(false);
+    // The shell's global key holds push-to-talk instead.
+    if (s.inputMode !== 'ptt' || s.pttKey === '' || this.globalKeys) return;
     this.ptt = startPushToTalk({
       key: s.pttKey,
       releaseDelayMs: s.pttReleaseMs,
       onChange: (pressed) => {
-        this.pttPressed = pressed;
-        this.session?.setPushToTalk(pressed);
-        if (callStore.getState().status === 'connected') this.play(pressed ? 'pttOn' : 'pttOff');
+        this.pushToTalk(pressed);
       },
+    });
+  }
+
+  private pushToTalk(pressed: boolean): void {
+    if (this.pttPressed === pressed) return;
+    this.pttPressed = pressed;
+    this.session?.setPushToTalk(pressed);
+    if (callStore.getState().status === 'connected') this.play(pressed ? 'pttOn' : 'pttOff');
+  }
+
+  /** A voice shortcut in this window, unless the shell watches it system-wide. */
+  private keyDown(e: KeyboardEvent): void {
+    if (e.repeat || e.defaultPrevented) return;
+    const binds = keybindsStore.getState();
+    const action = WINDOW_ACTIONS.find((a) => {
+      const keys = binds[a];
+      return keys !== null && matches(e, keys);
+    });
+    const keys = action && binds[action];
+    if (!action || !keys) return;
+    // A plain key belongs to the field being typed in.
+    if (!keys.ctrl && !keys.alt && !keys.meta && typingTarget(e.target)) return;
+    e.preventDefault();
+    if (action === 'statsOverlay') {
+      const on = shareSettingsStore.getState().statsOverlay;
+      dispatchShareSettings({ type: 'changed', settings: { statsOverlay: !on } });
+    } else if (!this.globalKeys) {
+      this.hotkey(action, true);
+    }
+  }
+
+  /** A voice shortcut from this window, a global key or the tray. */
+  private hotkey(action: HotkeyAction, pressed: boolean): void {
+    if (action === 'pushToTalk') {
+      clearTimeout(this.pttRelease);
+      const delay = voiceSettingsStore.getState().pttReleaseMs;
+      if (pressed || delay <= 0) this.pushToTalk(pressed);
+      else
+        this.pttRelease = setTimeout(() => {
+          this.pushToTalk(false);
+        }, delay);
+      return;
+    }
+    if (!pressed) return;
+    const run: Record<VoiceKeyAction, () => void> = {
+      toggleMute: () => {
+        this.toggleMute();
+      },
+      toggleDeafen: () => {
+        this.toggleDeafen();
+      },
+      toggleShare: () => {
+        if (callStore.getState().localShare) void this.stopShare();
+        else void this.startShare();
+      },
+      disconnect: () => {
+        void this.leave();
+      },
+    };
+    run[action]();
+  }
+
+  /** Gives the voice keys to the shell, which watches them while another app is in front. */
+  private async registerGlobalKeys(): Promise<void> {
+    const hotkeys = this.d.hotkeys;
+    if (!hotkeys) return;
+    const binds = keybindsStore.getState();
+    const s = voiceSettingsStore.getState();
+    const bindings: HotkeyBinding[] = VOICE_ACTIONS.flatMap((action) => {
+      const keys = binds[action];
+      return keys ? [{ action, keys }] : [];
+    });
+    if (s.inputMode === 'ptt' && s.pttKey !== '')
+      bindings.push({ action: 'pushToTalk', keys: shortcut(s.pttKey) });
+    const on = await hotkeys.register(bindings).catch(() => false);
+    if (on === this.globalKeys) return;
+    this.globalKeys = on;
+    this.syncPushToTalk(voiceSettingsStore.getState());
+  }
+
+  private syncTray(): void {
+    const s = voiceSettingsStore.getState();
+    this.d.hotkeys?.setTrayState({
+      muted: s.selfMute,
+      deafened: s.selfDeaf,
+      inCall: callStore.getState().status !== 'idle',
     });
   }
 

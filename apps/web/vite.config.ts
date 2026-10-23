@@ -1,6 +1,5 @@
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
@@ -13,13 +12,6 @@ import { PRODUCT_NAME } from './src/core/product.ts';
 
 const hubUrl = process.env.DSX_DEV_HUB_URL ?? 'http://127.0.0.1:7300';
 const outDir = fileURLToPath(new URL('../../hub/webdist/dist', import.meta.url));
-
-// The noise suppressor exports only its AudioWorklet API; the mic chain runs
-// its DeepFilterNet3 processor in a worker and imports the files directly.
-const deepFilterAssets = join(
-  dirname(createRequire(import.meta.url).resolve('@workadventure/noise-suppression/package.json')),
-  'dist/assets',
-);
 
 /** Routes served by the hub; Vite forwards them during development. */
 const hubRoutes = ['/rpc', '/api', '/files', '/healthz', '/readyz'];
@@ -77,10 +69,7 @@ export default defineConfig({
     precompress(outDir),
   ],
   resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
-      '@deepfilternet': deepFilterAssets,
-    },
+    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
   server: {
     port: 5173,

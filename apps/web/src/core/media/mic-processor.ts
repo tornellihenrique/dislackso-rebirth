@@ -1,6 +1,8 @@
-import deepFilterModel from '@deepfilternet/deepfilternet/DeepFilterNet3_onnx.tar.gz?url';
-import deepFilterWasm from '@deepfilternet/deepfilternet/df_bg.wasm?url';
-import deepFilterProcessor from '@deepfilternet/deepfilternet-worklet-processor.js?url';
+// The noise suppressor exports only its AudioWorklet API; the chain runs its
+// DeepFilterNet3 processor in a worker, so it takes the files themselves.
+import deepFilterModel from '../../../node_modules/@workadventure/noise-suppression/dist/assets/deepfilternet/DeepFilterNet3_onnx.tar.gz?url';
+import deepFilterWasm from '../../../node_modules/@workadventure/noise-suppression/dist/assets/deepfilternet/df_bg.wasm?url';
+import deepFilterProcessor from '../../../node_modules/@workadventure/noise-suppression/dist/assets/deepfilternet-worklet-processor.js?url';
 import gtcrnWasm from '@sapphi-red/web-noise-suppressor/gtcrn.wasm?url';
 import gtcrnProcessor from '@sapphi-red/web-noise-suppressor/gtcrnWorklet.js?url';
 import type { AudioProcessorOptions, Track, TrackProcessor } from 'livekit-client';

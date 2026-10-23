@@ -104,6 +104,44 @@ export interface UpdatesApi {
   check(): Promise<UpdateCheck>;
 }
 
+/** What the shell's global keys and its tray menu ask of the web app. */
+export type HotkeyAction =
+  'toggleMute' | 'toggleDeafen' | 'toggleShare' | 'disconnect' | 'pushToTalk';
+
+/** A key by KeyboardEvent.code, with its modifiers. */
+export interface HotkeyKeys {
+  readonly code: string;
+  readonly ctrl: boolean;
+  readonly shift: boolean;
+  readonly alt: boolean;
+  readonly meta: boolean;
+}
+
+export interface HotkeyBinding {
+  readonly action: HotkeyAction;
+  /** Push-to-talk holds while its key is down, whatever the modifiers. */
+  readonly keys: HotkeyKeys;
+}
+
+/** What the tray menu shows. */
+export interface TrayVoiceState {
+  readonly muted: boolean;
+  readonly deafened: boolean;
+  readonly inCall: boolean;
+}
+
+export interface HotkeysApi {
+  /**
+   * Replaces the keys that work while another app is in front. Resolves
+   * false when this system gives the app no global keys; the web app then
+   * listens in its own window.
+   */
+  register(bindings: readonly HotkeyBinding[]): Promise<boolean>;
+  /** A global key or the tray; pressed is false only when push-to-talk is let go. */
+  onAction(cb: (action: HotkeyAction, pressed: boolean) => void): Unsubscribe;
+  setTrayState(state: TrayVoiceState): void;
+}
+
 export interface DesktopBridge {
   readonly bridgeVersion: number;
   readonly platform: DesktopPlatform;
@@ -111,6 +149,8 @@ export interface DesktopBridge {
   readonly overlay: OverlayApi;
   /** Missing in apps older than it; the web app then offers no update check. */
   readonly updates?: UpdatesApi;
+  /** Missing in apps older than it; shortcuts then work only in the window. */
+  readonly hotkeys?: HotkeysApi;
 }
 
 /** What the shell sends its overlay page. */

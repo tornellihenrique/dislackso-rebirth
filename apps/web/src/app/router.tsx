@@ -29,6 +29,7 @@ import { SessionsPage } from '@/features/settings/SessionsPage';
 import { SettingsLayout } from '@/features/settings/SettingsLayout';
 import { DesktopPage } from '@/features/settings/DesktopPage';
 import { DrawingPage } from '@/features/settings/DrawingPage';
+import { KeybindsPage } from '@/features/settings/KeybindsPage';
 import { SoundsPage } from '@/features/settings/SoundsPage';
 import { SharePage } from '@/features/settings/SharePage';
 import { VoicePage } from '@/features/settings/VoicePage';
@@ -271,6 +272,12 @@ const settingsSoundsRoute = createRoute({
   component: SoundsPage,
 });
 
+const settingsKeybindsRoute = createRoute({
+  getParentRoute: () => settingsRoute,
+  path: 'keybinds',
+  component: KeybindsPage,
+});
+
 const settingsDrawingRoute = createRoute({
   getParentRoute: () => settingsRoute,
   path: 'drawing',
@@ -329,6 +336,7 @@ const routeTree = rootRoute.addChildren([
         settingsShareRoute,
         settingsDrawingRoute,
         settingsSoundsRoute,
+        settingsKeybindsRoute,
         settingsAppearanceRoute,
         settingsSessionsRoute,
         settingsDesktopRoute,

@@ -2,11 +2,14 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import {
+  parseHotkeyBindings,
   parseOverlayAction,
   parseOverlayInput,
   parseOverlayOpen,
   parseOverlayState,
   parsePacket,
+  parseTrayVoiceState,
+  type HotkeyAction,
 } from '@dislackso/desktop-bridge';
 import {
   app,
@@ -17,13 +20,17 @@ import {
   net,
   session,
   shell,
+  systemPreferences,
   type IpcMainEvent,
   type IpcMainInvokeEvent,
   type Session,
 } from 'electron';
 
+import shipped from '../../servers.json';
 import { Channel } from '../shared/channels';
 import type { ConnectProblem, ShellStrings } from '../shared/pages';
+
+import { GlobalHotkeys } from './hotkeys';
 
 import {
   forget,
@@ -33,6 +40,7 @@ import {
   remember,
   type SavedInstances,
 } from './instances';
+import { firstServer, knownOrigins, probe } from './known';
 import { OverlayWindow } from './overlay';
 import { ScreenPicker } from './picker';
 import { allowPermission, externalLink, sameOrigin } from './security';
@@ -44,6 +52,14 @@ const here = import.meta.dirname;
 const preloadPath = (name: string) => join(here, '..', 'preload', `${name}.cjs`);
 const BACKGROUND = '#1a1a1e';
 const REACH_TIMEOUT_MS = 8000;
+/** Looking for the shipped servers at start waits no longer than this. */
+const PROBE_TIMEOUT_MS = 4000;
+// DSX_SERVERS (comma-separated, empty for none) replaces the shipped list, for tests and other builds.
+const known = knownOrigins(
+  process.env.DSX_SERVERS === undefined
+    ? shipped
+    : { servers: process.env.DSX_SERVERS.split(',').filter((s) => s.trim() !== '') },
+);
 
 // Tests and side-by-side runs keep their data apart.
 app.setPath(
@@ -80,17 +96,31 @@ const updater = new Updater(
   () => strings,
   () => instance?.win ?? launcher,
 );
-const tray = new AppTray(
-  () => {
+/** An action for the server's page, from a global key or the tray. */
+function sendAction(action: HotkeyAction, pressed: boolean): void {
+  const win = instance?.win;
+  if (win && !win.isDestroyed()) win.webContents.send(Channel.hotkeyAction, { action, pressed });
+}
+
+const hotkeys = new GlobalHotkeys(
+  sendAction,
+  // macOS lets an app watch the keyboard only once the user allows it.
+  () => process.platform !== 'darwin' || systemPreferences.isTrustedAccessibilityClient(false),
+);
+const tray = new AppTray({
+  open: () => {
     showWindow();
   },
-  () => {
+  checkUpdates: () => {
     void checkFromTray();
   },
-  () => {
+  quit: () => {
     app.quit();
   },
-);
+  voice: (action) => {
+    sendAction(action, true);
+  },
+});
 
 /** The tray has no page to show the result on, so it gets a dialog. */
 async function checkFromTray(): Promise<void> {
@@ -217,6 +247,15 @@ function openInstance(origin: string): void {
     if (instance?.win === win) {
       instance = undefined;
       overlay.close();
+      void hotkeys.register([]);
+      tray.setVoiceState(undefined);
+    }
+  });
+  wc.on('did-start-navigation', (details) => {
+    // A reload or another page brings its own keys and state.
+    if (details.isMainFrame && !details.isSameDocument) {
+      void hotkeys.register([]);
+      tray.setVoiceState(undefined);
     }
   });
   void win.loadURL(`${origin}/`);
@@ -264,10 +303,10 @@ function showLauncher(notice = ''): void {
   }
 }
 
-async function reachable(origin: string): Promise<boolean> {
+async function reachable(origin: string, timeoutMs = REACH_TIMEOUT_MS): Promise<boolean> {
   try {
     const res = await net.fetch(`${origin}/healthz`, {
-      signal: AbortSignal.timeout(REACH_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     return res.ok;
   } catch {
@@ -292,6 +331,14 @@ function registerIpc(): void {
   });
   ipcMain.on(Channel.cancel, (e) => {
     if (fromInstance(e)) picker.cancel();
+  });
+  ipcMain.handle(Channel.hotkeysRegister, (e, raw: unknown) => {
+    const bindings = parseHotkeyBindings(raw);
+    return fromInstance(e) && bindings ? hotkeys.register(bindings) : false;
+  });
+  ipcMain.on(Channel.trayState, (e, raw: unknown) => {
+    const state = parseTrayVoiceState(raw);
+    if (fromInstance(e) && state) tray.setVoiceState(state);
   });
 
   ipcMain.handle(Channel.overlayOpen, async (e, raw: unknown) => {
@@ -336,6 +383,9 @@ function registerIpc(): void {
   ipcMain.handle(Channel.launcherNotice, (e) => (fromLauncher(e) ? launcherNotice : ''));
   ipcMain.handle(Channel.launcherSaved, async (e) =>
     fromLauncher(e) ? (await readSaved()).origins : [],
+  );
+  ipcMain.handle(Channel.launcherKnown, (e) =>
+    fromLauncher(e) ? probe(known, (o) => reachable(o, PROBE_TIMEOUT_MS)) : [],
   );
   ipcMain.handle(Channel.launcherRemove, async (e, origin: unknown) => {
     if (!fromLauncher(e) || typeof origin !== 'string') return [];
@@ -414,6 +464,9 @@ if (!app.requestSingleInstanceLock()) {
   app.on('before-quit', () => {
     quitting = true;
   });
+  app.on('will-quit', () => {
+    hotkeys.stop();
+  });
   app.on('window-all-closed', () => {
     app.quit();
   });
@@ -429,8 +482,13 @@ if (!app.requestSingleInstanceLock()) {
       openInstance(direct.origin);
       return;
     }
-    const last = (await readSaved()).origins[0];
-    if (last) openInstance(last);
-    else showLauncher();
+    const saved = await readSaved();
+    const first = await firstServer(saved.origins[0], known, (o) => reachable(o, PROBE_TIMEOUT_MS));
+    if (first === undefined) {
+      showLauncher();
+      return;
+    }
+    if (saved.origins[0] !== first) await writeSaved(remember(saved, first));
+    openInstance(first);
   });
 }

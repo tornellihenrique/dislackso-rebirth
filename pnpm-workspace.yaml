@@ -8,6 +8,8 @@ allowBuilds:
   electron-winstaller: false
   # Pulled in by the noise suppressor's unused ONNX runtime; its script only checks versions.
   protobufjs: false
+  # The desktop app's global keys; it ships prebuilt binaries, so nothing compiles.
+  uiohook-napi: false
 
 catalog:
   '@bufbuild/protobuf': 2.16.0
@@ -58,6 +60,7 @@ catalog:
   # typescript-eslint 8.x supports TypeScript < 6.1; move to 7.x once it does.
   typescript: 6.0.3
   typescript-eslint: 8.71.2
+  uiohook-napi: 1.5.5
   vite: 8.3.4
   vitest: 5.0.4
   zustand: 5.0.15
