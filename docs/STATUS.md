@@ -4,8 +4,9 @@
 
 **Phase 7 — Desktop shell: in progress.** Built: the desktop app, its screen picker, the drawing
 overlay on the shared screen, installers for Windows, macOS and Linux, and updates from GitHub
-releases. Next in this phase: window-share overlay, global hotkeys and push-to-talk, tray and host
-mode. Phase 6 (drawing) is merged and in use.
+releases, the tray with mute and deafen, and voice keys and push-to-talk that work while another
+app is in front. Next in this phase: window-share overlay and host mode. Phase 6 (drawing) is
+merged and in use.
 
 ### Phase 7 acceptance
 
@@ -16,7 +17,10 @@ mode. Phase 6 (drawing) is merged and in use.
       received video has none of the stroke's pixels where the overlay draws it. With capture
       protection turned off the same check finds 1,152 of them.
 - [ ] Global PTT works while another app is focused (Windows; macOS with Accessibility
-      permission). Not built yet.
+      permission). Built: the desktop app watches the voice keybinds and the PTT key with a
+      listen-only keyboard hook (`uiohook-napi`). The desktop e2e checks that the hook loads in the
+      app through the bridge, and unit tests cover the key matching; pressing real keys in another
+      app is a step of the manual script, since a test cannot press OS-level keys safely.
 - [ ] System audio share on Windows does not include other participants' voices (or the warning is
       shown when exclusion is unsupported). The picker offers the computer's sound (loopback) on
       Windows; excluding the call's voices is not built yet.
@@ -183,6 +187,34 @@ mode. Phase 6 (drawing) is merged and in use.
       typecheck + tests, build + Playwright smoke).
 
 ## Done
+
+### Phase 7 — Steady voice, DeepFilterNet3, sounds, keybinds, shipped servers
+
+- **Fixed: robot or sped-up voices.** LiveKit's log showed the microphones of several people,
+  the host's included, carrying 32–44 thousand samples a second instead of 48 thousand for whole
+  calls, with no packet loss (LiveKit's "clock skew" lines, `audio/red` only; unprocessed share
+  audio kept 48 kHz). The processed mic came out of a Web Audio context clocked by the output
+  device. In Chromium the chain now runs on the mic's own frames in a worker and sends exactly
+  what was captured; an e2e test checks the sent audio keeps pace with the clock.
+- **DeepFilterNet3 noise suppression, on for everyone** (the setting moved to a new name, so
+  everyone starts with it): keyboards, fans, clicks and room voices. About 0.4 ms per 10 ms
+  frame on the dev PC, in the worker; GTCRN takes over with a notice when a machine cannot keep
+  up or the model fails. RNNoise is gone. Firefox and Safari use their own filter.
+- **Sounds redone:** synthesized chimes with overtones and a short room, louder, through the
+  chosen output device; someone else joining or leaving the call has its own sound; push-to-talk
+  clicks. Settings → Sounds has the volume and a switch and preview per event.
+- **Keybinds** (Settings → Keybinds) with Discord's defaults, a Ctrl+K quick switcher, channel
+  and server stepping, and voice keys and push-to-talk that work in the background in the
+  desktop app. The tray has mute, deafen and leave.
+- **The desktop app ships with the team's server** (`servers.json`): a first start opens it
+  without the launcher; with several shipped servers it opens the only one that answers, or lists
+  them.
+- **A share's sound mutes without losing its volume,** from the tile button or its menu; the
+  volume sliders in menus no longer run into the percentage in Portuguese.
+- **The hub sends gzipped assets** built next to the originals: the app's main bundle is 336 kB on
+  the wire instead of 1.1 MB, and the noise filter about 12 MB once instead of 23.
+- **Fixed:** switching channels while the mic was still being set up could leave the new channel
+  without a mic.
 
 ### Phase 7 — Profile cards, moving people, sidebar width
 
@@ -782,6 +814,27 @@ mode. Phase 6 (drawing) is merged and in use.
 
 - No ledger decision was changed (D10: a thin Electron shell loading the instance). ARCHITECTURE
   §16.3–16.5 updated with what was built.
+- **The mic chain runs in a worker on the mic's frames** (`MediaStreamTrackProcessor` →
+  `MediaStreamTrackGenerator`, Chromium only), not in Web Audio: a context is clocked by the
+  output device, and on the team's machines it sent 30 % too little audio for whole calls. The gate
+  is decided per 10 ms frame in the worker, so it also keeps working in a background browser tab.
+- **DeepFilterNet3 from `@workadventure/noise-suppression` 0.2.0** (MIT; its build fixes a libDF
+  default that skipped model stages by estimated SNR), run in the worker by giving its
+  AudioWorklet processor the few worklet globals it uses; a unit test runs the real model on
+  noise, so an upgrade that breaks this fails `task check`. GTCRN stays as the light fallback.
+  Considered and left: Krisp (LiveKit Cloud only), Chrome's `voiceIsolation` (ChromeOS only), DTLN
+  and NSNet2 (16 kHz, weaker). Speech attenuation is capped at 30 dB: more makes the background
+  drop out between words.
+- **The hub serves precompressed assets** (gzip copies written by the web build) instead of
+  compressing on the fly: the larger files shrink to a third, with no CPU per request.
+- **Global keys use `uiohook-napi` 1.5.5** (MIT, prebuilt N-API binaries for every desktop
+  platform, so nothing compiles and Electron upgrades need no rebuild). It is the one module the
+  package carries in `node_modules`, outside the bundle, with its binaries unpacked from the asar.
+  It only listens, like Discord's keybinds: the key also reaches the app in front.
+- **AV1 stays the default only for 30 fps shares.** In Chromium (and so in the desktop app) WebRTC
+  encodes AV1 and VP9 in software on Windows; Discord's AV1 uses the GPU through its own native
+  engine (RTX 40 and newer), which Electron cannot reach. Hardware H.264 is the next thing to try
+  for 60 fps, after measuring which encoder Chromium really picks on the team's PCs.
 - **Electron 44.8.0 and electron-vite 6.0.0**, the newest releases at least a day old. Electron
   downloads its binary on first use, not at install, so pnpm's blocked install scripts do not get
   in the way.
@@ -969,9 +1022,18 @@ mode. Phase 6 (drawing) is merged and in use.
   stroke whose end was lost ends by itself 5 s after its last point.
 - Without `restrictOwnAudio` (older Chromium, other browsers) shared system audio can carry the
   call's voices back; the sharer gets a warning.
-- The stage shortcuts (G, F, arrows, Ctrl+Shift+S) are fixed until the Keybinds page.
-- **The tray has no mute or deafen yet,** only open and quit; on macOS its icon is the colored app
-  icon, not a template image.
+- The stage's one-key shortcuts (G, F, D, arrows) are fixed; every other shortcut is in Keybinds.
+- On macOS the tray icon is the colored app icon, not a template image.
+- **Firefox and Safari get no neural noise filter:** they cannot hand audio frames to a worker, so
+  they keep a Web Audio graph and their own filter, and that graph runs on the output device's
+  clock.
+- **The first call with the neural filter downloads about 12 MB** (cached afterwards); until it is
+  in, the voice goes out gated but unfiltered.
+- **LiveKit logs "ice reconnected or switched pair" every few seconds** for remote participants,
+  switching between the hub's LAN address and its public one on the same UDP socket. Media keeps
+  flowing on the same path, so it is only noise in the log.
+- **Windows apps run as administrator don't pass keys to the desktop app's hook** (Windows keeps
+  lower-privilege hooks out), so voice keys do nothing while such an app is in front.
 - **In the browser, sound must be picked when the share starts:** Chrome's picker decides whether
   the share captures any; "Share sound" can then turn it off and on, but cannot add it later.
 - **Direct mode without dynamic DNS needs port 443 reachable from abroad** for Let's Encrypt's
@@ -981,6 +1043,28 @@ mode. Phase 6 (drawing) is merged and in use.
 - **DuckDNS gets an IPv4 record only,** which every client can reach.
 
 ## Manual test script
+
+### Steady voice, noise filter, sounds, keybinds, shipped servers
+
+Prerequisites: the hub and the desktop app built from this branch, two friends.
+
+1. Join a call for 30 minutes with friends, some with the window minimized or in the tray. Nobody
+   should turn robotic or sped up. Afterwards, `livekit.log` should have no "received sender report,
+   clock skew" lines for `audio/red`.
+2. Settings → Voice & audio: noise suppression shows "Strong (DeepFilterNet3)"; Let's check with
+   playback on and type on the keyboard: the typing is gone, the voice stays. The hint says
+   DeepFilterNet3 is running.
+3. Settings → Sounds: press each preview; turn the volume down and up. A friend joining and leaving
+   your call plays the two new sounds.
+4. Settings → Keybinds: change "Share your screen or stop" to a combination; press it in a call.
+   Press Ctrl+K, type part of a channel's name, Enter. Try Alt+↑/↓ and Ctrl+Alt+↑/↓.
+5. Desktop app: with another app in front, press Ctrl+Shift+M: you are muted (the tray's Mute is
+   ticked). Set push-to-talk to a key and hold it in a game or a browser: friends hear you only
+   while it is down.
+6. Right-click a friend's share: Mute stream keeps the volume you set; in Portuguese the volume
+   label and percentage don't overlap.
+7. A new desktop install (or remove `%APPDATA%\Dislackso Desktop\instances.json`): the app opens
+   the team's server without asking for an address.
 
 ### Profile cards, moving people, sidebar width
 
