@@ -291,19 +291,6 @@ export function VoicePage() {
           }}
         />
       </SettingsSection>
-
-      <SettingsSection
-        title={t('settings.voice.sounds')}
-        description={t('settings.voice.soundsHint')}
-      >
-        <CheckboxField
-          label={t('settings.voice.sounds')}
-          checked={s.sounds}
-          onChange={(e) => {
-            voice.setPrefs({ sounds: e.target.checked });
-          }}
-        />
-      </SettingsSection>
     </>
   );
 }

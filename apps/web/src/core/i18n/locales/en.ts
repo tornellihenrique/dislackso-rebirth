@@ -672,6 +672,7 @@ export const en = {
       connectivity: 'Connectivity',
       drawing: 'Drawing',
       desktop: 'Desktop app',
+      sounds: 'Sounds',
     },
     desktop: {
       title: 'Desktop app',
@@ -725,10 +726,28 @@ export const en = {
       },
       echoCancellation: 'Echo cancellation',
       autoGainControl: 'Automatic gain control',
-      sounds: 'Sounds',
-      soundsHint: 'Play sounds when people join and leave, and when you mute or deafen.',
       boostWarning:
         'Above 100 %, this person plays through Web Audio, which can weaken echo cancellation. Headphones help.',
+    },
+    sounds: {
+      title: 'Sounds',
+      general: 'Sound effects',
+      enabled: 'Play sounds',
+      volume: 'Sound volume',
+      events: 'What plays a sound',
+      eventsHint:
+        'Each switch is yours only. Sounds play through your output device, also while deafened.',
+      preview: 'Play {{name}}',
+      event: {
+        call: 'You join or leave a voice channel',
+        userJoin: 'Someone joins your voice channel',
+        userLeave: 'Someone leaves your voice channel',
+        mute: 'You mute or unmute',
+        deafen: 'You deafen or undeafen',
+        stream: 'A screen share starts or stops in your call',
+        disconnected: 'Your call is cut off',
+        ptt: 'Push to talk opens and closes the mic',
+      },
     },
     drawing: {
       title: 'Drawing',

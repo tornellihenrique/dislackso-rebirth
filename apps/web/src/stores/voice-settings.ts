@@ -3,6 +3,7 @@ import { createStore } from 'zustand/vanilla';
 
 import type { InputMode, NoiseSuppression } from '@/core/media/mic-processor';
 import { MAX_USER_VOLUME } from '@/core/media/remote-audio';
+import { SOUND_EVENTS, type SoundEvent } from '@/core/media/sounds';
 import { stored } from '@/core/storage/local';
 
 /**
@@ -31,7 +32,12 @@ export interface VoiceSettings {
   readonly noiseSuppression: NoiseSuppression;
   readonly echoCancellation: boolean;
   readonly autoGainControl: boolean;
+  /** Plays the app's sounds at all. */
   readonly sounds: boolean;
+  /** 0–1. */
+  readonly soundVolume: number;
+  /** Sounds the user turned off. */
+  readonly soundsOff: Readonly<Partial<Record<SoundEvent, true>>>;
   /** Deafening also silences the audio of screen shares. */
   readonly deafenStreams: boolean;
   /** userId → 0–2. */
@@ -41,7 +47,7 @@ export interface VoiceSettings {
 
 export type VoicePrefs = Omit<
   VoiceSettings,
-  'selfMute' | 'selfDeaf' | 'muteBeforeDeaf' | 'userVolumes' | 'localMutes'
+  'selfMute' | 'selfDeaf' | 'muteBeforeDeaf' | 'userVolumes' | 'localMutes' | 'soundsOff'
 >;
 
 export type VoiceSettingsEvent =
@@ -49,7 +55,8 @@ export type VoiceSettingsEvent =
   | { readonly type: 'deafenToggled' }
   | { readonly type: 'prefsChanged'; readonly prefs: Partial<VoicePrefs> }
   | { readonly type: 'userVolumeSet'; readonly userId: string; readonly volume: number }
-  | { readonly type: 'localMuteToggled'; readonly userId: string };
+  | { readonly type: 'localMuteToggled'; readonly userId: string }
+  | { readonly type: 'soundToggled'; readonly event: SoundEvent };
 
 export const defaultVoiceSettings: VoiceSettings = {
   selfMute: false,
@@ -68,6 +75,8 @@ export const defaultVoiceSettings: VoiceSettings = {
   echoCancellation: true,
   autoGainControl: true,
   sounds: true,
+  soundVolume: 0.5,
+  soundsOff: {},
   deafenStreams: false,
   userVolumes: {},
   localMutes: {},
@@ -108,6 +117,10 @@ export function reduceVoiceSettings(
           : { ...state.localMutes, [event.userId]: true },
       };
     }
+    case 'soundToggled': {
+      const { [event.event]: off, ...rest } = state.soundsOff;
+      return { ...state, soundsOff: off ? rest : { ...rest, [event.event]: true } };
+    }
   }
 }
 
@@ -133,6 +146,12 @@ function parse(data: unknown): VoiceSettings | undefined {
       : defaultVoiceSettings.noiseSuppression,
     inputVolume: clampVolume(s.inputVolume),
     outputVolume: clampVolume(s.outputVolume),
+    soundVolume: Math.min(1, Math.max(0, s.soundVolume)),
+    soundsOff: Object.fromEntries(
+      Object.keys(SOUND_EVENTS)
+        .filter((e) => (s.soundsOff as Readonly<Record<string, unknown>>)[e] === true)
+        .map((e) => [e, true]),
+    ),
     // Stored data is untrusted: keep only well-formed entries.
     userVolumes: Object.fromEntries(
       Object.entries(s.userVolumes as Readonly<Record<string, unknown>>).filter(

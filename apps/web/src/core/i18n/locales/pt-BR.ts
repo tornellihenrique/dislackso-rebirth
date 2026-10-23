@@ -675,6 +675,7 @@ export const ptBR: Messages = {
       connectivity: 'Conectividade',
       drawing: 'Desenho',
       desktop: 'App para desktop',
+      sounds: 'Sons',
     },
     desktop: {
       title: 'App para desktop',
@@ -728,11 +729,28 @@ export const ptBR: Messages = {
       },
       echoCancellation: 'Cancelamento de eco',
       autoGainControl: 'Controle automático de ganho',
-      sounds: 'Sons',
-      soundsHint:
-        'Tocar sons quando pessoas entram e saem, e quando você silencia ou desativa o áudio.',
       boostWarning:
         'Acima de 100 %, esta pessoa toca pelo Web Audio, o que pode enfraquecer o cancelamento de eco. Fones ajudam.',
+    },
+    sounds: {
+      title: 'Sons',
+      general: 'Efeitos sonoros',
+      enabled: 'Tocar sons',
+      volume: 'Volume dos sons',
+      events: 'O que toca um som',
+      eventsHint:
+        'Cada opção vale só para você. Os sons tocam no seu dispositivo de saída, também com o áudio desativado.',
+      preview: 'Tocar: {{name}}',
+      event: {
+        call: 'Você entra ou sai de um canal de voz',
+        userJoin: 'Alguém entra no seu canal de voz',
+        userLeave: 'Alguém sai do seu canal de voz',
+        mute: 'Você silencia ou ativa o microfone',
+        deafen: 'Você desativa ou ativa o áudio',
+        stream: 'Uma transmissão de tela começa ou termina na sua chamada',
+        disconnected: 'Sua chamada cai',
+        ptt: 'O aperte para falar abre e fecha o microfone',
+      },
     },
     drawing: {
       title: 'Desenho',

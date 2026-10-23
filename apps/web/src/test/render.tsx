@@ -27,6 +27,8 @@ export function stubVoice(): VoiceActions {
     setUserVolume: () => undefined,
     toggleLocalMute: () => undefined,
     setPrefs: () => undefined,
+    toggleSound: () => undefined,
+    previewSound: () => undefined,
     startAudio: () => Promise.resolve(),
     startShare: () => Promise.resolve(),
     stopShare: () => Promise.resolve(),

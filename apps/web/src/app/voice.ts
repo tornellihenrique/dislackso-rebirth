@@ -17,7 +17,7 @@ import { startPushToTalk, type PushToTalk } from '@/core/media/push-to-talk';
 import { ShareError } from '@/core/media/share-error';
 import { capPreset, type SharePreset } from '@/core/media/share-presets';
 import { SELF_SHARE, ShareViews } from '@/core/media/share-views';
-import type { SoundKind, SoundPlayer } from '@/core/media/sounds';
+import { soundEvent, type SoundEvent, type SoundKind, type SoundPlayer } from '@/core/media/sounds';
 import { SpeakingTracker } from '@/core/media/speaking';
 import type { ConnectionStats, OutboundVideoStats, PathStats } from '@/core/media/stats';
 import { TransportMeter } from '@/core/media/transport-meter';
@@ -70,6 +70,9 @@ export interface VoiceActions {
   setUserVolume(userId: string, volume: number): void;
   toggleLocalMute(userId: string): void;
   setPrefs(prefs: Partial<VoicePrefs>): void;
+  toggleSound(event: SoundEvent): void;
+  /** Plays a sound at the saved volume, even when it is turned off. */
+  previewSound(kind: SoundKind): void;
   /** Resumes playback the browser blocked; call from a click. */
   startAudio(): Promise<void>;
   /** Asks what to share and shares it with the channel, with the saved settings. */
@@ -171,6 +174,8 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
   private readonly stops: (() => void)[] = [];
   /** Who shared in the call at the last voice state change. */
   private streamers = new Set<string>();
+  /** Everyone else in the call at the last voice state change. */
+  private occupants = new Set<string>();
   /** The shares' video, here so tiles can show them before the media engine loads. */
   private readonly views = new ShareViews();
   private telemetry: ReturnType<typeof setInterval> | undefined;
@@ -245,7 +250,7 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
     );
     this.stops.push(
       voiceStatesStore.subscribe(() => {
-        this.streamersChanged();
+        this.channelChanged();
       }),
     );
     this.stops.push(
@@ -272,6 +277,7 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
       window.removeEventListener('keydown', onKey);
     });
     this.stops.push(this.watchFocus());
+    this.d.sounds.setOutput(voiceSettingsStore.getState().outputDevice);
     this.syncPushToTalk(voiceSettingsStore.getState());
     return () => {
       for (const stop of this.stops.splice(0)) stop();
@@ -327,6 +333,7 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
       this.applyVolumes(current);
       this.applyStreamVolumes(shareSettingsStore.getState());
       this.streamers = this.channelStreamers();
+      this.occupants = this.channelOthers();
       dispatchCall({ type: 'connection', state: 'connected' });
       this.startTelemetry(sessionId);
       this.play('join');
@@ -382,6 +389,14 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
 
   setPrefs(prefs: Partial<VoicePrefs>): void {
     dispatchVoiceSettings({ type: 'prefsChanged', prefs });
+  }
+
+  toggleSound(event: SoundEvent): void {
+    dispatchVoiceSettings({ type: 'soundToggled', event });
+  }
+
+  previewSound(kind: SoundKind): void {
+    this.d.sounds.play(kind, voiceSettingsStore.getState().soundVolume);
   }
 
   async startAudio(): Promise<void> {
@@ -573,6 +588,7 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
     this.speaking.clear();
     if (this.speakingTimer !== undefined) clearTimeout(this.speakingTimer);
     this.streamers = new Set();
+    this.occupants = new Set();
     dispatchCall({ type: 'ended' });
     dispatchStage({ type: 'reset' });
   }
@@ -695,16 +711,37 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
     return [...this.channelStreamers()].filter((id) => id !== myId).length;
   }
 
-  /** Plays the stream sounds when someone else in the call starts or stops sharing. */
-  private streamersChanged(): void {
+  /** Everyone in this device's call but the user. */
+  private channelOthers(): Set<string> {
+    const call = callStore.getState();
+    if (call.status === 'idle') return new Set();
+    const myId = sessionStore.getState().me?.user?.id ?? '';
+    return new Set(
+      channelOccupants(voiceStatesStore.getState(), call.guildId, call.channelId)
+        .map((s) => s.userId)
+        .filter((id) => id !== myId),
+    );
+  }
+
+  /**
+   * Plays a sound when someone else joins or leaves the call, or starts or
+   * stops sharing in it.
+   */
+  private channelChanged(): void {
     const call = callStore.getState();
     if (call.status !== 'connected' && call.status !== 'reconnecting') return;
+    const others = this.channelOthers();
+    const joined = [...others].some((id) => !this.occupants.has(id));
+    const left = [...this.occupants].some((id) => !others.has(id));
+    this.occupants = others;
     const next = this.channelStreamers();
     const myId = sessionStore.getState().me?.user?.id ?? '';
     const started = [...next].some((id) => id !== myId && !this.streamers.has(id));
     const stopped = [...this.streamers].some((id) => id !== myId && !next.has(id));
     this.streamers = next;
-    if (started) this.play('streamStart');
+    if (joined) this.play('userJoin');
+    else if (left) this.play('userLeave');
+    else if (started) this.play('streamStart');
     else if (stopped) this.play('streamStop');
   }
 
@@ -739,6 +776,7 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
   }
 
   private settingsChanged(next: VoiceSettings, prev: VoiceSettings): void {
+    if (next.outputDevice !== prev.outputDevice) this.d.sounds.setOutput(next.outputDevice);
     if (next.deafenStreams !== prev.deafenStreams) {
       this.session?.setDeafenStreams(next.deafenStreams);
     }
@@ -775,6 +813,7 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
       onChange: (pressed) => {
         this.pttPressed = pressed;
         this.session?.setPushToTalk(pressed);
+        if (callStore.getState().status === 'connected') this.play(pressed ? 'pttOn' : 'pttOff');
       },
     });
   }
@@ -818,7 +857,8 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
   }
 
   private play(kind: SoundKind): void {
-    if (voiceSettingsStore.getState().sounds) this.d.sounds.play(kind);
+    const s = voiceSettingsStore.getState();
+    if (s.sounds && !(soundEvent(kind) in s.soundsOff)) this.d.sounds.play(kind, s.soundVolume);
   }
 
   private notice(text: string): void {
