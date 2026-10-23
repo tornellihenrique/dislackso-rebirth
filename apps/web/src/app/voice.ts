@@ -39,6 +39,7 @@ import { sessionStore } from '@/stores/session';
 import {
   dispatchShareSettings,
   shareSettingsStore,
+  streamVolumeOf,
   type ShareSettings,
 } from '@/stores/share-settings';
 import { dispatchStage } from '@/stores/stage';
@@ -77,7 +78,8 @@ export interface VoiceActions {
   /** Stops or resumes receiving someone's share. */
   setWatching(userId: string, watching: boolean): void;
   setStreamVolume(userId: string, volume: number): void;
-  setShareSettings(settings: Partial<Omit<ShareSettings, 'streamVolumes'>>): void;
+  toggleStreamMute(userId: string): void;
+  setShareSettings(settings: Partial<Omit<ShareSettings, 'streamVolumes' | 'streamMutes'>>): void;
   /** Shows someone's share in el; returns the function that takes it out. */
   mountShare(userId: string, el: HTMLElement): () => void;
   mountSelfShare(el: HTMLElement): () => void;
@@ -237,7 +239,8 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
     );
     this.stops.push(
       shareSettingsStore.subscribe((next, prev) => {
-        if (next.streamVolumes !== prev.streamVolumes) this.applyStreamVolumes(next);
+        if (next.streamVolumes !== prev.streamVolumes || next.streamMutes !== prev.streamMutes)
+          this.applyStreamVolumes(next, prev);
       }),
     );
     this.stops.push(
@@ -439,7 +442,11 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
     dispatchShareSettings({ type: 'streamVolumeSet', userId, volume });
   }
 
-  setShareSettings(settings: Partial<Omit<ShareSettings, 'streamVolumes'>>): void {
+  toggleStreamMute(userId: string): void {
+    dispatchShareSettings({ type: 'streamMuteToggled', userId });
+  }
+
+  setShareSettings(settings: Partial<Omit<ShareSettings, 'streamVolumes' | 'streamMutes'>>): void {
     dispatchShareSettings({ type: 'changed', settings });
     if (callStore.getState().localShare?.status !== 'live') return;
     if (settings.preset !== undefined) void this.retuneShare();
@@ -701,10 +708,13 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
     else if (stopped) this.play('streamStop');
   }
 
-  private applyStreamVolumes(s: ShareSettings): void {
-    for (const [id, volume] of Object.entries(s.streamVolumes)) {
-      this.session?.setStreamVolume(id, volume);
-    }
+  private applyStreamVolumes(s: ShareSettings, prev?: ShareSettings): void {
+    const ids = new Set([
+      ...Object.keys(s.streamVolumes),
+      ...Object.keys(s.streamMutes),
+      ...Object.keys(prev?.streamMutes ?? {}),
+    ]);
+    for (const id of ids) this.session?.setStreamVolume(id, streamVolumeOf(s, id));
   }
 
   private applySelf(s: VoiceSettings): void {

@@ -267,6 +267,7 @@ export const ptBR: Messages = {
       streamMuted: 'Transmissão silenciada',
       muteStream: 'Silenciar a transmissão',
       unmuteStream: 'Ativar o som da transmissão',
+      muteStreamItem: 'Silenciar transmissão',
       draw: 'Desenhar',
       stopDrawing: 'Parar de desenhar',
       snapshot: 'Capturar',

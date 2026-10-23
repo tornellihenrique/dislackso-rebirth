@@ -269,6 +269,26 @@ describe('VoiceController', () => {
     expect(leave).toHaveBeenCalledWith({ voiceSessionId: 's9' });
   });
 
+  it('mutes a share without losing its volume', async () => {
+    const { voice, session } = setup();
+    Object.defineProperty(navigator, 'mediaDevices', {
+      value: new EventTarget(),
+      configurable: true,
+    });
+    const stop = voice.start();
+    await voice.join('g', 'c1');
+    voice.setStreamVolume('2', 0.5);
+    voice.toggleStreamMute('2');
+    voice.toggleStreamMute('2');
+    expect(session()?.calls.filter((c) => c.startsWith('streamVolume'))).toEqual([
+      'streamVolume 2=0.5',
+      'streamVolume 2=0',
+      'streamVolume 2=0.5',
+    ]);
+    stop();
+    Reflect.deleteProperty(navigator, 'mediaDevices');
+  });
+
   it('shares with the saved settings, capped by the instance and the channel', async () => {
     const { voice, played, session } = setup();
     dispatchRealtime({

@@ -32,6 +32,7 @@ export function stubVoice(): VoiceActions {
     stopShare: () => Promise.resolve(),
     setWatching: () => undefined,
     setStreamVolume: () => undefined,
+    toggleStreamMute: () => undefined,
     setShareSettings: () => undefined,
     mountShare: () => () => undefined,
     mountSelfShare: () => () => undefined,

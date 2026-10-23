@@ -265,6 +265,7 @@ export const en = {
       streamMuted: 'Stream muted',
       muteStream: 'Mute the stream',
       unmuteStream: 'Unmute the stream',
+      muteStreamItem: 'Mute stream',
       draw: 'Draw',
       stopDrawing: 'Stop drawing',
       snapshot: 'Snapshot',
