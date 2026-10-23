@@ -34,11 +34,13 @@ const (
 var (
 	limitLoginIP      = ports.Limit{Burst: 10, Every: 6 * time.Second}
 	limitLoginAccount = ports.Limit{Burst: 5, Every: time.Minute}
-	limitRegisterIP   = ports.Limit{Burst: 5, Every: 10 * time.Minute}
-	limitTokenIP      = ports.Limit{Burst: 10, Every: 30 * time.Second}
-	limitResendUser   = ports.Limit{Burst: 2, Every: 2 * time.Minute}
-	limitResetIP      = ports.Limit{Burst: 5, Every: 3 * time.Minute}
-	limitResetEmail   = ports.Limit{Burst: 3, Every: 10 * time.Minute}
+	// Every attempt counts, a mistyped form or a wrong invite too, so the limit
+	// only stops floods; an invite code is too long to guess at this rate.
+	limitRegisterIP = ports.Limit{Burst: 10, Every: 6 * time.Second}
+	limitTokenIP    = ports.Limit{Burst: 10, Every: 30 * time.Second}
+	limitResendUser = ports.Limit{Burst: 2, Every: 2 * time.Minute}
+	limitResetIP    = ports.Limit{Burst: 5, Every: 3 * time.Minute}
+	limitResetEmail = ports.Limit{Burst: 3, Every: 10 * time.Minute}
 )
 
 type SettingsReader interface {

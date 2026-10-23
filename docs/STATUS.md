@@ -807,6 +807,10 @@ mode. Phase 6 (drawing) is merged and in use.
   does not fall back to it, and Apple Silicon refuses unsigned apps.
 - **The app's version is the release tag** (`extraMetadata.version`); local builds use
   `git describe`.
+- **Account creation allows 10 attempts per IP, then one every 6 seconds** (it was 5, then one
+  every 10 minutes): every attempt counts, a wrong invite or a form mistake too, so a few slips
+  left a friend with one try every 10 minutes. An 8-character invite code (32 symbols) stays far
+  out of reach.
 - **The click that ends a dnd-kit drag is cancelled from window** (`drag-click.ts`): dnd-kit only
   stops its propagation, so React never saw it while the browser still followed the dragged
   item's link, a full page load that dropped the call. Reproduced in the browser and fixed for the
