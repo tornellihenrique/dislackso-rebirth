@@ -1,6 +1,7 @@
-import { writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { gzipSync } from 'node:zlib';
 
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
@@ -38,8 +39,35 @@ function keepEmbedPlaceholder(dir: string): Plugin {
   };
 }
 
+/**
+ * Gzipped copies of the assets that shrink, next to them (name.gz): the hub
+ * sends those to browsers that take gzip, over what is often a home upload.
+ */
+function precompress(dir: string): Plugin {
+  return {
+    name: 'dislackso:precompress',
+    apply: 'build',
+    writeBundle: () => {
+      const assets = join(dir, 'assets');
+      for (const file of readdirSync(assets)) {
+        if (!/\.(js|css|wasm|svg|json)$/.test(file)) continue;
+        const data = readFileSync(join(assets, file));
+        if (data.length < 1024) continue;
+        const gz = gzipSync(data, { level: 9 });
+        if (gz.length < data.length * 0.9) writeFileSync(join(assets, `${file}.gz`), gz);
+      }
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), tailwindcss(), productTitle(), keepEmbedPlaceholder(outDir)],
+  plugins: [
+    react(),
+    tailwindcss(),
+    productTitle(),
+    keepEmbedPlaceholder(outDir),
+    precompress(outDir),
+  ],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },

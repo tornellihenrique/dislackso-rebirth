@@ -27,6 +27,8 @@ export interface ShareSettings {
   readonly statsOverlay: boolean;
   /** userId → 0–2: the volume of each person's shared audio. */
   readonly streamVolumes: Readonly<Record<string, number>>;
+  /** Shares whose sound is muted here; muting keeps the volume for later. */
+  readonly streamMutes: Readonly<Record<string, true>>;
 }
 
 export const defaultShareSettings: ShareSettings = {
@@ -39,14 +41,25 @@ export const defaultShareSettings: ShareSettings = {
   filmstripHidden: false,
   statsOverlay: false,
   streamVolumes: {},
+  streamMutes: {},
 };
 
 export type ShareSettingsEvent =
   | {
       readonly type: 'changed';
-      readonly settings: Partial<Omit<ShareSettings, 'streamVolumes'>>;
+      readonly settings: Partial<Omit<ShareSettings, 'streamVolumes' | 'streamMutes'>>;
     }
-  | { readonly type: 'streamVolumeSet'; readonly userId: string; readonly volume: number };
+  | { readonly type: 'streamVolumeSet'; readonly userId: string; readonly volume: number }
+  | { readonly type: 'streamMuteToggled'; readonly userId: string };
+
+/** The volume someone's share plays at here: 0 while muted. */
+export function streamVolumeOf(s: ShareSettings, userId: string): number {
+  return userId in s.streamMutes ? 0 : (s.streamVolumes[userId] ?? 1);
+}
+
+function without(set: Readonly<Record<string, true>>, id: string): Record<string, true> {
+  return Object.fromEntries(Object.entries(set).filter(([k]) => k !== id));
+}
 
 const MAX_STREAM_VOLUME = 2;
 const clampVolume = (v: number) => Math.min(MAX_STREAM_VOLUME, Math.max(0, v));
@@ -59,9 +72,19 @@ export function reduceShareSettings(
     case 'changed':
       return { ...state, ...event.settings };
     case 'streamVolumeSet':
+      // Moving the slider is a wish to hear the share at that volume.
       return {
         ...state,
         streamVolumes: { ...state.streamVolumes, [event.userId]: clampVolume(event.volume) },
+        streamMutes: without(state.streamMutes, event.userId),
+      };
+    case 'streamMuteToggled':
+      return {
+        ...state,
+        streamMutes:
+          event.userId in state.streamMutes
+            ? without(state.streamMutes, event.userId)
+            : { ...state.streamMutes, [event.userId]: true },
       };
   }
 }
@@ -75,6 +98,7 @@ function parse(data: unknown): ShareSettings | undefined {
   const codec = (['auto', ...SHARE_CODECS] as const).find((c) => c === d.codec);
   const volumes =
     typeof d.streamVolumes === 'object' && d.streamVolumes !== null ? d.streamVolumes : {};
+  const mutes = typeof d.streamMutes === 'object' && d.streamMutes !== null ? d.streamMutes : {};
   const def = defaultShareSettings;
   return {
     preset: preset ?? def.preset,
@@ -90,6 +114,11 @@ function parse(data: unknown): ShareSettings | undefined {
       Object.entries(volumes as Readonly<Record<string, unknown>>)
         .filter((e): e is [string, number] => typeof e[1] === 'number')
         .map(([id, v]) => [id, clampVolume(v)]),
+    ),
+    streamMutes: Object.fromEntries(
+      Object.entries(mutes as Readonly<Record<string, unknown>>).filter(
+        (e): e is [string, true] => e[1] === true,
+      ),
     ),
   };
 }

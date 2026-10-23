@@ -22,6 +22,18 @@ async function open(
   storageState?: Awaited<ReturnType<BrowserContext['storageState']>>,
 ): Promise<Session> {
   const context = await browser.newContext(storageState ? { storageState } : {});
+  // Keeps the page's peer connections, for reading what they send.
+  await context.addInitScript(() => {
+    const Native = window.RTCPeerConnection;
+    const all: RTCPeerConnection[] = [];
+    (window as unknown as { peerConnections: RTCPeerConnection[] }).peerConnections = all;
+    window.RTCPeerConnection = class extends Native {
+      constructor(config?: RTCConfiguration) {
+        super(config);
+        all.push(this);
+      }
+    };
+  });
   const page = await context.newPage();
   return { context, page, errors: trackErrors(page) };
 }
@@ -114,6 +126,34 @@ test('people in voice show in every member sidebar, and switching is fast', asyn
   await joinVoice(ana.page, 'General');
 });
 
+/** Seconds of microphone audio this page has handed to WebRTC so far. */
+function micSeconds(page: Page): Promise<number> {
+  return page.evaluate(async () => {
+    const pcs = (window as unknown as { peerConnections: RTCPeerConnection[] }).peerConnections;
+    let total = 0;
+    for (const pc of pcs) {
+      if (pc.connectionState === 'closed') continue;
+      for (const s of (await pc.getStats()).values()) {
+        const source = s as { type: string; kind?: string; totalSamplesDuration?: number };
+        if (source.type === 'media-source' && source.kind === 'audio')
+          total += source.totalSamplesDuration ?? 0;
+      }
+    }
+    return total;
+  });
+}
+
+test('the microphone sends as much audio as time passes', async () => {
+  // Audio made slower than real time is what listeners hear as a robot voice.
+  await expect.poll(() => micSeconds(ana.page), CONNECT).toBeGreaterThan(1);
+  const before = await micSeconds(ana.page);
+  const started = Date.now();
+  await ana.page.waitForTimeout(4000);
+  const rate = ((await micSeconds(ana.page)) - before) / ((Date.now() - started) / 1000);
+  expect(rate).toBeGreaterThan(0.95);
+  expect(rate).toBeLessThan(1.05);
+});
+
 test('mute and deafen show live, and undeafening restores the mute from before', async () => {
   const row = () => occupant(admin.page, MEMBER.username);
   await userPanel(ana.page).getByRole('button', { name: 'Mute', exact: true }).click();
@@ -181,6 +221,15 @@ test('joining from a second device moves voice there', async ({ browser }) => {
   await second.page.close({ runBeforeUnload: true });
   await expect(occupant(admin.page, MEMBER.username)).toBeHidden(CONNECT);
   await second.context.close();
+});
+
+test('the voice settings run the neural noise filter', async () => {
+  await ana.page.goto('/settings/voice');
+  await ana.page.getByRole('button', { name: "Let's check" }).click();
+  await expect(ana.page.getByText('Running DeepFilterNet3 now.')).toBeVisible(CONNECT);
+  await ana.page.getByRole('button', { name: 'Stop testing' }).click();
+  await ana.page.goto('/');
+  await servers(ana.page).getByRole('link', { name: SERVER }).click();
 });
 
 test('a moderator can disconnect someone from voice', async () => {

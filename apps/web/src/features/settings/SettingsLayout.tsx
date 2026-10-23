@@ -17,6 +17,8 @@ interface NavItemProps {
     | '/settings/voice'
     | '/settings/share'
     | '/settings/drawing'
+    | '/settings/sounds'
+    | '/settings/keybinds'
     | '/settings/sessions'
     | '/settings/desktop'
     | '/settings/instance'
@@ -73,6 +75,8 @@ export function SettingsLayout() {
           <NavItem to="/settings/account">{t('settings.nav.account')}</NavItem>
           <NavItem to="/settings/profile">{t('settings.nav.profile')}</NavItem>
           <NavItem to="/settings/voice">{t('settings.nav.voice')}</NavItem>
+          <NavItem to="/settings/sounds">{t('settings.nav.sounds')}</NavItem>
+          <NavItem to="/settings/keybinds">{t('settings.nav.keybinds')}</NavItem>
           <NavItem to="/settings/share">{t('settings.nav.share')}</NavItem>
           <NavItem to="/settings/drawing">{t('settings.nav.drawing')}</NavItem>
           <NavItem to="/settings/appearance">{t('settings.nav.appearance')}</NavItem>

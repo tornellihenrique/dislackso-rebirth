@@ -15,11 +15,12 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Link, useParams } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { guardDragClick, releaseDragClick } from '@/features/common/drag-click';
 import { useEntities } from '@/stores/entities';
+import { dispatchDialogs, useDialogs } from '@/stores/dialogs';
 import { dispatchUi, orderGuilds, useUi } from '@/stores/ui';
 import { GuildIcon } from '@/ui/GuildIcon';
 import { ProductMark } from '@/ui/ProductMark';
@@ -82,7 +83,7 @@ export function GuildRail() {
   const preferred = useUi((s) => s.guildOrder);
   const guildIds = useMemo(() => orderGuilds(joined, preferred), [joined, preferred]);
   const { guildId } = useParams({ strict: false });
-  const [creating, setCreating] = useState(false);
+  const creating = useDialogs((s) => s.open === 'addServer');
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const onDragEnd = ({ active, over }: DragEndEvent) => {
     releaseDragClick();
@@ -133,14 +134,19 @@ export function GuildRail() {
           type="button"
           aria-label={t('shell.addServer')}
           onClick={() => {
-            setCreating(true);
+            dispatchDialogs({ type: 'opened', dialog: 'addServer' });
           }}
           className="group flex size-12 shrink-0 items-center justify-center rounded-circle bg-main text-success transition-[border-radius,background-color] duration-150 hover:rounded-lg hover:bg-success hover:text-accent-fg"
         >
           <Plus aria-hidden className="size-6" />
         </button>
       </Tooltip>
-      <CreateGuildDialog open={creating} onOpenChange={setCreating} />
+      <CreateGuildDialog
+        open={creating}
+        onOpenChange={(open) => {
+          dispatchDialogs(open ? { type: 'opened', dialog: 'addServer' } : { type: 'closed' });
+        }}
+      />
     </nav>
   );
 }

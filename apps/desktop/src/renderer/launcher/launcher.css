@@ -6,6 +6,7 @@
   --border: #35363c;
   --accent: #5865f2;
   --danger: #f23f43;
+  --success: #23a55a;
   color-scheme: dark;
 }
 
@@ -139,4 +140,37 @@ li .remove {
 
 li .remove:hover {
   color: var(--danger);
+}
+
+.known li {
+  gap: 10px;
+}
+
+.known .looking {
+  color: var(--muted);
+}
+
+.known .dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.known li:has(.up) .dot {
+  background: var(--success);
+}
+
+.known li:has(.down) .dot {
+  background: var(--danger);
+}
+
+.status {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.status.up {
+  color: var(--success);
 }

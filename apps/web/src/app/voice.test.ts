@@ -131,7 +131,13 @@ function setup() {
   const gateway = { setVoiceSelf: vi.fn(), sendTelemetry: vi.fn() };
   const t = ((key: string) => key) as unknown as TFunction;
   const host = document.createElement('div');
-  const voice = new VoiceController({ hub, sounds: { play: (k) => played.push(k) }, t, host });
+  const sounds = {
+    play: (k: string) => {
+      played.push(k);
+    },
+    setOutput: () => undefined,
+  };
+  const voice = new VoiceController({ hub, sounds, t, host });
   voice.attachGateway(gateway);
   const notices = () =>
     noticesStore.getState().items.map((i) => (i.kind === 'message' ? i.text : i.kind));
@@ -267,6 +273,100 @@ describe('VoiceController', () => {
     expect(callStore.getState().status).toBe('idle');
     expect(notices()).toEqual(['voice.notices.connectionLost']);
     expect(leave).toHaveBeenCalledWith({ voiceSessionId: 's9' });
+  });
+
+  it('plays a sound when someone else joins or leaves the call, unless turned off', async () => {
+    const { voice, played } = setup();
+    Object.defineProperty(navigator, 'mediaDevices', {
+      value: new EventTarget(),
+      configurable: true,
+    });
+    const stop = voice.start();
+    await voice.join('g', 'c1');
+    const other = state('o1', 'c1', { userId: '2' });
+    dispatchVoiceStates({ type: 'updated', state: other });
+    dispatchVoiceStates({ type: 'updated', state: state('o2', 'c2', { userId: '3' }) });
+    dispatchVoiceStates({ type: 'updated', state: { ...other, channelId: '' } });
+    expect(played).toEqual(['join', 'userJoin', 'userLeave']);
+    voice.toggleSound('userJoin');
+    dispatchVoiceStates({ type: 'updated', state: other });
+    expect(played.at(-1)).toBe('userLeave');
+    stop();
+    Reflect.deleteProperty(navigator, 'mediaDevices');
+  });
+
+  it('hands the voice keys to the desktop shell and follows its keys and tray', async () => {
+    Object.defineProperty(navigator, 'mediaDevices', {
+      value: new EventTarget(),
+      configurable: true,
+    });
+    let fire: ((action: string, pressed: boolean) => void) | undefined;
+    const registered: unknown[] = [];
+    const trays: unknown[] = [];
+    const hotkeys = {
+      register: (b: readonly unknown[]) => {
+        registered.push(b.map((x) => (x as { action: string }).action));
+        return Promise.resolve(true);
+      },
+      onAction: (cb: (action: string, pressed: boolean) => void) => {
+        fire = cb;
+        return () => undefined;
+      },
+      setTrayState: (s: unknown) => trays.push(s),
+    };
+    const sounds = { play: () => undefined, setOutput: () => undefined };
+    const t = ((key: string) => key) as unknown as TFunction;
+    const hub = {} as HubClients;
+    const voice = new VoiceController({
+      hub,
+      sounds,
+      t,
+      host: document.createElement('div'),
+      hotkeys: hotkeys as never,
+    });
+    const stop = voice.start();
+    await vi.waitFor(() => {
+      expect(registered).toEqual([['toggleMute', 'toggleDeafen']]);
+    });
+    // The shell answers that it took them.
+    await new Promise((r) => setTimeout(r, 0));
+    expect(trays.at(-1)).toEqual({ muted: false, deafened: false, inCall: false });
+
+    fire?.('toggleDeafen', true);
+    expect(voiceSettingsStore.getState()).toMatchObject({ selfDeaf: true, selfMute: true });
+    expect(trays.at(-1)).toEqual({ muted: true, deafened: true, inCall: false });
+    // The window leaves the keys to the shell, so one press toggles once.
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', { code: 'KeyD', ctrlKey: true, shiftKey: true }),
+    );
+    expect(voiceSettingsStore.getState().selfDeaf).toBe(true);
+
+    voice.setPrefs({ inputMode: 'ptt', pttKey: 'Backquote' });
+    await vi.waitFor(() => {
+      expect(registered.at(-1)).toEqual(['toggleMute', 'toggleDeafen', 'pushToTalk']);
+    });
+    stop();
+    Reflect.deleteProperty(navigator, 'mediaDevices');
+  });
+
+  it('mutes a share without losing its volume', async () => {
+    const { voice, session } = setup();
+    Object.defineProperty(navigator, 'mediaDevices', {
+      value: new EventTarget(),
+      configurable: true,
+    });
+    const stop = voice.start();
+    await voice.join('g', 'c1');
+    voice.setStreamVolume('2', 0.5);
+    voice.toggleStreamMute('2');
+    voice.toggleStreamMute('2');
+    expect(session()?.calls.filter((c) => c.startsWith('streamVolume'))).toEqual([
+      'streamVolume 2=0.5',
+      'streamVolume 2=0',
+      'streamVolume 2=0.5',
+    ]);
+    stop();
+    Reflect.deleteProperty(navigator, 'mediaDevices');
   });
 
   it('shares with the saved settings, capped by the instance and the channel', async () => {

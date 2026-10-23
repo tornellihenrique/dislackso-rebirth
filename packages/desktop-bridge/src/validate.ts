@@ -1,10 +1,14 @@
 import type {
   BridgePoint,
+  HotkeyAction,
+  HotkeyBinding,
+  HotkeyKeys,
   OverlayAction,
   OverlayInput,
   OverlayLabels,
   OverlayOpen,
   OverlayState,
+  TrayVoiceState,
 } from './index';
 
 /*
@@ -129,6 +133,57 @@ export function parseOverlayOpen(v: unknown): OverlayOpen | undefined {
     othersAllowed: state.othersAllowed ?? true,
     holdMaxMs: state.holdMaxMs ?? 0,
   };
+}
+
+const hotkeyActions: readonly HotkeyAction[] = [
+  'toggleMute',
+  'toggleDeafen',
+  'toggleShare',
+  'disconnect',
+  'pushToTalk',
+];
+const MAX_BINDINGS = 16;
+
+function parseKeys(v: unknown): HotkeyKeys | undefined {
+  const r = record(v);
+  const code = text(r?.code, 32);
+  if (!r || code === undefined || !/^\w+$/.test(code)) return undefined;
+  return {
+    code,
+    ctrl: r.ctrl === true,
+    shift: r.shift === true,
+    alt: r.alt === true,
+    meta: r.meta === true,
+  };
+}
+
+export function parseHotkeyBindings(v: unknown): HotkeyBinding[] | undefined {
+  if (!Array.isArray(v) || v.length > MAX_BINDINGS) return undefined;
+  const out: HotkeyBinding[] = [];
+  for (const item of v) {
+    const r = record(item);
+    const action = hotkeyActions.find((a) => a === r?.action);
+    const keys = parseKeys(r?.keys);
+    if (!action || !keys) return undefined;
+    out.push({ action, keys });
+  }
+  return out;
+}
+
+export function parseHotkeyAction(v: unknown): HotkeyAction | undefined {
+  return hotkeyActions.find((a) => a === v);
+}
+
+export function parseTrayVoiceState(v: unknown): TrayVoiceState | undefined {
+  const r = record(v);
+  if (
+    typeof r?.muted !== 'boolean' ||
+    typeof r.deafened !== 'boolean' ||
+    typeof r.inCall !== 'boolean'
+  ) {
+    return undefined;
+  }
+  return { muted: r.muted, deafened: r.deafened, inCall: r.inCall };
 }
 
 /** desktopCapturer source ids look like `screen:0:0` or `window:1234:0`. */

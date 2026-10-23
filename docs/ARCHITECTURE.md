@@ -391,20 +391,23 @@ Switching channels is the same call; target ≤ 1 s. Use `Room.prepareConnection
 
 ### 9.3 Mute / deafen semantics (Discord-like, exact)
 - **Mute (mic)**: local mic track muted → nobody hears the user. Toggle works in or out of a channel; state persists across sessions and is applied on join.
-- **Deafen (audio)**: implies mute; additionally disables all remote **microphone** publications (`setEnabled(false)` → SFU stops forwarding). App sounds (notifications, join/leave) still play. Screen-share audio follows its own tile volume; setting "Deafen also mutes stream audio" (default off).
+- **Deafen (audio)**: implies mute; additionally disables all remote **microphone** publications (`setEnabled(false)` → SFU stops forwarding). App sounds (notifications, join/leave) still play. Screen-share audio follows its own tile volume and mute (tile button or menu; muting keeps the volume, moving the slider unmutes); setting "Deafen also mutes stream audio" (default off).
 - **Undeafen** restores the mute state from before deafening.
 - Self states are sent via `UpdateVoiceSelfState` and shown to everyone (icons).
 - **Server mute/deafen** (admin): hub revokes publish permission for `microphone` (and mutes the track) / revokes subscribe permission; user cannot override; red icons.
 - Local per-user mute and per-user volume (0–200 %) from the context menu, persisted per user id locally.
 
 ### 9.4 Audio pipeline & settings
-`getUserMedia` constraints from settings → optional processing chain (AudioWorklet): noise suppression (`none | browser | rnnoise` via `@sapphi-red/web-noise-suppressor`; browser NS is disabled when RNNoise is on) → input gain → **voice gate** (input sensitivity: automatic or manual dB threshold, 400 ms hangover; push-to-talk bypasses gate) → LiveKit `LocalAudioTrack` processor.
+`getUserMedia` constraints from settings → processing chain → **voice gate** (input sensitivity: automatic or manual dB threshold, 400 ms hangover; push-to-talk bypasses gate) → LiveKit `LocalAudioTrack` processor.
+- **The chain keeps the microphone's clock.** In Chromium it reads the captured frames in a worker (`MediaStreamTrackProcessor`), resamples to 48 kHz if needed, runs noise filter → input gain → gate per 10 ms frame, and writes exactly as much audio back (`MediaStreamTrackGenerator`). A Web Audio graph is clocked by the output device instead and can send fewer samples than captured, which listeners hear as a robot or sped-up voice; other browsers keep that graph (gain and gate only) and their own noise filter.
+- **Noise suppression:** `off | browser | ai`, default `ai` for everyone: **DeepFilterNet3** (full band, from `@workadventure/noise-suppression`, its AudioWorklet processor run in the worker with the few worklet globals it uses), attenuation limited to 30 dB while speaking. When the machine cannot keep up (over 70 % of real time) or the model fails, **GTCRN** (`@sapphi-red/web-noise-suppressor`, 16 kHz inside) takes over, with a notice. Browser noise suppression is off while `ai` runs.
 - Settings: input device, output device (`room.switchActiveDevice('audiooutput')`), input volume, output volume, mic test with level meter and loopback playback, input mode (voice activity / push-to-talk + key + release delay), echo cancellation, auto gain control, noise suppression mode.
 - Encoding: mic Opus mono, 48 kbps default (instance cap ≤ 96 kbps), DTX on, RED on. Screen audio Opus stereo 128 kbps, DTX off.
 - Remote playback through `<audio>` elements by default (keeps Chromium AEC effective). Volumes > 100 % route that user through WebAudio (note in UI: echo cancellation may degrade; headphones recommended).
-- Speaking indicator: local levels read every 50 ms, 400 ms hangover. Others from the audio this device plays (Web Audio analyser per voice track), after this device's per-user volume, mute and deafen, so only someone actually heard lights up; the local user from the microphone signal sent (gate open, not muted). Threshold -50 dBFS. Sounds: join/leave/mute/unmute/deafen/undeafen/stream start/stop (toggleable).
+- Speaking indicator: local levels read every 50 ms, 400 ms hangover. Others from the audio this device plays (Web Audio analyser per voice track), after this device's per-user volume, mute and deafen, so only someone actually heard lights up; the local user from the microphone signal sent (gate open, not muted). Threshold -50 dBFS.
+- **Sounds** are synthesized once per kind (chimes with overtones and a short room, rendered to buffers) and play through the chosen output device, also while deafened: you join or leave; someone else joins or leaves your call; mute/unmute; deafen/undeafen; a share starts or stops in the call; the call is cut off; push-to-talk opens and closes. Settings → Sounds: on/off, volume, and a switch and preview for each.
 - Device hot-plug: listen to `devicechange`; fall back to default device if the selected one disappears.
-- PTT: browser = while window focused (release on `blur`); desktop = global (shell bridge).
+- PTT: browser = while window focused (release on `blur`); desktop = global (shell bridge, §16.6), with the same release delay.
 
 ### 9.5 Screen sharing
 Room options: `adaptiveStream: true`, `dynacast: true`.
@@ -627,7 +630,7 @@ Auth (login, register with invite code, verify-email pending with resend, reset 
 Radii: 4/8/16; message avatar 40 px; voice occupant avatar 24 px; stage tile radius 8 px, gap 8 px.
 
 ### 15.4 Global shortcuts (rebindable)
-`Ctrl+Shift+M` mute · `Ctrl+Shift+D` deafen · `Ctrl+K` quick switcher · `Ctrl+Shift+S` stats overlay · `Alt+↑/↓` previous/next channel · `Esc` close modal/exit draw/fullscreen · PTT key (unset by default).
+Discord's defaults where it has one, all rebindable in Settings → Keybinds (stored per device; keys taken from another action leave it unset): `Ctrl+Shift+M` mute · `Ctrl+Shift+D` deafen · share/stop and leave voice (unset) · PTT key (unset) · `Ctrl+K` quick switcher (servers and channels; a voice channel joins) · `Alt+↑/↓` previous/next channel · `Ctrl+Alt+↑/↓` previous/next server · `Alt+←` back · `Ctrl+Shift+N` create or join a server · `Ctrl+U` member list · `Ctrl+,` settings · `Ctrl+/` keybinds · `Ctrl+Shift+S` stats overlay. Fixed: `Esc` close modal/exit draw/fullscreen, and the stage's G, F, D and arrows. A shortcut without Ctrl, Alt or Meta leaves fields being typed in alone. In the desktop app the voice ones work system-wide (§16.6).
 
 ### 15.5 Quality bar
 Smooth 60 fps interactions, no layout shift when voice states change, skeletons instead of spinners, keyboard navigable, visible focus rings, `prefers-reduced-motion` respected, all strings via i18n.
@@ -639,11 +642,13 @@ Smooth 60 fps interactions, no layout shift when voice states change, skeletons 
 ### 16.1 Responsibilities
 Instance launcher (saved instances, each in its own `persist:` partition; https, or http for this computer only; reachability checked on `/healthz`) → loads `https://<instance>/` in the main window. Native features via a typed preload bridge exposed **only to the window's instance origin**: the preload asks the main process (sync IPC) before exposing anything, and the main process checks the sender, the top frame and its origin on every call. `DSX_INSTANCE_URL` opens an instance directly and `DSX_USER_DATA` moves the app's data (tests, side-by-side runs).
 
+**Servers the app ships with** (`apps/desktop/servers.json`, replaced by `DSX_SERVERS`, comma-separated, empty for none): with nothing saved, the app opens the shipped server when there is one, or the only shipped server that answers `/healthz` within 4 s; when several answer, or none, the launcher lists them with their state above the address field.
+
 ### 16.2 Security
 `contextIsolation: true`, `sandbox: true`, `nodeIntegration: false`, strict navigation guard (external links → OS browser), permission handler grants media/display-capture/notifications only to instance origins, no remote module, CSP for local shell pages, bridge methods validate arguments.
 
 ### 16.3 Bridge (`window.desktop`, versioned `bridgeVersion`)
-Types and argument validation live in `packages/desktop-bridge`, shared by the web app and the shell. The web app uses the bridge only when its version is the one it knows. Built so far: `screen` and `overlay` (version 1), and the optional `updates` (`version()`, `check()` returning what a check found), which older apps lack and the web app then leaves out; the rest is planned.
+Types and argument validation live in `packages/desktop-bridge`, shared by the web app and the shell. The web app uses the bridge only when its version is the one it knows. Built so far: `screen` and `overlay` (version 1), and the optional `updates` (`version()`, `check()` returning what a check found) and `hotkeys` (`register(bindings)` resolving whether the system gives global keys, `onAction(cb)` for global keys and the tray, `setTrayState()`), which older apps lack and the web app then leaves out; the rest is planned.
 ```ts
 interface DesktopBridge {
   bridgeVersion: number;
@@ -669,7 +674,7 @@ interface DesktopBridge {
 - Window shares: overlay follows the target window bounds (polling via `get-windows`, 10 Hz); hidden when the window is minimized (Phase 7b).
 
 ### 16.6 Other native features
-Global hotkeys including PTT key-down/key-up via `uiohook-napi` (macOS needs Accessibility permission; Wayland unsupported → fall back to focused-window PTT) · tray icon (built: open and quit; mute/deafen to come) · close-to-tray (built: closing the window hides it and the call goes on, with background throttling off for the instance window; the tray's Quit, an update restart or the OS quitting ends the app) · start at login · native notifications + taskbar badge/overlay icon · deep links `dislackso://` · window state persistence · hardware acceleration toggle · auto-update via `electron-updater` from GitHub Releases (repo must be public; macOS unsigned builds cannot auto-update — show "download new version" instead) · **Host mode**: bundles the hub binary; "Host an instance" spawns it with a data dir under app data and opens the setup wizard.
+Global hotkeys including PTT key-down/key-up via `uiohook-napi` (built: the web app registers the voice keybinds and the PTT key; the hook only listens, so the key still reaches the app in front; while it runs the window leaves those keys to it; macOS needs Accessibility permission and gets the hook only once allowed; where the hook cannot load the web app keeps focused-window keys) · tray icon (built: open, mute, deafen, leave voice, check for updates, quit) · close-to-tray (built: closing the window hides it and the call goes on, with background throttling off for the instance window; the tray's Quit, an update restart or the OS quitting ends the app) · start at login · native notifications + taskbar badge/overlay icon · deep links `dislackso://` · window state persistence · hardware acceleration toggle · auto-update via `electron-updater` from GitHub Releases (repo must be public; macOS unsigned builds cannot auto-update — show "download new version" instead) · **Host mode**: bundles the hub binary; "Host an instance" spawns it with a data dir under app data and opens the setup wizard.
 
 ### 16.7 Installers and updates
 `electron-builder` (`apps/desktop/electron-builder.yml`, `task desktop:dist`): Windows NSIS one-click installer for the current user (no admin rights), macOS dmg for x64 and arm64 (ad-hoc signed), Linux AppImage and deb. electron-vite bundles everything the app runs into `out/`, so the package carries no `node_modules`. The release workflow builds them on a tag, with the tag as the app's version, and adds them and the updater's `latest*.yml` and blockmaps to the draft release. A packaged app checks the latest published release at start and every 6 hours, and when the user asks (Settings → Desktop app, or the tray's "Check for updates"): Windows and the AppImage download in the background, then offer to restart (or install on quit); macOS shows a download link; the deb updates through reinstalling.

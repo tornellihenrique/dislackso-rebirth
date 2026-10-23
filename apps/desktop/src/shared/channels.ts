@@ -14,10 +14,15 @@ export const Channel = {
   overlayAction: 'desktop:overlay-action',
   appVersion: 'desktop:app-version',
   updatesCheck: 'desktop:updates-check',
+  hotkeysRegister: 'desktop:hotkeys-register',
+  /** Main → instance page: { action, pressed }. */
+  hotkeyAction: 'desktop:hotkey-action',
+  trayState: 'desktop:tray-state',
 
   launcherStrings: 'launcher:strings',
   launcherNotice: 'launcher:notice',
   launcherSaved: 'launcher:saved',
+  launcherKnown: 'launcher:known',
   launcherConnect: 'launcher:connect',
   launcherRemove: 'launcher:remove',
 

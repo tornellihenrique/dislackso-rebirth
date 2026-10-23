@@ -12,7 +12,9 @@ import { useEntities } from '@/stores/entities';
 import { useUi } from '@/stores/ui';
 
 import { ConnectionBanner } from './ConnectionBanner';
+import { QuickSwitcher } from './QuickSwitcher';
 import { SidebarResizer } from './SidebarResizer';
+import { useAppShortcuts } from './useAppShortcuts';
 import { UserPanel } from './UserPanel';
 
 /**
@@ -26,6 +28,7 @@ export function AppShell() {
   const [width, setWidth] = useState<number | null>(null);
   const savedWidth = useUi((s) => s.sidebarWidth);
   const sidebarWidth = width ?? savedWidth;
+  useAppShortcuts(inGuild ? guildId : undefined, channelId);
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -56,6 +59,7 @@ export function AppShell() {
           <MemberList guildId={guildId} />
         )}
       </div>
+      <QuickSwitcher guildId={inGuild ? guildId : undefined} />
     </div>
   );
 }

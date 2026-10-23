@@ -5,6 +5,7 @@ import {
   VoiceForcedAction,
   type VoiceForced,
 } from '@dislackso/contracts/gen/dislackso/gateway/v1/gateway_pb';
+import type { HotkeyAction, HotkeyBinding, HotkeysApi } from '@dislackso/desktop-bridge';
 import type { VoiceState } from '@dislackso/contracts/gen/dislackso/v1/common_pb';
 import type { IceServer } from '@dislackso/contracts/gen/dislackso/v1/voice_pb';
 import type { TFunction } from 'i18next';
@@ -12,12 +13,13 @@ import type { TFunction } from 'i18next';
 import type { HubClients } from '@/core/api/clients';
 import { toApiError } from '@/core/api/errors';
 import { errorText } from '@/core/i18n/error-text';
+import { matches, shortcut, typingTarget } from '@/core/keys/shortcut';
 import { listAudioDevices, resolveDevice, watchDevices } from '@/core/media/devices';
 import { startPushToTalk, type PushToTalk } from '@/core/media/push-to-talk';
 import { ShareError } from '@/core/media/share-error';
 import { capPreset, type SharePreset } from '@/core/media/share-presets';
 import { SELF_SHARE, ShareViews } from '@/core/media/share-views';
-import type { SoundKind, SoundPlayer } from '@/core/media/sounds';
+import { soundEvent, type SoundEvent, type SoundKind, type SoundPlayer } from '@/core/media/sounds';
 import { SpeakingTracker } from '@/core/media/speaking';
 import type { ConnectionStats, OutboundVideoStats, PathStats } from '@/core/media/stats';
 import { TransportMeter } from '@/core/media/transport-meter';
@@ -33,12 +35,14 @@ import type {
 } from '@/core/media/voice-session';
 import { callStore, dispatchCall } from '@/stores/call';
 import { entitiesStore } from '@/stores/entities';
+import { keybindsStore, VOICE_ACTIONS, type VoiceKeyAction } from '@/stores/keybinds';
 import { pushNotice } from '@/stores/notices';
 import { realtimeStore } from '@/stores/realtime';
 import { sessionStore } from '@/stores/session';
 import {
   dispatchShareSettings,
   shareSettingsStore,
+  streamVolumeOf,
   type ShareSettings,
 } from '@/stores/share-settings';
 import { dispatchStage } from '@/stores/stage';
@@ -69,6 +73,9 @@ export interface VoiceActions {
   setUserVolume(userId: string, volume: number): void;
   toggleLocalMute(userId: string): void;
   setPrefs(prefs: Partial<VoicePrefs>): void;
+  toggleSound(event: SoundEvent): void;
+  /** Plays a sound at the saved volume, even when it is turned off. */
+  previewSound(kind: SoundKind): void;
   /** Resumes playback the browser blocked; call from a click. */
   startAudio(): Promise<void>;
   /** Asks what to share and shares it with the channel, with the saved settings. */
@@ -77,7 +84,8 @@ export interface VoiceActions {
   /** Stops or resumes receiving someone's share. */
   setWatching(userId: string, watching: boolean): void;
   setStreamVolume(userId: string, volume: number): void;
-  setShareSettings(settings: Partial<Omit<ShareSettings, 'streamVolumes'>>): void;
+  toggleStreamMute(userId: string): void;
+  setShareSettings(settings: Partial<Omit<ShareSettings, 'streamVolumes' | 'streamMutes'>>): void;
   /** Shows someone's share in el; returns the function that takes it out. */
   mountShare(userId: string, el: HTMLElement): () => void;
   mountSelfShare(el: HTMLElement): () => void;
@@ -114,7 +122,12 @@ export interface VoiceDeps {
   readonly t: TFunction;
   /** Holds the remote audio elements. */
   readonly host: HTMLElement;
+  /** The desktop shell's global keys and tray; undefined in a browser or an older app. */
+  readonly hotkeys?: HotkeysApi | undefined;
 }
+
+/** Keys this controller answers in the window; the others belong to the shell and pages. */
+const WINDOW_ACTIONS = [...VOICE_ACTIONS, 'statsOverlay'] as const;
 
 const micNotices = {
   denied: 'voice.notices.micDenied',
@@ -139,7 +152,7 @@ function audioPrefs(s: VoiceSettings, inputDevice: string): AudioPrefs {
     autoGainControl: s.autoGainControl,
     mic: {
       inputVolume: s.inputVolume,
-      noiseSuppression: s.noiseSuppression,
+      noiseReduction: s.noiseReduction,
       inputMode: s.inputMode,
       sensitivity: { auto: s.sensitivityAuto, thresholdDb: s.sensitivityDb },
     },
@@ -166,9 +179,14 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
   private readonly mine = new Set<string>();
   private inputDevice = '';
   private ptt: PushToTalk | undefined;
+  /** The desktop shell watches the voice keys system-wide, so the window leaves them alone. */
+  private globalKeys = false;
+  private pttRelease: ReturnType<typeof setTimeout> | undefined;
   private readonly stops: (() => void)[] = [];
   /** Who shared in the call at the last voice state change. */
   private streamers = new Set<string>();
+  /** Everyone else in the call at the last voice state change. */
+  private occupants = new Set<string>();
   /** The shares' video, here so tiles can show them before the media engine loads. */
   private readonly views = new ShareViews();
   private telemetry: ReturnType<typeof setInterval> | undefined;
@@ -199,6 +217,10 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
       onMicError: (failure) => {
         dispatchCall({ type: 'micError', failure });
         this.notice(this.d.t(micNotices[failure]));
+      },
+      onMicFilter: (state) => {
+        if (state.reason === 'overload') this.notice(this.d.t('voice.notices.filterOverload'));
+        else if (state.kind === null) this.notice(this.d.t('voice.notices.filterFailed'));
       },
       onPeerQuality: (userId, quality) => {
         dispatchCall({ type: 'peerQuality', userId, quality });
@@ -237,12 +259,13 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
     );
     this.stops.push(
       shareSettingsStore.subscribe((next, prev) => {
-        if (next.streamVolumes !== prev.streamVolumes) this.applyStreamVolumes(next);
+        if (next.streamVolumes !== prev.streamVolumes || next.streamMutes !== prev.streamMutes)
+          this.applyStreamVolumes(next, prev);
       }),
     );
     this.stops.push(
       voiceStatesStore.subscribe(() => {
-        this.streamersChanged();
+        this.channelChanged();
       }),
     );
     this.stops.push(
@@ -251,25 +274,35 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
       }),
     );
     const onKey = (e: KeyboardEvent) => {
-      if (!e.ctrlKey || !e.shiftKey || e.altKey || e.metaKey) return;
-      if (e.code === 'KeyM') {
-        e.preventDefault();
-        this.toggleMute();
-      } else if (e.code === 'KeyD') {
-        e.preventDefault();
-        this.toggleDeafen();
-      } else if (e.code === 'KeyS') {
-        e.preventDefault();
-        const on = shareSettingsStore.getState().statsOverlay;
-        dispatchShareSettings({ type: 'changed', settings: { statsOverlay: !on } });
-      }
+      this.keyDown(e);
     };
     window.addEventListener('keydown', onKey);
     this.stops.push(() => {
       window.removeEventListener('keydown', onKey);
     });
     this.stops.push(this.watchFocus());
+    this.d.sounds.setOutput(voiceSettingsStore.getState().outputDevice);
     this.syncPushToTalk(voiceSettingsStore.getState());
+    const hotkeys = this.d.hotkeys;
+    if (hotkeys) {
+      this.stops.push(
+        hotkeys.onAction((action, pressed) => {
+          this.hotkey(action, pressed);
+        }),
+      );
+      this.stops.push(
+        keybindsStore.subscribe(() => {
+          void this.registerGlobalKeys();
+        }),
+      );
+      this.stops.push(
+        callStore.subscribe((next, prev) => {
+          if ((next.status === 'idle') !== (prev.status === 'idle')) this.syncTray();
+        }),
+      );
+      void this.registerGlobalKeys();
+      this.syncTray();
+    }
     return () => {
       for (const stop of this.stops.splice(0)) stop();
       this.ptt?.stop();
@@ -324,6 +357,7 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
       this.applyVolumes(current);
       this.applyStreamVolumes(shareSettingsStore.getState());
       this.streamers = this.channelStreamers();
+      this.occupants = this.channelOthers();
       dispatchCall({ type: 'connection', state: 'connected' });
       this.startTelemetry(sessionId);
       this.play('join');
@@ -379,6 +413,14 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
 
   setPrefs(prefs: Partial<VoicePrefs>): void {
     dispatchVoiceSettings({ type: 'prefsChanged', prefs });
+  }
+
+  toggleSound(event: SoundEvent): void {
+    dispatchVoiceSettings({ type: 'soundToggled', event });
+  }
+
+  previewSound(kind: SoundKind): void {
+    this.d.sounds.play(kind, voiceSettingsStore.getState().soundVolume);
   }
 
   async startAudio(): Promise<void> {
@@ -439,7 +481,11 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
     dispatchShareSettings({ type: 'streamVolumeSet', userId, volume });
   }
 
-  setShareSettings(settings: Partial<Omit<ShareSettings, 'streamVolumes'>>): void {
+  toggleStreamMute(userId: string): void {
+    dispatchShareSettings({ type: 'streamMuteToggled', userId });
+  }
+
+  setShareSettings(settings: Partial<Omit<ShareSettings, 'streamVolumes' | 'streamMutes'>>): void {
     dispatchShareSettings({ type: 'changed', settings });
     if (callStore.getState().localShare?.status !== 'live') return;
     if (settings.preset !== undefined) void this.retuneShare();
@@ -566,6 +612,7 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
     this.speaking.clear();
     if (this.speakingTimer !== undefined) clearTimeout(this.speakingTimer);
     this.streamers = new Set();
+    this.occupants = new Set();
     dispatchCall({ type: 'ended' });
     dispatchStage({ type: 'reset' });
   }
@@ -688,23 +735,47 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
     return [...this.channelStreamers()].filter((id) => id !== myId).length;
   }
 
-  /** Plays the stream sounds when someone else in the call starts or stops sharing. */
-  private streamersChanged(): void {
+  /** Everyone in this device's call but the user. */
+  private channelOthers(): Set<string> {
+    const call = callStore.getState();
+    if (call.status === 'idle') return new Set();
+    const myId = sessionStore.getState().me?.user?.id ?? '';
+    return new Set(
+      channelOccupants(voiceStatesStore.getState(), call.guildId, call.channelId)
+        .map((s) => s.userId)
+        .filter((id) => id !== myId),
+    );
+  }
+
+  /**
+   * Plays a sound when someone else joins or leaves the call, or starts or
+   * stops sharing in it.
+   */
+  private channelChanged(): void {
     const call = callStore.getState();
     if (call.status !== 'connected' && call.status !== 'reconnecting') return;
+    const others = this.channelOthers();
+    const joined = [...others].some((id) => !this.occupants.has(id));
+    const left = [...this.occupants].some((id) => !others.has(id));
+    this.occupants = others;
     const next = this.channelStreamers();
     const myId = sessionStore.getState().me?.user?.id ?? '';
     const started = [...next].some((id) => id !== myId && !this.streamers.has(id));
     const stopped = [...this.streamers].some((id) => id !== myId && !next.has(id));
     this.streamers = next;
-    if (started) this.play('streamStart');
+    if (joined) this.play('userJoin');
+    else if (left) this.play('userLeave');
+    else if (started) this.play('streamStart');
     else if (stopped) this.play('streamStop');
   }
 
-  private applyStreamVolumes(s: ShareSettings): void {
-    for (const [id, volume] of Object.entries(s.streamVolumes)) {
-      this.session?.setStreamVolume(id, volume);
-    }
+  private applyStreamVolumes(s: ShareSettings, prev?: ShareSettings): void {
+    const ids = new Set([
+      ...Object.keys(s.streamVolumes),
+      ...Object.keys(s.streamMutes),
+      ...Object.keys(prev?.streamMutes ?? {}),
+    ]);
+    for (const id of ids) this.session?.setStreamVolume(id, streamVolumeOf(s, id));
   }
 
   private applySelf(s: VoiceSettings): void {
@@ -729,6 +800,8 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
   }
 
   private settingsChanged(next: VoiceSettings, prev: VoiceSettings): void {
+    if (next.outputDevice !== prev.outputDevice) this.d.sounds.setOutput(next.outputDevice);
+    if (next.selfMute !== prev.selfMute || next.selfDeaf !== prev.selfDeaf) this.syncTray();
     if (next.deafenStreams !== prev.deafenStreams) {
       this.session?.setDeafenStreams(next.deafenStreams);
     }
@@ -745,6 +818,8 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
       next.pttReleaseMs !== prev.pttReleaseMs
     ) {
       this.syncPushToTalk(next);
+      if (next.inputMode !== prev.inputMode || next.pttKey !== prev.pttKey)
+        void this.registerGlobalKeys();
     }
     if (callStore.getState().status === 'idle') return;
     void this.effectiveInput(next).then((input) => {
@@ -756,16 +831,102 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
   private syncPushToTalk(s: VoiceSettings): void {
     this.ptt?.stop();
     this.ptt = undefined;
-    this.pttPressed = false;
-    this.session?.setPushToTalk(false);
-    if (s.inputMode !== 'ptt' || s.pttKey === '') return;
+    clearTimeout(this.pttRelease);
+    this.pushToTalk(false);
+    // The shell's global key holds push-to-talk instead.
+    if (s.inputMode !== 'ptt' || s.pttKey === '' || this.globalKeys) return;
     this.ptt = startPushToTalk({
       key: s.pttKey,
       releaseDelayMs: s.pttReleaseMs,
       onChange: (pressed) => {
-        this.pttPressed = pressed;
-        this.session?.setPushToTalk(pressed);
+        this.pushToTalk(pressed);
       },
+    });
+  }
+
+  private pushToTalk(pressed: boolean): void {
+    if (this.pttPressed === pressed) return;
+    this.pttPressed = pressed;
+    this.session?.setPushToTalk(pressed);
+    if (callStore.getState().status === 'connected') this.play(pressed ? 'pttOn' : 'pttOff');
+  }
+
+  /** A voice shortcut in this window, unless the shell watches it system-wide. */
+  private keyDown(e: KeyboardEvent): void {
+    if (e.repeat || e.defaultPrevented) return;
+    const binds = keybindsStore.getState();
+    const action = WINDOW_ACTIONS.find((a) => {
+      const keys = binds[a];
+      return keys !== null && matches(e, keys);
+    });
+    const keys = action && binds[action];
+    if (!action || !keys) return;
+    // A plain key belongs to the field being typed in.
+    if (!keys.ctrl && !keys.alt && !keys.meta && typingTarget(e.target)) return;
+    e.preventDefault();
+    if (action === 'statsOverlay') {
+      const on = shareSettingsStore.getState().statsOverlay;
+      dispatchShareSettings({ type: 'changed', settings: { statsOverlay: !on } });
+    } else if (!this.globalKeys) {
+      this.hotkey(action, true);
+    }
+  }
+
+  /** A voice shortcut from this window, a global key or the tray. */
+  private hotkey(action: HotkeyAction, pressed: boolean): void {
+    if (action === 'pushToTalk') {
+      clearTimeout(this.pttRelease);
+      const delay = voiceSettingsStore.getState().pttReleaseMs;
+      if (pressed || delay <= 0) this.pushToTalk(pressed);
+      else
+        this.pttRelease = setTimeout(() => {
+          this.pushToTalk(false);
+        }, delay);
+      return;
+    }
+    if (!pressed) return;
+    const run: Record<VoiceKeyAction, () => void> = {
+      toggleMute: () => {
+        this.toggleMute();
+      },
+      toggleDeafen: () => {
+        this.toggleDeafen();
+      },
+      toggleShare: () => {
+        if (callStore.getState().localShare) void this.stopShare();
+        else void this.startShare();
+      },
+      disconnect: () => {
+        void this.leave();
+      },
+    };
+    run[action]();
+  }
+
+  /** Gives the voice keys to the shell, which watches them while another app is in front. */
+  private async registerGlobalKeys(): Promise<void> {
+    const hotkeys = this.d.hotkeys;
+    if (!hotkeys) return;
+    const binds = keybindsStore.getState();
+    const s = voiceSettingsStore.getState();
+    const bindings: HotkeyBinding[] = VOICE_ACTIONS.flatMap((action) => {
+      const keys = binds[action];
+      return keys ? [{ action, keys }] : [];
+    });
+    if (s.inputMode === 'ptt' && s.pttKey !== '')
+      bindings.push({ action: 'pushToTalk', keys: shortcut(s.pttKey) });
+    const on = await hotkeys.register(bindings).catch(() => false);
+    if (on === this.globalKeys) return;
+    this.globalKeys = on;
+    this.syncPushToTalk(voiceSettingsStore.getState());
+  }
+
+  private syncTray(): void {
+    const s = voiceSettingsStore.getState();
+    this.d.hotkeys?.setTrayState({
+      muted: s.selfMute,
+      deafened: s.selfDeaf,
+      inCall: callStore.getState().status !== 'idle',
     });
   }
 
@@ -808,7 +969,8 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
   }
 
   private play(kind: SoundKind): void {
-    if (voiceSettingsStore.getState().sounds) this.d.sounds.play(kind);
+    const s = voiceSettingsStore.getState();
+    if (s.sounds && !(soundEvent(kind) in s.soundsOff)) this.d.sounds.play(kind, s.soundVolume);
   }
 
   private notice(text: string): void {

@@ -1,6 +1,6 @@
 import { Check, ChevronRight } from 'lucide-react';
 import { ContextMenu as CM, DropdownMenu as DM } from 'radix-ui';
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 
 import { usePortalContainer } from './portal';
 
@@ -247,4 +247,47 @@ export function ContextSub({ label, children }: SubProps) {
 /** Content that is not an item, such as a slider, inside a context menu. */
 export function ContextPanel({ children }: { children: ReactNode }) {
   return <div className="px-2 py-1.5">{children}</div>;
+}
+
+interface SliderProps {
+  label: string;
+  /** In percent, from 0 to max. */
+  value: number;
+  max: number;
+  onChange: (value: number) => void;
+  /** Shown under the slider. */
+  children?: ReactNode;
+}
+
+/** A labelled percent slider in a context menu. */
+export function ContextSlider({ label, value, max, onChange, children }: SliderProps) {
+  const id = useId();
+  return (
+    <ContextPanel>
+      <label
+        htmlFor={id}
+        className="flex items-baseline gap-3 text-xs font-semibold text-fg-muted uppercase"
+      >
+        <span className="min-w-0 flex-1">{label}</span>
+        <span className="shrink-0 tabular-nums">{value} %</span>
+      </label>
+      <input
+        id={id}
+        type="range"
+        min={0}
+        max={max}
+        step={5}
+        value={value}
+        onChange={(e) => {
+          onChange(Number(e.target.value));
+        }}
+        onKeyDown={(e) => {
+          // Arrow keys move the slider, not the menu highlight.
+          e.stopPropagation();
+        }}
+        className="mt-1 w-full accent-accent"
+      />
+      {children}
+    </ContextPanel>
+  );
 }

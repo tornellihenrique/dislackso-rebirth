@@ -1,6 +1,5 @@
 import { ChannelType } from '@dislackso/contracts/gen/dislackso/v1/channel_pb';
 import { useMutation } from '@tanstack/react-query';
-import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useServices } from '@/app/services';
@@ -17,8 +16,8 @@ import { useVoiceSettings } from '@/stores/voice-settings';
 import {
   ContextCheckItem,
   ContextItem,
-  ContextPanel,
   ContextSeparator,
+  ContextSlider,
   ContextSub,
 } from '@/ui/Menu';
 
@@ -43,7 +42,6 @@ type Action =
 export function VoiceMemberItems({ guildId, userId }: VoiceMemberItemsProps) {
   const { t } = useTranslation();
   const { hub, voice } = useServices();
-  const sliderId = useId();
   const myId = useSession((s) => s.me?.user?.id ?? '');
   const myRole = useMyRole(guildId);
   const member = useEntities((s) => s.members[guildId]?.[userId]);
@@ -81,36 +79,20 @@ export function VoiceMemberItems({ guildId, userId }: VoiceMemberItemsProps) {
     <>
       {listening && (
         <>
-          <ContextPanel>
-            <label
-              htmlFor={sliderId}
-              className="flex items-center justify-between text-xs font-semibold text-fg-muted uppercase"
-            >
-              {t('voice.member.volume')}
-              <span>{percent} %</span>
-            </label>
-            <input
-              id={sliderId}
-              type="range"
-              min={0}
-              max={MAX_USER_VOLUME * 100}
-              step={5}
-              value={percent}
-              onChange={(e) => {
-                voice.setUserVolume(userId, Number(e.target.value) / 100);
-              }}
-              onKeyDown={(e) => {
-                // Arrow keys move the slider, not the menu highlight.
-                e.stopPropagation();
-              }}
-              className="mt-1 w-full accent-accent"
-            />
+          <ContextSlider
+            label={t('voice.member.volume')}
+            value={percent}
+            max={MAX_USER_VOLUME * 100}
+            onChange={(v) => {
+              voice.setUserVolume(userId, v / 100);
+            }}
+          >
             {volume > 1 && (
               <p className="mt-1 max-w-52 text-xs text-fg-muted">
                 {t('settings.voice.boostWarning')}
               </p>
             )}
-          </ContextPanel>
+          </ContextSlider>
           <ContextCheckItem
             checked={locallyMuted}
             onCheckedChange={() => {

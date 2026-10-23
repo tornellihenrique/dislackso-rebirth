@@ -23,6 +23,7 @@
     "@fontsource-variable/inter": "catalog:",
     "@fontsource-variable/jetbrains-mono": "catalog:",
     "@sapphi-red/web-noise-suppressor": "catalog:",
+    "@workadventure/noise-suppression": "catalog:",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "catalog:",
     "get-nonce": "catalog:",

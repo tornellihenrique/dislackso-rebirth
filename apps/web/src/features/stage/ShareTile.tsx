@@ -14,7 +14,7 @@ import {
   Volume2,
   VolumeX,
 } from 'lucide-react';
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useServices } from '@/app/services';
@@ -36,8 +36,8 @@ import {
   ContextCheckItem,
   ContextItem,
   ContextMenuArea,
-  ContextPanel,
   ContextSeparator,
+  ContextSlider,
 } from '@/ui/Menu';
 import { Tooltip } from '@/ui/Tooltip';
 
@@ -79,9 +79,9 @@ export function ShareTile({
   const name = displayName(user);
   const statsAll = useShareSettings((s) => s.statsOverlay);
   const volume = useShareSettings((s) => s.streamVolumes[tile.userId] ?? 1);
+  const muted = useShareSettings((s) => tile.userId in s.streamMutes);
   const [statsHere, setStatsHere] = useState(false);
   const mount = useShareMount(tile.userId, tile.self);
-  const sliderId = useId();
   const fullLabel = fullscreen ? t('stage.tile.exitFullscreen') : t('stage.tile.fullscreen');
   const target = useShareTarget(tile.userId, tile.self);
   const canDraw = useCanDraw(target);
@@ -95,6 +95,13 @@ export function ShareTile({
   const label = tile.self ? t('stage.tile.yourScreen') : t('stage.tile.screenOf', { name });
   const watch = (on: boolean) => {
     voice.setWatching(tile.userId, on);
+  };
+  const silent = muted || volume === 0;
+  const muteLabel = silent ? t('stage.tile.unmuteStream') : t('stage.tile.muteStream');
+  const toggleMute = () => {
+    // A share turned all the way down unmutes back to full volume.
+    if (!muted && volume === 0) voice.setStreamVolume(tile.userId, 1);
+    else voice.toggleStreamMute(tile.userId);
   };
   const drawable = canDraw && hasVideo && watching;
   const drawLabel = drawMode ? t('stage.tile.stopDrawing') : t('stage.tile.draw');
@@ -130,31 +137,17 @@ export function ShareTile({
     <>
       {hasAudio && (
         <>
-          <ContextPanel>
-            <label
-              htmlFor={sliderId}
-              className="flex items-center justify-between text-xs font-semibold text-fg-muted uppercase"
-            >
-              {t('stage.tile.streamVolume')}
-              <span>{Math.round(volume * 100)} %</span>
-            </label>
-            <input
-              id={sliderId}
-              type="range"
-              min={0}
-              max={MAX_STREAM_VOLUME * 100}
-              step={5}
-              value={Math.round(volume * 100)}
-              onChange={(e) => {
-                voice.setStreamVolume(tile.userId, Number(e.target.value) / 100);
-              }}
-              onKeyDown={(e) => {
-                // Arrow keys move the slider, not the menu highlight.
-                e.stopPropagation();
-              }}
-              className="mt-1 w-full accent-accent"
-            />
-          </ContextPanel>
+          <ContextSlider
+            label={t('stage.tile.streamVolume')}
+            value={Math.round(volume * 100)}
+            max={MAX_STREAM_VOLUME * 100}
+            onChange={(v) => {
+              voice.setStreamVolume(tile.userId, v / 100);
+            }}
+          />
+          <ContextCheckItem checked={silent} onCheckedChange={toggleMute}>
+            {t('stage.tile.muteStreamItem')}
+          </ContextCheckItem>
           <ContextSeparator />
         </>
       )}
@@ -251,7 +244,7 @@ export function ShareTile({
             {t('voice.occupant.live')}
           </span>
           <span className="truncate">{tile.self ? t('stage.tile.youAreSharing') : name}</span>
-          {hasAudio && volume === 0 && (
+          {hasAudio && silent && (
             <VolumeX aria-label={t('stage.tile.streamMuted')} className="size-4" />
           )}
         </span>
@@ -299,13 +292,8 @@ export function ShareTile({
               <Activity aria-hidden className="size-4" />
             </TileButton>
             {hasAudio && (
-              <TileButton
-                label={volume === 0 ? t('stage.tile.unmuteStream') : t('stage.tile.muteStream')}
-                onClick={() => {
-                  voice.setStreamVolume(tile.userId, volume === 0 ? 1 : 0);
-                }}
-              >
-                {volume === 0 ? (
+              <TileButton label={muteLabel} pressed={silent} onClick={toggleMute}>
+                {silent ? (
                   <VolumeX aria-hidden className="size-4" />
                 ) : (
                   <Volume2 aria-hidden className="size-4" />

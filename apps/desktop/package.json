@@ -15,6 +15,9 @@
     "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.web.json",
     "test": "vitest run"
   },
+  "dependencies": {
+    "uiohook-napi": "catalog:"
+  },
   "devDependencies": {
     "@bufbuild/protobuf": "catalog:",
     "@dislackso/annotation": "workspace:*",

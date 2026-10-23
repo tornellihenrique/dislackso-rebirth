@@ -145,6 +145,50 @@ func TestSPAStyleNonce(t *testing.T) {
 	}
 }
 
+func TestSPAGzippedAssets(t *testing.T) {
+	files := fstest.MapFS{
+		"index.html":             {Data: []byte("<title>app</title>")},
+		"assets/big-abc.wasm":    {Data: []byte("plain")},
+		"assets/big-abc.wasm.gz": {Data: []byte("gzipped")},
+		"assets/small-abc.js":    {Data: []byte("small")},
+	}
+	tests := []struct {
+		name         string
+		path         string
+		accept       string
+		wantBody     string
+		wantEncoding string
+		wantVary     bool
+	}{
+		{"gzip copy for a client taking gzip", "/assets/big-abc.wasm", "gzip, deflate, br", "gzipped", "gzip", true},
+		{"plain for a client refusing gzip", "/assets/big-abc.wasm", "gzip;q=0, br", "plain", "", true},
+		{"plain without Accept-Encoding", "/assets/big-abc.wasm", "", "plain", "", true},
+		{"plain when the build has no gzip copy", "/assets/small-abc.js", "gzip", "small", "", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.path, http.NoBody)
+			if tt.accept != "" {
+				req.Header.Set("Accept-Encoding", tt.accept)
+			}
+			rec := httptest.NewRecorder()
+			newSPAHandler(files).ServeHTTP(rec, req)
+			if rec.Code != http.StatusOK || rec.Body.String() != tt.wantBody {
+				t.Fatalf("got %d %q, want 200 %q", rec.Code, rec.Body.String(), tt.wantBody)
+			}
+			if got := rec.Header().Get("Content-Encoding"); got != tt.wantEncoding {
+				t.Errorf("Content-Encoding = %q, want %q", got, tt.wantEncoding)
+			}
+			if got := rec.Header().Get("Content-Type"); got != "application/wasm" && strings.HasSuffix(tt.path, ".wasm") {
+				t.Errorf("Content-Type = %q, want application/wasm", got)
+			}
+			if got := rec.Header().Get("Vary") == "Accept-Encoding"; got != tt.wantVary {
+				t.Errorf("Vary: Accept-Encoding = %v, want %v", got, tt.wantVary)
+			}
+		})
+	}
+}
+
 func TestSPATraversalStaysInsideTheBuild(t *testing.T) {
 	for _, p := range []string{"/../../etc/passwd", "/assets/../../secret.txt", "/..%2f..%2fsecret.txt"} {
 		req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)

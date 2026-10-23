@@ -27,6 +27,13 @@ export interface ShellStrings {
   readonly trayOpen: string;
   readonly trayQuit: string;
   readonly trayCheckUpdates: string;
+  readonly trayMute: string;
+  readonly trayDeafen: string;
+  readonly trayDisconnect: string;
+  readonly knownTitle: string;
+  readonly knownLooking: string;
+  readonly knownUp: string;
+  readonly knownDown: string;
   /** {version} is replaced in the update check results. */
   readonly upToDate: string;
   readonly updateDownloading: string;
@@ -36,12 +43,20 @@ export interface ShellStrings {
 
 export type ConnectProblem = 'invalid' | 'insecure' | 'unreachable';
 
+/** A server this build ships with, and whether it answered. */
+export interface KnownServer {
+  readonly origin: string;
+  readonly reachable: boolean;
+}
+
 /** What the launcher page gets from its preload as `window.launcher`. */
 export interface LauncherApi {
   strings(): Promise<ShellStrings>;
   /** Why the launcher opened instead of the last server, if it did. */
   notice(): Promise<string>;
   saved(): Promise<string[]>;
+  /** The servers this build ships with, and whether each answers now. */
+  known(): Promise<KnownServer[]>;
   connect(address: string): Promise<{ ok: true } | { ok: false; problem: ConnectProblem }>;
   remove(origin: string): Promise<string[]>;
 }

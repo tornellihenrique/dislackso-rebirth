@@ -5,10 +5,12 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"io"
 	"io/fs"
 	"net/http"
 	"path"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -80,6 +82,9 @@ func (h *spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(name, "assets/") {
 			// Vite fingerprints everything under assets/.
 			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+			if h.serveGzipped(w, r, name) {
+				return
+			}
 		} else {
 			w.Header().Set("Cache-Control", "no-cache")
 		}
@@ -91,6 +96,46 @@ func (h *spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.serveIndex(w, r)
+}
+
+// serveGzipped sends the build's gzipped copy of name (name.gz) to a client
+// that takes gzip, and reports whether it did. The hub's upload is often a
+// home connection, and the larger assets shrink to a third or less.
+func (h *spaHandler) serveGzipped(w http.ResponseWriter, r *http.Request, name string) bool {
+	f, err := h.files.Open(name + ".gz")
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+	w.Header().Add("Vary", "Accept-Encoding")
+	content, ok := f.(io.ReadSeeker)
+	if !ok || !acceptsGzip(r.Header.Get("Accept-Encoding")) {
+		return false
+	}
+	info, err := f.Stat()
+	if err != nil {
+		return false
+	}
+	w.Header().Set("Content-Encoding", "gzip")
+	// The type comes from name, not from the .gz file.
+	http.ServeContent(w, r, name, info.ModTime(), content)
+	return true
+}
+
+// acceptsGzip reads an Accept-Encoding header: gzip listed without q=0.
+func acceptsGzip(header string) bool {
+	for part := range strings.SplitSeq(header, ",") {
+		coding, params, _ := strings.Cut(part, ";")
+		if !strings.EqualFold(strings.TrimSpace(coding), "gzip") {
+			continue
+		}
+		if q, ok := strings.CutPrefix(strings.TrimSpace(params), "q="); ok {
+			v, err := strconv.ParseFloat(q, 64)
+			return err == nil && v > 0
+		}
+		return true
+	}
+	return false
 }
 
 func (h *spaHandler) serveIndex(w http.ResponseWriter, r *http.Request) {

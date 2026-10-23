@@ -7,6 +7,7 @@ const api: LauncherApi = {
   strings: () => ipcRenderer.invoke(Channel.launcherStrings),
   notice: () => ipcRenderer.invoke(Channel.launcherNotice),
   saved: () => ipcRenderer.invoke(Channel.launcherSaved),
+  known: () => ipcRenderer.invoke(Channel.launcherKnown),
   connect: (address) => ipcRenderer.invoke(Channel.launcherConnect, address),
   remove: (origin) => ipcRenderer.invoke(Channel.launcherRemove, origin),
 };

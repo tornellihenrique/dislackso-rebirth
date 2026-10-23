@@ -27,6 +27,13 @@ export const ptBR: Messages = {
   },
   shell: {
     resizeSidebar: 'Redimensionar a lista de canais',
+    quickSwitcher: {
+      title: 'Ir para um servidor ou canal',
+      search: 'Nome do servidor ou canal',
+      placeholder: 'Para onde?',
+      none: 'Nada com esse nome.',
+      hint: '↑ ↓ para escolher, Enter para ir, Esc para fechar. Escolher um canal de voz entra nele.',
+    },
     home: 'Início',
     servers: 'Servidores',
     serversEmpty: 'Os servidores que você criar ou entrar aparecerão aqui.',
@@ -149,6 +156,9 @@ export const ptBR: Messages = {
       micNotFound: 'Nenhum microfone encontrado. Você ainda pode ouvir.',
       micInUse: 'Outro aplicativo está usando o microfone.',
       micFailed: 'Não foi possível iniciar o microfone.',
+      filterOverload:
+        'Este computador não deu conta do filtro de ruído forte, então um mais leve roda agora.',
+      filterFailed: 'O filtro de ruído não carregou; sua voz sai sem filtro.',
     },
     panel: {
       connected: 'Voz conectada',
@@ -267,6 +277,7 @@ export const ptBR: Messages = {
       streamMuted: 'Transmissão silenciada',
       muteStream: 'Silenciar a transmissão',
       unmuteStream: 'Ativar o som da transmissão',
+      muteStreamItem: 'Silenciar transmissão',
       draw: 'Desenhar',
       stopDrawing: 'Parar de desenhar',
       snapshot: 'Capturar',
@@ -674,6 +685,8 @@ export const ptBR: Messages = {
       connectivity: 'Conectividade',
       drawing: 'Desenho',
       desktop: 'App para desktop',
+      sounds: 'Sons',
+      keybinds: 'Atalhos',
     },
     desktop: {
       title: 'App para desktop',
@@ -721,17 +734,84 @@ export const ptBR: Messages = {
       processing: 'Processamento de voz',
       noiseSuppression: 'Supressão de ruído',
       noise: {
-        none: 'Desligada',
-        browser: 'Padrão (navegador)',
-        rnnoise: 'Forte (RNNoise)',
+        off: 'Desligada',
+        browser: 'Padrão (do navegador)',
+        ai: 'Forte (DeepFilterNet3)',
+      },
+      noiseHint: {
+        off: 'Tudo o que o seu microfone capta é enviado.',
+        browser: 'Remove ruídos constantes, como ventiladores; teclados e vozes passam.',
+        ai: 'Um filtro neural neste computador remove teclados, ventiladores, cliques e vozes no ambiente. Ele baixa cerca de 12 MB uma vez.',
+        aiRunning: 'DeepFilterNet3 em execução agora.',
+        aiUnsupported:
+          'Este navegador não consegue executá-lo e usa o próprio filtro. O app para desktop, o Chrome e o Edge conseguem.',
+        lightOverload:
+          'Este computador não deu conta, então um filtro mais leve (GTCRN) roda no lugar.',
+        lightFailed:
+          'O DeepFilterNet3 não carregou, então um filtro mais leve (GTCRN) roda no lugar.',
+        failed: 'Nenhum filtro carregou; sua voz sai sem filtro.',
       },
       echoCancellation: 'Cancelamento de eco',
       autoGainControl: 'Controle automático de ganho',
-      sounds: 'Sons',
-      soundsHint:
-        'Tocar sons quando pessoas entram e saem, e quando você silencia ou desativa o áudio.',
       boostWarning:
         'Acima de 100 %, esta pessoa toca pelo Web Audio, o que pode enfraquecer o cancelamento de eco. Fones ajudam.',
+    },
+    keybinds: {
+      title: 'Atalhos',
+      hintDesktop:
+        'Os atalhos de voz funcionam em qualquer lugar, também com outro app na frente; a tecla continua chegando a esse app. Os outros funcionam nesta janela.',
+      hintBrowser:
+        'Funcionam com esta aba na frente. No app para desktop, os de voz funcionam em qualquer lugar.',
+      group: {
+        voice: 'Voz',
+        navigation: 'Navegação',
+        stage: 'Transmissões de tela',
+      },
+      action: {
+        pushToTalk: 'Aperte para falar',
+        toggleMute: 'Silenciar ou ativar o microfone',
+        toggleDeafen: 'Desativar ou ativar o áudio',
+        toggleShare: 'Transmitir a tela ou parar',
+        disconnect: 'Sair do canal de voz',
+        quickSwitcher: 'Ir para um servidor ou canal',
+        previousChannel: 'Canal anterior',
+        nextChannel: 'Próximo canal',
+        previousServer: 'Servidor anterior',
+        nextServer: 'Próximo servidor',
+        back: 'Voltar',
+        addServer: 'Criar ou entrar em um servidor',
+        memberList: 'Mostrar ou ocultar a lista de membros',
+        settings: 'Abrir as configurações',
+        keybinds: 'Abrir os atalhos',
+        statsOverlay: 'Mostrar ou ocultar as estatísticas da transmissão',
+      },
+      pttOff: 'Usado quando o modo de entrada é aperte para falar (Voz e áudio).',
+      none: 'Sem atalho',
+      recording: 'Aperte as teclas…',
+      change: 'Alterar',
+      clear: 'Limpar',
+      reset: 'Restaurar todos',
+      taken: 'Teclas já usadas em outro lugar passam para a nova ação. Esc cancela a gravação.',
+    },
+    sounds: {
+      title: 'Sons',
+      general: 'Efeitos sonoros',
+      enabled: 'Tocar sons',
+      volume: 'Volume dos sons',
+      events: 'O que toca um som',
+      eventsHint:
+        'Cada opção vale só para você. Os sons tocam no seu dispositivo de saída, também com o áudio desativado.',
+      preview: 'Tocar: {{name}}',
+      event: {
+        call: 'Você entra ou sai de um canal de voz',
+        userJoin: 'Alguém entra no seu canal de voz',
+        userLeave: 'Alguém sai do seu canal de voz',
+        mute: 'Você silencia ou ativa o microfone',
+        deafen: 'Você desativa ou ativa o áudio',
+        stream: 'Uma transmissão de tela começa ou termina na sua chamada',
+        disconnected: 'Sua chamada cai',
+        ptt: 'O aperte para falar abre e fecha o microfone',
+      },
     },
     drawing: {
       title: 'Desenho',
