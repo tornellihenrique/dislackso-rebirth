@@ -147,6 +147,9 @@ export const en = {
       micNotFound: 'No microphone found. You can still listen.',
       micInUse: 'Another app is using the microphone.',
       micFailed: "Couldn't start the microphone.",
+      filterOverload:
+        'This computer could not keep up with the strong noise filter, so a lighter one runs now.',
+      filterFailed: 'The noise filter did not load; your voice goes out unfiltered.',
     },
     panel: {
       connected: 'Voice connected',
@@ -720,9 +723,20 @@ export const en = {
       processing: 'Voice processing',
       noiseSuppression: 'Noise suppression',
       noise: {
-        none: 'Off',
-        browser: 'Standard (browser)',
-        rnnoise: 'Strong (RNNoise)',
+        off: 'Off',
+        browser: "Standard (the browser's)",
+        ai: 'Strong (DeepFilterNet3)',
+      },
+      noiseHint: {
+        off: 'Everything your mic picks up goes out.',
+        browser: 'Takes out steady noise such as fans; keyboards and voices get through.',
+        ai: 'A neural filter on this computer takes out keyboards, fans, clicks and voices in the room. It downloads about 12 MB once.',
+        aiRunning: 'Running DeepFilterNet3 now.',
+        aiUnsupported:
+          'This browser cannot run it; it uses its own filter instead. The desktop app, Chrome and Edge can.',
+        lightOverload: 'This computer could not keep up, so a lighter filter (GTCRN) runs instead.',
+        lightFailed: 'DeepFilterNet3 did not load, so a lighter filter (GTCRN) runs instead.',
+        failed: 'No filter could load; your voice goes out unfiltered.',
       },
       echoCancellation: 'Echo cancellation',
       autoGainControl: 'Automatic gain control',

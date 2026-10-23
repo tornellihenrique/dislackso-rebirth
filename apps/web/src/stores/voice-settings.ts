@@ -1,7 +1,7 @@
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
 
-import type { InputMode, NoiseSuppression } from '@/core/media/mic-processor';
+import type { InputMode, NoiseReduction } from '@/core/media/mic-processor';
 import { MAX_USER_VOLUME } from '@/core/media/remote-audio';
 import { SOUND_EVENTS, type SoundEvent } from '@/core/media/sounds';
 import { stored } from '@/core/storage/local';
@@ -29,7 +29,11 @@ export interface VoiceSettings {
   readonly pttReleaseMs: number;
   readonly sensitivityAuto: boolean;
   readonly sensitivityDb: number;
-  readonly noiseSuppression: NoiseSuppression;
+  /**
+   * Stored under a new name when the neural filter became the default, so
+   * everyone starts with it once.
+   */
+  readonly noiseReduction: NoiseReduction;
   readonly echoCancellation: boolean;
   readonly autoGainControl: boolean;
   /** Plays the app's sounds at all. */
@@ -71,7 +75,7 @@ export const defaultVoiceSettings: VoiceSettings = {
   pttReleaseMs: 200,
   sensitivityAuto: true,
   sensitivityDb: -50,
-  noiseSuppression: 'browser',
+  noiseReduction: 'ai',
   echoCancellation: true,
   autoGainControl: true,
   sounds: true,
@@ -141,9 +145,9 @@ function parse(data: unknown): VoiceSettings | undefined {
   return {
     ...s,
     inputMode: s.inputMode === 'ptt' ? 'ptt' : 'voice',
-    noiseSuppression: (['none', 'browser', 'rnnoise'] as const).includes(s.noiseSuppression)
-      ? s.noiseSuppression
-      : defaultVoiceSettings.noiseSuppression,
+    noiseReduction: (['off', 'browser', 'ai'] as const).includes(s.noiseReduction)
+      ? s.noiseReduction
+      : defaultVoiceSettings.noiseReduction,
     inputVolume: clampVolume(s.inputVolume),
     outputVolume: clampVolume(s.outputVolume),
     soundVolume: Math.min(1, Math.max(0, s.soundVolume)),

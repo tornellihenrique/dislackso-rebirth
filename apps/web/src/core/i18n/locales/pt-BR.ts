@@ -149,6 +149,9 @@ export const ptBR: Messages = {
       micNotFound: 'Nenhum microfone encontrado. Você ainda pode ouvir.',
       micInUse: 'Outro aplicativo está usando o microfone.',
       micFailed: 'Não foi possível iniciar o microfone.',
+      filterOverload:
+        'Este computador não deu conta do filtro de ruído forte, então um mais leve roda agora.',
+      filterFailed: 'O filtro de ruído não carregou; sua voz sai sem filtro.',
     },
     panel: {
       connected: 'Voz conectada',
@@ -723,9 +726,22 @@ export const ptBR: Messages = {
       processing: 'Processamento de voz',
       noiseSuppression: 'Supressão de ruído',
       noise: {
-        none: 'Desligada',
-        browser: 'Padrão (navegador)',
-        rnnoise: 'Forte (RNNoise)',
+        off: 'Desligada',
+        browser: 'Padrão (do navegador)',
+        ai: 'Forte (DeepFilterNet3)',
+      },
+      noiseHint: {
+        off: 'Tudo o que o seu microfone capta é enviado.',
+        browser: 'Remove ruídos constantes, como ventiladores; teclados e vozes passam.',
+        ai: 'Um filtro neural neste computador remove teclados, ventiladores, cliques e vozes no ambiente. Ele baixa cerca de 12 MB uma vez.',
+        aiRunning: 'DeepFilterNet3 em execução agora.',
+        aiUnsupported:
+          'Este navegador não consegue executá-lo e usa o próprio filtro. O app para desktop, o Chrome e o Edge conseguem.',
+        lightOverload:
+          'Este computador não deu conta, então um filtro mais leve (GTCRN) roda no lugar.',
+        lightFailed:
+          'O DeepFilterNet3 não carregou, então um filtro mais leve (GTCRN) roda no lugar.',
+        failed: 'Nenhum filtro carregou; sua voz sai sem filtro.',
       },
       echoCancellation: 'Cancelamento de eco',
       autoGainControl: 'Controle automático de ganho',

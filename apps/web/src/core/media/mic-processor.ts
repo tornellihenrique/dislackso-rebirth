@@ -1,158 +1,194 @@
+import deepFilterModel from '@deepfilternet/deepfilternet/DeepFilterNet3_onnx.tar.gz?url';
+import deepFilterWasm from '@deepfilternet/deepfilternet/df_bg.wasm?url';
+import deepFilterProcessor from '@deepfilternet/deepfilternet-worklet-processor.js?url';
+import gtcrnWasm from '@sapphi-red/web-noise-suppressor/gtcrn.wasm?url';
+import gtcrnProcessor from '@sapphi-red/web-noise-suppressor/gtcrnWorklet.js?url';
 import type { AudioProcessorOptions, Track, TrackProcessor } from 'livekit-client';
 
-import { createRnnoiseNode } from './rnnoise';
-import { levelDb, MIN_DB, VoiceGate, type Sensitivity } from './voice-gate';
+import type { DenoiserAssets, DenoiserKind } from './denoisers';
+import type { ChainSettings, InputMode, MicLevel } from './mic-chain';
+import type { MicWorkerCommand, MicWorkerEvent } from './mic-worker';
+import { MicWebAudioChain } from './mic-webaudio';
+import type { Sensitivity } from './voice-gate';
 
-export type NoiseSuppression = 'none' | 'browser' | 'rnnoise';
-export type InputMode = 'voice' | 'ptt';
+export type { InputMode, MicLevel } from './mic-chain';
+
+/** off, the browser's own filter, or the neural one in the chain (the default). */
+export type NoiseReduction = 'off' | 'browser' | 'ai';
 
 export interface MicSettings {
   /** 0–2, 1 leaves the level as captured. */
   readonly inputVolume: number;
-  readonly noiseSuppression: NoiseSuppression;
+  readonly noiseReduction: NoiseReduction;
   readonly inputMode: InputMode;
   readonly sensitivity: Sensitivity;
 }
 
-/** Reported about 30 times a second. */
-export interface MicLevel {
-  readonly db: number;
-  /** Whether the gate lets the mic through. */
-  readonly open: boolean;
-  readonly threshold: number;
+/** The filter the chain runs: what was asked for, or what it fell back to. */
+export interface FilterState {
+  readonly kind: DenoiserKind | null;
+  readonly reason?: 'overload' | 'failed';
 }
 
-const ANALYSE_EVERY_MS = 33;
-/** Gate ramps, in seconds, short enough to keep word onsets. */
-const GATE_ATTACK_S = 0.005;
-const GATE_RELEASE_S = 0.05;
-const RNNOISE_SAMPLE_RATE = 48_000;
+type TrackProcessorCtor = new (init: { track: MediaStreamTrack; maxBufferSize?: number }) => {
+  readonly readable: ReadableStream<AudioData>;
+};
+
+type TrackGeneratorCtor = new (init: {
+  kind: 'audio';
+}) => MediaStreamTrack & { readonly writable: WritableStream<AudioData> };
+
+const breakout = globalThis as unknown as {
+  MediaStreamTrackProcessor?: TrackProcessorCtor;
+  MediaStreamTrackGenerator?: TrackGeneratorCtor;
+};
 
 /**
- * The microphone chain, as a LiveKit track processor: optional RNNoise,
- * input volume, then a gate opened by voice activity or push-to-talk. It owns
- * its 48 kHz AudioContext, since RNNoise needs that rate and LiveKit's own
- * context runs at whatever the device uses.
+ * Chromium hands a track's audio frames to script and takes frames back as a
+ * new track. The chain then runs on the capture's own clock in a worker;
+ * other browsers get a Web Audio graph and their own noise filter.
+ */
+export function canRunWorkerChain(): boolean {
+  return (
+    breakout.MediaStreamTrackProcessor !== undefined &&
+    breakout.MediaStreamTrackGenerator !== undefined &&
+    typeof Worker !== 'undefined'
+  );
+}
+
+/** Whether getUserMedia should run the browser's own noise suppression. */
+export function browserNoiseSuppression(mode: NoiseReduction): boolean {
+  return mode === 'browser' || (mode === 'ai' && !canRunWorkerChain());
+}
+
+/**
+ * Frames the browser keeps for the worker while it sets the filter up (a
+ * few hundred ms the first time), instead of dropping them. Until then the
+ * sound goes out gated but unfiltered.
+ */
+const SOURCE_BUFFER_FRAMES = 50;
+
+/** This machine could not keep up with the strong filter: later chains start light. */
+let lightOnly = false;
+
+function chainSettings(s: MicSettings): ChainSettings {
+  return {
+    inputVolume: s.inputVolume,
+    filter: s.noiseReduction === 'ai',
+    inputMode: s.inputMode,
+    sensitivity: s.sensitivity,
+  };
+}
+
+function assets(): DenoiserAssets {
+  const abs = (url: string) => new URL(url, window.location.href).href;
+  return {
+    deepFilterProcessor: abs(deepFilterProcessor),
+    deepFilterWasm: abs(deepFilterWasm),
+    deepFilterModel: abs(deepFilterModel),
+    gtcrnProcessor: abs(gtcrnProcessor),
+    gtcrnWasm: abs(gtcrnWasm),
+  };
+}
+
+/**
+ * The microphone chain as a LiveKit track processor: noise filter, input
+ * volume, then a gate opened by voice activity or push-to-talk.
  */
 export class MicProcessor implements TrackProcessor<Track.Kind.Audio, AudioProcessorOptions> {
   readonly name = 'dislackso-mic';
   processedTrack?: MediaStreamTrack;
 
-  private ctx: AudioContext | undefined;
-  private source: MediaStreamAudioSourceNode | undefined;
-  private rnnoise: (AudioWorkletNode & { destroy(): void }) | undefined;
-  private gain: GainNode | undefined;
-  private gate: GainNode | undefined;
-  private analyser: AnalyserNode | undefined;
-  private dest: MediaStreamAudioDestinationNode | undefined;
-  private timer: ReturnType<typeof setInterval> | undefined;
-  private readonly voiceGate = new VoiceGate();
-  private pttPressed = false;
-  private gateOpen = false;
-  private chain = Promise.resolve();
+  private worker: Worker | undefined;
+  private generator: MediaStreamTrack | undefined;
+  private webAudio: MicWebAudioChain | undefined;
 
   constructor(
     private settings: MicSettings,
     private readonly onLevel?: (level: MicLevel) => void,
+    private readonly onFilter?: (state: FilterState) => void,
   ) {}
 
   /** Only the raw track is used, so the mic test can run the chain outside a call. */
   async init(opts: Pick<AudioProcessorOptions, 'track'>): Promise<void> {
-    const ctx = new AudioContext({ sampleRate: RNNOISE_SAMPLE_RATE, latencyHint: 'interactive' });
-    this.ctx = ctx;
-    this.gain = ctx.createGain();
-    this.gate = ctx.createGain();
-    this.gate.gain.value = 0;
-    this.analyser = ctx.createAnalyser();
-    this.analyser.fftSize = 1024;
-    this.dest = ctx.createMediaStreamDestination();
-    this.gain.connect(this.analyser);
-    this.gain.connect(this.gate).connect(this.dest);
-    const [processed] = this.dest.stream.getAudioTracks();
-    if (processed) this.processedTrack = processed;
-    this.gain.gain.value = this.settings.inputVolume;
-    await this.connectSource(opts.track);
-    this.timer = setInterval(() => {
-      this.analyse();
-    }, ANALYSE_EVERY_MS);
-    if (ctx.state === 'suspended') await ctx.resume();
+    const Processor = breakout.MediaStreamTrackProcessor;
+    const Generator = breakout.MediaStreamTrackGenerator;
+    if (!Processor || !Generator || typeof Worker === 'undefined') {
+      this.webAudio = new MicWebAudioChain(this.settings, this.onLevel);
+      await this.webAudio.init(opts.track);
+      const processed = this.webAudio.processedTrack;
+      if (processed) this.processedTrack = processed;
+      return;
+    }
+    const source = new Processor({ track: opts.track, maxBufferSize: SOURCE_BUFFER_FRAMES });
+    const generator = new Generator({ kind: 'audio' });
+    const worker = new Worker(new URL('./mic-worker.ts', import.meta.url), {
+      type: 'module',
+      name: 'mic',
+    });
+    this.worker = worker;
+    this.generator = generator;
+    this.processedTrack = generator;
+    worker.onmessage = (e: MessageEvent<MicWorkerEvent>) => {
+      this.received(e.data);
+    };
+    this.send(
+      {
+        type: 'start',
+        readable: source.readable,
+        writable: generator.writable,
+        settings: chainSettings(this.settings),
+        assets: assets(),
+        light: lightOnly,
+      },
+      [source.readable, generator.writable],
+    );
   }
 
-  /** LiveKit calls this with a new raw track after a device switch, without an audio context. */
+  /** LiveKit calls this with a new raw track after a device switch. */
   async restart(opts: Pick<AudioProcessorOptions, 'track'>): Promise<void> {
-    await this.connectSource(opts.track);
+    if (this.webAudio) {
+      await this.webAudio.restart(opts.track);
+      return;
+    }
+    const Processor = breakout.MediaStreamTrackProcessor;
+    if (!Processor) return;
+    const source = new Processor({ track: opts.track, maxBufferSize: SOURCE_BUFFER_FRAMES });
+    this.send({ type: 'source', readable: source.readable }, [source.readable]);
   }
 
   async destroy(): Promise<void> {
-    if (this.timer !== undefined) clearInterval(this.timer);
-    this.timer = undefined;
-    this.source?.disconnect();
-    this.rnnoise?.destroy();
-    this.rnnoise?.disconnect();
-    this.processedTrack?.stop();
-    const ctx = this.ctx;
-    this.ctx = undefined;
-    if (ctx && ctx.state !== 'closed') await ctx.close();
+    this.worker?.terminate();
+    this.worker = undefined;
+    this.generator?.stop();
+    this.generator = undefined;
+    await this.webAudio?.destroy();
+    this.webAudio = undefined;
   }
 
   update(settings: MicSettings): void {
-    const rnnoiseChanged =
-      (settings.noiseSuppression === 'rnnoise') !== (this.settings.noiseSuppression === 'rnnoise');
     this.settings = settings;
-    if (this.gain && this.ctx)
-      this.gain.gain.setTargetAtTime(settings.inputVolume, this.ctx.currentTime, 0.02);
-    if (rnnoiseChanged) void this.rewire();
+    this.webAudio?.update(settings);
+    this.send({ type: 'settings', settings: chainSettings(settings) });
   }
 
   setPushToTalk(pressed: boolean): void {
-    this.pttPressed = pressed;
-    this.analyse();
+    this.webAudio?.setPushToTalk(pressed);
+    this.send({ type: 'ptt', pressed });
   }
 
-  private async connectSource(track: MediaStreamTrack): Promise<void> {
-    if (!this.ctx) return;
-    this.source?.disconnect();
-    this.source = this.ctx.createMediaStreamSource(new MediaStream([track]));
-    await this.rewire();
+  private send(cmd: MicWorkerCommand, transfer: Transferable[] = []): void {
+    this.worker?.postMessage(cmd, transfer);
   }
 
-  /** Puts RNNoise in or out between the source and the gain. Calls run one at a time. */
-  private rewire(): Promise<void> {
-    this.chain = this.chain.then(async () => {
-      const { ctx, source, gain } = this;
-      if (!ctx || !source || !gain) return;
-      source.disconnect();
-      this.rnnoise?.disconnect();
-      if (this.settings.noiseSuppression === 'rnnoise') {
-        try {
-          this.rnnoise ??= await createRnnoiseNode(ctx);
-          source.connect(this.rnnoise).connect(gain);
-          return;
-        } catch {
-          // Without RNNoise the mic still works, just unfiltered.
-        }
-      }
-      source.connect(gain);
-    });
-    return this.chain;
-  }
-
-  private analyse(): void {
-    const { ctx, analyser, gate } = this;
-    if (!ctx || !analyser || !gate) return;
-    const samples = new Float32Array(analyser.fftSize);
-    analyser.getFloatTimeDomainData(samples);
-    const db = levelDb(samples);
-    const voiceOpen = this.voiceGate.update(db, performance.now(), this.settings.sensitivity);
-    const open = this.settings.inputMode === 'ptt' ? this.pttPressed : voiceOpen;
-    if (open !== this.gateOpen) {
-      this.gateOpen = open;
-      gate.gain.setTargetAtTime(
-        open ? 1 : 0,
-        ctx.currentTime,
-        open ? GATE_ATTACK_S : GATE_RELEASE_S,
-      );
+  private received(event: MicWorkerEvent): void {
+    if (event.type === 'level') {
+      this.onLevel?.({ db: event.db, open: event.open, threshold: event.threshold });
+      return;
     }
-    this.onLevel?.({ db: Math.max(MIN_DB, db), open, threshold: this.voiceGate.threshold });
+    if (event.reason === 'overload') lightOnly = true;
+    this.onFilter?.(
+      event.reason ? { kind: event.kind, reason: event.reason } : { kind: event.kind },
+    );
   }
 }

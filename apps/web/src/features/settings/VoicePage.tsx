@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
 import { useServices } from '@/app/services';
@@ -8,7 +9,11 @@ import {
   watchDevices,
   type AudioDevices,
 } from '@/core/media/devices';
-import type { NoiseSuppression } from '@/core/media/mic-processor';
+import {
+  canRunWorkerChain,
+  type FilterState,
+  type NoiseReduction,
+} from '@/core/media/mic-processor';
 import { MIN_DB } from '@/core/media/voice-gate';
 import { useVoiceSettings } from '@/stores/voice-settings';
 import { Button } from '@/ui/Button';
@@ -17,7 +22,7 @@ import { CheckboxField, RangeField, SelectField } from '@/ui/Fields';
 import { SettingsSection } from './SettingsLayout';
 import { useMicTest } from './use-mic-test';
 
-const NOISE_MODES: readonly NoiseSuppression[] = ['none', 'browser', 'rnnoise'];
+const NOISE_MODES: readonly NoiseReduction[] = ['off', 'browser', 'ai'];
 
 const percent = (v: number) => `${String(Math.round(v * 100))} %`;
 
@@ -55,11 +60,11 @@ export function VoicePage() {
   const mic = useMemo(
     () => ({
       inputVolume: s.inputVolume,
-      noiseSuppression: s.noiseSuppression,
+      noiseReduction: s.noiseReduction,
       inputMode: s.inputMode,
       sensitivity: { auto: s.sensitivityAuto, thresholdDb: s.sensitivityDb },
     }),
-    [s.inputVolume, s.noiseSuppression, s.inputMode, s.sensitivityAuto, s.sensitivityDb],
+    [s.inputVolume, s.noiseReduction, s.inputMode, s.sensitivityAuto, s.sensitivityDb],
   );
   const micTest = useMicTest(mic, playback);
   const { running, failed, start, stop, attach } = micTest;
@@ -264,10 +269,11 @@ export function VoicePage() {
       <SettingsSection title={t('settings.voice.processing')}>
         <SelectField
           label={t('settings.voice.noiseSuppression')}
-          value={s.noiseSuppression}
+          value={s.noiseReduction}
+          hint={noiseHint(t, s.noiseReduction, micTest.filter)}
           onChange={(e) => {
             const mode = NOISE_MODES.find((m) => m === e.target.value);
-            if (mode) voice.setPrefs({ noiseSuppression: mode });
+            if (mode) voice.setPrefs({ noiseReduction: mode });
           }}
         >
           {NOISE_MODES.map((m) => (
@@ -293,6 +299,19 @@ export function VoicePage() {
       </SettingsSection>
     </>
   );
+}
+
+/** What the chosen filter does here, and which one the mic test runs. */
+function noiseHint(t: TFunction, mode: NoiseReduction, running: FilterState | null): string {
+  if (mode !== 'ai') return t(`settings.voice.noiseHint.${mode}`);
+  if (!canRunWorkerChain()) return t('settings.voice.noiseHint.aiUnsupported');
+  if (running === null) return t('settings.voice.noiseHint.ai');
+  if (running.kind === 'deepfilter') return t('settings.voice.noiseHint.aiRunning');
+  if (running.kind === 'gtcrn')
+    return running.reason === 'overload'
+      ? t('settings.voice.noiseHint.lightOverload')
+      : t('settings.voice.noiseHint.lightFailed');
+  return t('settings.voice.noiseHint.failed');
 }
 
 interface MeterProps {

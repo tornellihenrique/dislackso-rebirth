@@ -144,7 +144,7 @@ function audioPrefs(s: VoiceSettings, inputDevice: string): AudioPrefs {
     autoGainControl: s.autoGainControl,
     mic: {
       inputVolume: s.inputVolume,
-      noiseSuppression: s.noiseSuppression,
+      noiseReduction: s.noiseReduction,
       inputMode: s.inputMode,
       sensitivity: { auto: s.sensitivityAuto, thresholdDb: s.sensitivityDb },
     },
@@ -206,6 +206,10 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
       onMicError: (failure) => {
         dispatchCall({ type: 'micError', failure });
         this.notice(this.d.t(micNotices[failure]));
+      },
+      onMicFilter: (state) => {
+        if (state.reason === 'overload') this.notice(this.d.t('voice.notices.filterOverload'));
+        else if (state.kind === null) this.notice(this.d.t('voice.notices.filterFailed'));
       },
       onPeerQuality: (userId, quality) => {
         dispatchCall({ type: 'peerQuality', userId, quality });

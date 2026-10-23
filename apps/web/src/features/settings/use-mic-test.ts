@@ -1,7 +1,13 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
 import { DEFAULT_DEVICE } from '@/core/media/devices';
-import { MicProcessor, type MicLevel, type MicSettings } from '@/core/media/mic-processor';
+import {
+  browserNoiseSuppression,
+  MicProcessor,
+  type FilterState,
+  type MicLevel,
+  type MicSettings,
+} from '@/core/media/mic-processor';
 
 export interface MicTestCapture {
   readonly inputDevice: string;
@@ -13,6 +19,8 @@ interface MicTestSnapshot {
   readonly running: boolean;
   readonly level: MicLevel | null;
   readonly failed: boolean;
+  /** The noise filter the test runs, once known. */
+  readonly filter: FilterState | null;
 }
 
 /**
@@ -26,7 +34,7 @@ class MicTest {
   private playback = false;
   private mic: MicSettings | undefined;
   private readonly listeners = new Set<() => void>();
-  private snapshot: MicTestSnapshot = { running: false, level: null, failed: false };
+  private snapshot: MicTestSnapshot = { running: false, level: null, failed: false, filter: null };
 
   readonly subscribe = (fn: () => void) => {
     this.listeners.add(fn);
@@ -49,15 +57,21 @@ class MicTest {
             : {}),
           echoCancellation: capture.echoCancellation,
           autoGainControl: capture.autoGainControl,
-          noiseSuppression: mic.noiseSuppression === 'browser',
+          noiseSuppression: browserNoiseSuppression(mic.noiseReduction),
           channelCount: 1,
         },
       });
       const [track] = stream.getAudioTracks();
       if (!track) throw new Error('no audio track');
-      const p = new MicProcessor(mic, (level) => {
-        this.set({ level });
-      });
+      const p = new MicProcessor(
+        mic,
+        (level) => {
+          this.set({ level });
+        },
+        (filter) => {
+          this.set({ filter });
+        },
+      );
       await p.init({ track });
       this.raw = track;
       this.processor = p;
@@ -75,7 +89,7 @@ class MicTest {
     this.raw?.stop();
     this.raw = undefined;
     this.syncPlayback();
-    this.set({ running: false, level: null });
+    this.set({ running: false, level: null, filter: null });
   };
 
   readonly attach = (el: HTMLAudioElement | null) => {

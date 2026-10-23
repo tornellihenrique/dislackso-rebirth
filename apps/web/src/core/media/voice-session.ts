@@ -17,7 +17,13 @@ import {
 } from 'livekit-client';
 
 import { DEFAULT_DEVICE } from './devices';
-import { MicProcessor, type MicLevel, type MicSettings } from './mic-processor';
+import {
+  browserNoiseSuppression,
+  MicProcessor,
+  type FilterState,
+  type MicLevel,
+  type MicSettings,
+} from './mic-processor';
 import { RemoteAudio } from './remote-audio';
 import {
   retuneShare,
@@ -95,6 +101,8 @@ export interface VoiceSessionListener {
   onAudioBlocked(blocked: boolean): void;
   onMicError(failure: MicFailure): void;
   onMicLevel?(level: MicLevel): void;
+  /** The noise filter the microphone runs, once it is known and when it changes. */
+  onMicFilter?(state: FilterState): void;
   onShares?(shares: readonly RemoteShare[]): void;
   onShareEnded?(reason: ShareEnd): void;
   /** A data packet someone in the call sent. */
@@ -176,7 +184,8 @@ export class VoiceSession {
   private local: LocalVoice = { muted: false, deafened: false, micAllowed: true };
   private bitrateKbps = 48;
   private pttPressed = false;
-  private publishing = false;
+  /** The room a microphone is being published to. */
+  private publishing: Room | undefined;
   private share: LocalShare | undefined;
   /** Preset changes run one at a time: each reads and writes the senders. */
   private retuning = Promise.resolve();
@@ -314,7 +323,8 @@ export class VoiceSession {
     const captureChanged =
       prev.echoCancellation !== prefs.echoCancellation ||
       prev.autoGainControl !== prefs.autoGainControl ||
-      (prev.mic.noiseSuppression === 'browser') !== (prefs.mic.noiseSuppression === 'browser');
+      browserNoiseSuppression(prev.mic.noiseReduction) !==
+        browserNoiseSuppression(prefs.mic.noiseReduction);
     if (captureChanged && this.mic)
       await this.mic.restartTrack(this.captureOptions(prefs)).catch(() => undefined);
   }
@@ -494,7 +504,7 @@ export class VoiceSession {
       ...(deviceId !== undefined ? { deviceId } : {}),
       echoCancellation: prefs.echoCancellation,
       autoGainControl: prefs.autoGainControl,
-      noiseSuppression: prefs.mic.noiseSuppression === 'browser',
+      noiseSuppression: browserNoiseSuppression(prefs.mic.noiseReduction),
       // Chromium's voice isolation would override the choice above.
       voiceIsolation: false,
       channelCount: 1,
@@ -503,8 +513,8 @@ export class VoiceSession {
 
   private async publishMic(room: Room): Promise<void> {
     const prefs = this.prefs;
-    if (!prefs || !this.local.micAllowed || this.mic || this.publishing) return;
-    this.publishing = true;
+    if (!prefs || !this.local.micAllowed || this.mic || this.publishing === room) return;
+    this.publishing = room;
     try {
       const track = await createLocalAudioTrack(this.captureOptions(prefs));
       if (this.room !== room) {
@@ -523,19 +533,29 @@ export class VoiceSession {
         red: true,
         audioPreset: { maxBitrate: this.bitrateKbps * 1000 },
       });
-      // A processor needs the room's audio context, which publishing sets.
-      const processor = new MicProcessor(prefs.mic, (level) => {
-        this.selfLevel = level;
-        this.listener.onMicLevel?.(level);
-      });
+      const processor = new MicProcessor(
+        prefs.mic,
+        (level) => {
+          this.selfLevel = level;
+          this.listener.onMicLevel?.(level);
+        },
+        (state) => {
+          this.listener.onMicFilter?.(state);
+        },
+      );
       processor.setPushToTalk(this.pttPressed);
       await track.setProcessor(processor);
+      // Switched channels meanwhile: the new room publishes its own.
+      if (this.room !== room) {
+        track.stop();
+        return;
+      }
       this.mic = track;
       this.processor = processor;
     } catch (err) {
       if (this.room === room) this.listener.onMicError(micFailure(err));
     } finally {
-      this.publishing = false;
+      if (this.publishing === room) this.publishing = undefined;
     }
   }
 
