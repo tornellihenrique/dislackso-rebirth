@@ -188,6 +188,15 @@ merged and in use.
 
 ## Done
 
+### Phase 7 — LiveKit follows the public address
+
+- **Fixed: voice stuck on connecting for everyone outside the LAN** while the site worked. LiveKit
+  kept advertising the address found when it started: on 2026-11-01 that was the VPN's, because
+  the hub restarted with TunnelBear connected, and any provider address change does the same.
+  The hub now looks at its public IPv4 every minute and restarts LiveKit when the same other
+  address shows twice in a row, so voice comes back by itself within about 2 minutes. The media
+  port is also checked before every LiveKit start, crash restarts included.
+
 ### Phase 7 — Steady voice, DeepFilterNet3, sounds, keybinds, shipped servers
 
 - **Fixed: robot or sped-up voices.** LiveKit's log showed the microphones of several people,
@@ -997,8 +1006,9 @@ merged and in use.
   longer outage people rejoin by hand.
 - Disabling or deleting an account ends its sessions but not a voice connection already up
   (LiveKit keeps refreshing its token); the next join is refused.
-- A host whose router keeps port numbers and that loses internet after starting keeps LiveKit's
-  last external address until the hub restarts.
+- **A VPN running on the host PC cuts everyone outside the LAN off** while it is on: the host's
+  public address becomes the VPN's, which forwards nothing to it, and DuckDNS follows within 5
+  minutes. Voice recovers by itself within about 2 minutes of turning it off, the site within 5.
 - **Dragging a server icon in the rail still reloads the page on the owner's PC** (Chrome, real
   mouse), which ends the call. Playwright does not reproduce it, also during a call with slow
   drags; the app has no reload of its own, so the next step is a DevTools capture (Console and
@@ -1047,6 +1057,16 @@ merged and in use.
 - **DuckDNS gets an IPv4 record only,** which every client can reach.
 
 ## Manual test script
+
+### LiveKit follows the public address
+
+Prerequisites: the hub built from this branch, a friend outside your network.
+
+1. Start the hub with the VPN off; a friend joins voice.
+2. Connect TunnelBear for 3 minutes, then disconnect it. `hub.log` shows "the public address
+   changed; restarting the media server" twice, once each way.
+3. About 2 minutes after disconnecting, `livekit.yaml` has your real address in `node_ip`, and the
+   friend can join voice again, with the site back within 5 minutes.
 
 ### Steady voice, noise filter, sounds, keybinds, shipped servers
 

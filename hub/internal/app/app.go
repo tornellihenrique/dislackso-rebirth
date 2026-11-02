@@ -290,7 +290,7 @@ func (a *App) Serve(ctx context.Context) error {
 	a.host.Start(bg)
 	defer a.host.Stop(bg)
 	background.Go(func() { a.voice.Run(bg) })
-	a.probeNetwork(ctx, bg, &background)
+	a.probeNetwork(bg, &background)
 	if err := a.media.start(bg, &background, a.listener.Addr(), a.mediaReady); err != nil {
 		return err
 	}
@@ -320,10 +320,10 @@ func (a *App) Serve(ctx context.Context) error {
 	return nil
 }
 
-// probeNetwork checks the media port before the media server binds it, and
-// keeps it forwarded on the router. Hosts told not to look up their public
-// address (offline, LAN only) skip both.
-func (a *App) probeNetwork(ctx, bg context.Context, background *sync.WaitGroup) {
+// probeNetwork has the media port checked before each start of the media
+// server, which binds it, and keeps it forwarded on the router. Hosts told
+// not to look up their public address (offline, LAN only) skip both.
+func (a *App) probeNetwork(bg context.Context, background *sync.WaitGroup) {
 	lk := a.cfg.LiveKit
 	if a.media.binary == "" || !lk.ExternalIP {
 		return
@@ -331,9 +331,13 @@ func (a *App) probeNetwork(ctx, bg context.Context, background *sync.WaitGroup) 
 	// Callers reach the media port itself at the public address only when the
 	// router keeps its number; behind other routers LiveKit finds each
 	// connection's outside port over STUN.
-	if p := a.doctor.Probe(ctx, lk.UDPPort); p.NAT == domain.NATOpen || p.NAT == domain.NATPortPreserving {
-		a.media.nodeIP = p.PublicIPv4.String()
+	a.media.findNodeIP = func(ctx context.Context) string {
+		if p := a.doctor.Probe(ctx, lk.UDPPort); p.NAT == domain.NATOpen || p.NAT == domain.NATPortPreserving {
+			return p.PublicIPv4.String()
+		}
+		return ""
 	}
+	a.media.publicIP = publicIPv4
 	background.Go(func() { a.doctor.Run(bg, lk.UDPPort, lk.TCPPort) })
 }
 

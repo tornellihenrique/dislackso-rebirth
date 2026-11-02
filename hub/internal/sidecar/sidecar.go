@@ -47,6 +47,8 @@ type Spec struct {
 	Env []string
 	// LogPath receives the process's output.
 	LogPath string
+	// BeforeStart runs before each start, for what the process reads then.
+	BeforeStart func(ctx context.Context) error
 	// Health reports whether the process serves; it is polled after each start.
 	Health func(ctx context.Context) error
 	// OnReady runs each time the process becomes healthy; restarts counts
@@ -65,18 +67,32 @@ type Status struct {
 }
 
 type Supervisor struct {
-	spec   Spec
-	logger *slog.Logger
+	spec    Spec
+	logger  *slog.Logger
+	restart chan struct{}
 
 	mu     sync.Mutex
 	status Status
 }
 
+// errRestartAsked ends a run that Restart stopped.
+var errRestartAsked = errors.New("restart asked for")
+
 func New(spec Spec, logger *slog.Logger) *Supervisor {
 	return &Supervisor{
-		spec:   spec,
-		logger: logger.With(slog.String("sidecar", spec.Name)),
-		status: Status{State: StateStopped, Since: time.Now()},
+		spec:    spec,
+		logger:  logger.With(slog.String("sidecar", spec.Name)),
+		restart: make(chan struct{}, 1),
+		status:  Status{State: StateStopped, Since: time.Now()},
+	}
+}
+
+// Restart stops the process and starts it again at once. A start already on
+// its way counts: it runs BeforeStart after this call.
+func (s *Supervisor) Restart() {
+	select {
+	case s.restart <- struct{}{}:
+	default:
 	}
 }
 
@@ -120,6 +136,10 @@ func (s *Supervisor) Run(ctx context.Context) error {
 			st.Restarts++
 			st.LastError = err.Error()
 		})
+		if errors.Is(err, errRestartAsked) {
+			s.logger.InfoContext(ctx, "sidecar restarting")
+			continue
+		}
 		s.logger.WarnContext(ctx, "sidecar exited; restarting", slog.Any("error", err), slog.Duration("in", backoff))
 		select {
 		case <-ctx.Done():
@@ -133,6 +153,16 @@ func (s *Supervisor) Run(ctx context.Context) error {
 
 // runOnce starts the process and returns when it exits or ctx is done.
 func (s *Supervisor) runOnce(ctx context.Context) error {
+	s.set(func(st *Status) { st.State = StateStarting })
+	select {
+	case <-s.restart:
+	default:
+	}
+	if s.spec.BeforeStart != nil {
+		if err := s.spec.BeforeStart(ctx); err != nil {
+			return fmt.Errorf("prepare %s: %w", s.spec.Name, err)
+		}
+	}
 	logFile, err := openLog(s.spec.LogPath)
 	if err != nil {
 		return err
@@ -155,7 +185,6 @@ func (s *Supervisor) runOnce(ctx context.Context) error {
 	}
 	cmd.Stdout, cmd.Stderr = out, out
 	configure(cmd)
-	s.set(func(st *Status) { st.State = StateStarting })
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("start %s: %w", s.spec.Name, err)
 	}
@@ -186,6 +215,10 @@ func (s *Supervisor) runOnce(ctx context.Context) error {
 		stop(cmd.Process)
 		waitOrKill(cmd.Process, exited)
 		return err
+	case <-s.restart:
+		stop(cmd.Process)
+		waitOrKill(cmd.Process, exited)
+		return errRestartAsked
 	}
 }
 
