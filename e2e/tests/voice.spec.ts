@@ -22,6 +22,18 @@ async function open(
   storageState?: Awaited<ReturnType<BrowserContext['storageState']>>,
 ): Promise<Session> {
   const context = await browser.newContext(storageState ? { storageState } : {});
+  // Keeps the microphones the page opened, for telling which device a call uses.
+  await context.addInitScript(() => {
+    const mics: MediaStreamTrack[] = [];
+    (window as unknown as { mics: MediaStreamTrack[] }).mics = mics;
+    const md = navigator.mediaDevices;
+    const native = md.getUserMedia.bind(md);
+    md.getUserMedia = async (constraints) => {
+      const stream = await native(constraints);
+      mics.push(...stream.getAudioTracks());
+      return stream;
+    };
+  });
   // Keeps the page's peer connections, for reading what they send.
   await context.addInitScript(() => {
     const Native = window.RTCPeerConnection;
@@ -183,6 +195,39 @@ test('a camera turned on shows in its tile for everyone, next to a screen share'
     occupant(admin.page, MEMBER.username).getByRole('img', { name: 'Camera on' }),
   ).toBeHidden(CONNECT);
   await expect(tile(admin.page, MEMBER.username).getByTestId('camera-view')).toBeHidden(CONNECT);
+});
+
+/** The device of every microphone the page holds open. */
+function openMics(page: Page): Promise<string[]> {
+  return page.evaluate(() =>
+    (window as unknown as { mics: MediaStreamTrack[] }).mics
+      .filter((t) => t.readyState === 'live')
+      .map((t) => t.getSettings().deviceId ?? ''),
+  );
+}
+
+test('choosing another microphone moves the call to it', async () => {
+  const page = ana.page;
+  const inputs = await page.evaluate(async () =>
+    (await navigator.mediaDevices.enumerateDevices())
+      .filter((d) => d.kind === 'audioinput' && d.deviceId !== 'default')
+      .map((d) => ({ id: d.deviceId, label: d.label })),
+  );
+  const other = inputs.find((d) => !d.label.includes('Default')) ?? inputs[0];
+  if (!other) throw new Error(`no second microphone in ${JSON.stringify(inputs)}`);
+
+  await page.getByRole('link', { name: 'User settings' }).click();
+  await page.getByRole('link', { name: 'Voice & video' }).click();
+  await page.getByLabel('Input device').selectOption(other.id);
+  await expect.poll(() => openMics(page), CONNECT).toEqual([other.id]);
+  // The call's audio goes on from the new device.
+  const before = await micSeconds(page);
+  await page.waitForTimeout(2000);
+  expect((await micSeconds(page)) - before).toBeGreaterThan(1.5);
+
+  await page.getByLabel('Input device').selectOption('');
+  await expect.poll(() => openMics(page), CONNECT).not.toEqual([other.id]);
+  await page.keyboard.press('Escape');
 });
 
 test('mute and deafen show live, and undeafening restores the mute from before', async () => {

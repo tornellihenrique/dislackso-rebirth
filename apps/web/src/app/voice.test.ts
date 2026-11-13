@@ -72,6 +72,10 @@ class FakeSession {
   updatePrefs() {
     return Promise.resolve();
   }
+  reopenMic() {
+    this.calls.push('reopenMic');
+    return Promise.resolve();
+  }
   startAudio() {
     return Promise.resolve();
   }
@@ -273,6 +277,42 @@ describe('VoiceController', () => {
     expect(callStore.getState().status).toBe('idle');
     expect(notices()).toEqual(['voice.notices.connectionLost']);
     expect(leave).toHaveBeenCalledWith({ voiceSessionId: 's9' });
+  });
+
+  it('reopens the microphone when the system default moves to another device', async () => {
+    const { voice, session } = setup();
+    let system = 'Default - Headset';
+    const md = Object.assign(new EventTarget(), {
+      enumerateDevices: () =>
+        Promise.resolve([
+          { kind: 'audioinput', deviceId: 'default', label: system },
+          { kind: 'audioinput', deviceId: 'usb', label: 'USB mic' },
+        ]),
+    });
+    Object.defineProperty(navigator, 'mediaDevices', { value: md, configurable: true });
+    const stop = voice.start();
+    await voice.join('g', 'c1');
+    const reopened = () => session()?.calls.filter((c) => c === 'reopenMic').length;
+    const settle = () => new Promise((resolve) => setTimeout(resolve, 10));
+
+    md.dispatchEvent(new Event('devicechange'));
+    await settle();
+    expect(reopened()).toBe(0);
+    system = 'Default - USB mic';
+    md.dispatchEvent(new Event('devicechange'));
+    await vi.waitFor(() => {
+      expect(reopened()).toBe(1);
+    });
+
+    // A microphone the user chose stays, whatever the system default.
+    voice.setPrefs({ inputDevice: 'usb' });
+    await settle();
+    system = 'Default - Headset';
+    md.dispatchEvent(new Event('devicechange'));
+    await settle();
+    expect(reopened()).toBe(1);
+    stop();
+    Reflect.deleteProperty(navigator, 'mediaDevices');
   });
 
   it('plays a sound when someone else joins or leaves the call, unless turned off', async () => {

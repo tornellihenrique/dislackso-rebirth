@@ -38,6 +38,24 @@ export async function listCameras(
     .map((d) => ({ id: d.deviceId, label: d.label }));
 }
 
+/**
+ * The getUserMedia constraint for a chosen device; none for the default.
+ * Chromium takes a bare or ideal device id only as a preference and opened
+ * the default microphone instead, so a chosen device is required exactly:
+ * callers pass only devices that are plugged in, and fall back to the
+ * default when one goes away in between.
+ */
+export function deviceConstraint(id: string): ConstrainDOMString | undefined {
+  return id === '' || id === DEFAULT_DEVICE ? undefined : { exact: id };
+}
+
+/** Whether opening a device failed because that device is gone. */
+export function deviceMissing(err: unknown): boolean {
+  return (
+    err instanceof Error && (err.name === 'OverconstrainedError' || err.name === 'NotFoundError')
+  );
+}
+
 /** The device to use: the chosen one while it is plugged in, else the default. */
 export function resolveDevice(chosen: string, available: readonly AudioDevice[]): string {
   return chosen !== '' && available.some((d) => d.id === chosen) ? chosen : DEFAULT_DEVICE;

@@ -1,6 +1,28 @@
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_DEVICE, listAudioDevices, listCameras, resolveDevice } from './devices';
+import {
+  DEFAULT_DEVICE,
+  deviceConstraint,
+  deviceMissing,
+  listAudioDevices,
+  listCameras,
+  resolveDevice,
+} from './devices';
+
+describe('deviceConstraint', () => {
+  it('holds a chosen device exactly and leaves the default to the browser', () => {
+    expect(deviceConstraint('usb')).toEqual({ exact: 'usb' });
+    expect(deviceConstraint('')).toBeUndefined();
+    expect(deviceConstraint(DEFAULT_DEVICE)).toBeUndefined();
+  });
+
+  it('tells a device gone from other failures', () => {
+    const named = (name: string) => Object.assign(new Error(name), { name });
+    expect(deviceMissing(named('OverconstrainedError'))).toBe(true);
+    expect(deviceMissing(named('NotFoundError'))).toBe(true);
+    expect(deviceMissing(named('NotAllowedError'))).toBe(false);
+  });
+});
 
 describe('resolveDevice', () => {
   const plugged = [
