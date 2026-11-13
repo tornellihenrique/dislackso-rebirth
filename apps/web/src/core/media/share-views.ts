@@ -1,5 +1,12 @@
 /** The ShareViews key of this device's own share. */
 export const SELF_SHARE = 'self';
+/** The ShareViews key of this device's own camera. */
+export const SELF_CAMERA = 'self-camera';
+
+/** The ShareViews key of someone's camera; their share's key is their identity. */
+export function cameraView(identity: string): string {
+  return `camera:${identity}`;
+}
 
 /** What ShareViews needs from a video track; LiveKit's tracks fit. */
 export interface AttachableTrack {

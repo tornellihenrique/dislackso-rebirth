@@ -14,11 +14,11 @@ import type { HubClients } from '@/core/api/clients';
 import { toApiError } from '@/core/api/errors';
 import { errorText } from '@/core/i18n/error-text';
 import { matches, shortcut, typingTarget } from '@/core/keys/shortcut';
-import { listAudioDevices, resolveDevice, watchDevices } from '@/core/media/devices';
+import { listAudioDevices, listCameras, resolveDevice, watchDevices } from '@/core/media/devices';
 import { startPushToTalk, type PushToTalk } from '@/core/media/push-to-talk';
 import { ShareError } from '@/core/media/share-error';
 import { capPreset, type SharePreset } from '@/core/media/share-presets';
-import { SELF_SHARE, ShareViews } from '@/core/media/share-views';
+import { cameraView, SELF_CAMERA, SELF_SHARE, ShareViews } from '@/core/media/share-views';
 import { soundEvent, type SoundEvent, type SoundKind, type SoundPlayer } from '@/core/media/sounds';
 import { SpeakingTracker } from '@/core/media/speaking';
 import type { ConnectionStats, OutboundVideoStats, PathStats } from '@/core/media/stats';
@@ -26,6 +26,7 @@ import { TransportMeter } from '@/core/media/transport-meter';
 import type {
   AudioPrefs,
   CallEnd,
+  DeviceFailure,
   LocalShareInfo,
   MicFailure,
   RemoteShareStats,
@@ -83,12 +84,16 @@ export interface VoiceActions {
   stopShare(): Promise<void>;
   /** Stops or resumes receiving someone's share. */
   setWatching(userId: string, watching: boolean): void;
+  /** Turns this device's camera on or off, with the saved device. */
+  toggleCamera(): Promise<void>;
   setStreamVolume(userId: string, volume: number): void;
   toggleStreamMute(userId: string): void;
   setShareSettings(settings: Partial<Omit<ShareSettings, 'streamVolumes' | 'streamMutes'>>): void;
   /** Shows someone's share in el; returns the function that takes it out. */
   mountShare(userId: string, el: HTMLElement): () => void;
   mountSelfShare(el: HTMLElement): () => void;
+  /** Shows someone's camera, or this device's own, in el; returns the function that takes it out. */
+  mountCamera(userId: string, self: boolean, el: HTMLElement): () => void;
   /** The <video> showing a share, for drawing and snapshots. */
   shareElement(userId: string, self: boolean): HTMLVideoElement | undefined;
   shareStats(userId: string): Promise<RemoteShareStats | undefined>;
@@ -135,6 +140,13 @@ const micNotices = {
   in_use: 'voice.notices.micInUse',
   other: 'voice.notices.micFailed',
 } as const satisfies Record<MicFailure, string>;
+
+const cameraNotices = {
+  denied: 'voice.notices.cameraDenied',
+  not_found: 'voice.notices.cameraNotFound',
+  in_use: 'voice.notices.cameraInUse',
+  other: 'voice.notices.cameraFailed',
+} as const satisfies Record<DeviceFailure, string>;
 
 function rtcIceServers(servers: readonly IceServer[]): RTCIceServer[] {
   return servers.map((s) => ({
@@ -230,6 +242,14 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
       },
       onShareEnded: (reason) => {
         this.shareEnded(reason);
+      },
+      onCameras: (userIds) => {
+        dispatchCall({ type: 'cameras', userIds });
+      },
+      onCameraEnded: () => {
+        if (!callStore.getState().localCamera) return;
+        dispatchCall({ type: 'localCamera', camera: null });
+        this.notice(this.d.t('voice.notices.cameraStopped'));
       },
       onData: (topic, payload, userId) => {
         for (const h of this.dataHandlers.get(topic) ?? []) h(payload, userId);
@@ -477,6 +497,24 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
     this.session?.setWatching(userId, watching);
   }
 
+  async toggleCamera(): Promise<void> {
+    const call = callStore.getState();
+    const session = this.session;
+    if ((call.status !== 'connected' && call.status !== 'reconnecting') || !session) return;
+    if (call.localCamera === 'starting') return;
+    if (call.localCamera === 'live') {
+      dispatchCall({ type: 'localCamera', camera: null });
+      await session.stopCamera();
+      return;
+    }
+    const gen = this.generation;
+    dispatchCall({ type: 'localCamera', camera: 'starting' });
+    const failure = await session.startCamera(await this.effectiveCamera());
+    if (gen !== this.generation) return;
+    dispatchCall({ type: 'localCamera', camera: failure ? null : 'live' });
+    if (failure) this.notice(this.d.t(cameraNotices[failure]));
+  }
+
   setStreamVolume(userId: string, volume: number): void {
     dispatchShareSettings({ type: 'streamVolumeSet', userId, volume });
   }
@@ -498,6 +536,10 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
 
   mountSelfShare(el: HTMLElement): () => void {
     return this.views.mount(SELF_SHARE, el);
+  }
+
+  mountCamera(userId: string, self: boolean, el: HTMLElement): () => void {
+    return this.views.mount(self ? SELF_CAMERA : cameraView(userId), el);
   }
 
   shareElement(userId: string, self: boolean): HTMLVideoElement | undefined {
@@ -822,6 +864,8 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
         void this.registerGlobalKeys();
     }
     if (callStore.getState().status === 'idle') return;
+    if (next.cameraDevice !== prev.cameraDevice && callStore.getState().localCamera === 'live')
+      void this.effectiveCamera().then((id) => this.session?.setCameraDevice(id));
     void this.effectiveInput(next).then((input) => {
       this.inputDevice = input;
       return this.session?.updatePrefs(audioPrefs(voiceSettingsStore.getState(), input));
@@ -937,6 +981,17 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
       return resolveDevice(s.inputDevice, (await listAudioDevices()).inputs);
     } catch {
       return s.inputDevice;
+    }
+  }
+
+  /** The chosen camera while it is plugged in, else the browser's pick. */
+  private async effectiveCamera(): Promise<string> {
+    const chosen = voiceSettingsStore.getState().cameraDevice;
+    if (chosen === '') return '';
+    try {
+      return (await listCameras()).some((d) => d.id === chosen) ? chosen : '';
+    } catch {
+      return chosen;
     }
   }
 

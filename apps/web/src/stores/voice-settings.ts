@@ -19,6 +19,7 @@ export interface VoiceSettings {
   /** Device ids; empty follows the system default. */
   readonly inputDevice: string;
   readonly outputDevice: string;
+  readonly cameraDevice: string;
   /** 0–2. */
   readonly inputVolume: number;
   /** 0–2, applied on top of each user's volume. */
@@ -68,6 +69,7 @@ export const defaultVoiceSettings: VoiceSettings = {
   muteBeforeDeaf: false,
   inputDevice: '',
   outputDevice: '',
+  cameraDevice: '',
   inputVolume: 1,
   outputVolume: 1,
   inputMode: 'voice',

@@ -188,6 +188,18 @@ merged and in use.
 
 ## Done
 
+### Phase 7 — Camera
+
+- **Camera in calls**, next to the screen share: anyone can have both on. The camera button
+  sits in the voice panel and in the stage's control bar; its arrow picks the camera, also
+  while it is on. The camera shows in the person's own tile (mirrored for themselves), and a
+  camera icon marks them in the channel list for everyone. Settings → Voice & video has the
+  camera choice and a preview only you see. "Show only video" keeps the people with a camera.
+- Sent at up to 720p and 30 fps with simulcast (also 360p and 180p), so small tiles and slow
+  connections get a lower layer. There is no quality choice, as in Discord.
+- The hub reports the camera in voice state (`video`) from LiveKit's track events, like
+  `streaming` for shares.
+
 ### Phase 7 — LiveKit follows the public address
 
 - **Fixed: voice stuck on connecting for everyone outside the LAN** while the site worked. LiveKit
@@ -823,6 +835,9 @@ merged and in use.
 
 - No ledger decision was changed (D10: a thin Electron shell loading the instance). ARCHITECTURE
   §16.3–16.5 updated with what was built.
+- **The camera is always allowed**, without the instance switch §9.6 planned (off by default):
+  the owner wanted it on for the team, and a switch nobody turns off only adds a step. Each
+  camera sends about 2.3 Mbit/s with its smaller layers and, for people on the relay, counts against its budget.
 - **The mic chain runs in a worker on the mic's frames** (`MediaStreamTrackProcessor` →
   `MediaStreamTrackGenerator`, Chromium only), not in Web Audio: a context is clocked by the
   output device, and on the team's machines it sent 30 % too little audio for whole calls. The gate
@@ -1057,6 +1072,18 @@ merged and in use.
 - **DuckDNS gets an IPv4 record only,** which every client can reach.
 
 ## Manual test script
+
+### Camera
+
+Prerequisites: two people in a voice channel, at least one camera.
+
+1. Settings → Voice & video: pick the camera, press Test video: your picture shows mirrored.
+2. In the call press the camera button (voice panel or stage bar). Your tile shows your camera,
+   the other person sees it in your tile, and both see the camera icon next to your name.
+3. Share your screen as well: the share gets its own tile and the camera stays on.
+4. With the camera on, pick another camera from the arrow next to the button: the picture
+   switches without turning off.
+5. Turn the camera off: the tile shows your avatar again and the icon goes away.
 
 ### LiveKit follows the public address
 

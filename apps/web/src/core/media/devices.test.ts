@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_DEVICE, listAudioDevices, resolveDevice } from './devices';
+import { DEFAULT_DEVICE, listAudioDevices, listCameras, resolveDevice } from './devices';
 
 describe('resolveDevice', () => {
   const plugged = [
@@ -15,8 +15,8 @@ describe('resolveDevice', () => {
   });
 });
 
-describe('listAudioDevices', () => {
-  it('splits inputs from outputs and skips unusable entries', async () => {
+describe('listAudioDevices and listCameras', () => {
+  it('sort devices by kind and skip unusable entries', async () => {
     const devices = [
       { kind: 'audioinput', deviceId: 'default', label: 'Default' },
       { kind: 'audioinput', deviceId: 'communications', label: 'Communications' },
@@ -33,5 +33,6 @@ describe('listAudioDevices', () => {
       inputs: [{ id: 'default', label: 'Default' }],
       outputs: [{ id: 'spk', label: 'Speakers' }],
     });
+    await expect(listCameras(md)).resolves.toEqual([{ id: 'cam', label: 'Camera' }]);
   });
 });

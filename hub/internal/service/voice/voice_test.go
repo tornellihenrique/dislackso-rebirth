@@ -154,7 +154,7 @@ func TestJoin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := "vc_10|4|token-1|microphone,screen_share,screen_share_audio|true|10m0s"; j.Token != want {
+	if want := "vc_10|4|token-1|microphone,camera,screen_share,screen_share_audio|true|10m0s"; j.Token != want {
 		t.Errorf("token = %q, want %q", j.Token, want)
 	}
 	if j.URL != "/lk" || len(j.ICE) != 1 || j.MicBitrateMaxKbps != 96 {
@@ -346,7 +346,7 @@ func TestServerMuteAndDeafen(t *testing.T) {
 	}
 	want := []fakes.MediaCall{
 		{Op: "permissions", Room: "vc_10", Identity: "4", Permissions: domain.VoicePermissions{
-			Publish: []domain.MediaSource{domain.SourceScreenShare, domain.SourceScreenShareAudio}, Subscribe: true,
+			Publish: []domain.MediaSource{domain.SourceCamera, domain.SourceScreenShare, domain.SourceScreenShareAudio}, Subscribe: true,
 		}},
 	}
 	if diff := cmp.Diff(want, h.media.TakeCalls()); diff != "" {
@@ -372,7 +372,7 @@ func TestServerMuteAndDeafen(t *testing.T) {
 
 	// Leaving and joining again does not lift it: the new token has no microphone.
 	j := h.join(t, member, lobby)
-	if !strings.Contains(j.Token, "|screen_share,screen_share_audio|") || !j.State.ServerMute {
+	if !strings.Contains(j.Token, "|camera,screen_share,screen_share_audio|") || !j.State.ServerMute {
 		t.Errorf("token after rejoin = %s, state %+v", j.Token, j.State)
 	}
 	// A connection that comes up after the mute is enforced again.
@@ -421,27 +421,39 @@ func TestMuteEnforcedOnMicPublish(t *testing.T) {
 	}
 }
 
-func TestStreaming(t *testing.T) {
-	h := newHarness(t)
-	h.join(t, member, lobby)
-	h.joined(member, lobby, "token-1")
-	track := func(kind ports.MediaEventKind, sid string) {
-		h.svc.HandleMediaEvent(t.Context(), ports.MediaEvent{
-			Kind: kind, Room: "vc_10", Source: domain.SourceScreenShare,
-			Participant: ports.MediaParticipant{SID: sid, Identity: "4"},
+func TestTrackFlags(t *testing.T) {
+	tests := []struct {
+		name   string
+		source domain.MediaSource
+		flag   func(domain.VoiceState) bool
+	}{
+		{"screen share", domain.SourceScreenShare, func(s domain.VoiceState) bool { return s.Streaming }},
+		{"camera", domain.SourceCamera, func(s domain.VoiceState) bool { return s.Video }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newHarness(t)
+			h.join(t, member, lobby)
+			h.joined(member, lobby, "token-1")
+			track := func(kind ports.MediaEventKind, sid string) {
+				h.svc.HandleMediaEvent(t.Context(), ports.MediaEvent{
+					Kind: kind, Room: "vc_10", Source: tt.source,
+					Participant: ports.MediaParticipant{SID: sid, Identity: "4"},
+				})
+			}
+			track(ports.MediaTrackPublished, "sid-other")
+			if st, _ := h.state(4); tt.flag(st) {
+				t.Error("a track of another connection counted")
+			}
+			track(ports.MediaTrackPublished, "sid-token-1")
+			if st, _ := h.state(4); !tt.flag(st) {
+				t.Error("off after the track was published")
+			}
+			track(ports.MediaTrackUnpublished, "sid-token-1")
+			if st, _ := h.state(4); tt.flag(st) {
+				t.Error("still on after the track was unpublished")
+			}
 		})
-	}
-	track(ports.MediaTrackPublished, "sid-other")
-	if st, _ := h.state(4); st.Streaming {
-		t.Error("a track of another connection counted")
-	}
-	track(ports.MediaTrackPublished, "sid-token-1")
-	if st, _ := h.state(4); !st.Streaming {
-		t.Error("not streaming after the share was published")
-	}
-	track(ports.MediaTrackUnpublished, "sid-token-1")
-	if st, _ := h.state(4); st.Streaming {
-		t.Error("still streaming after the share was unpublished")
 	}
 }
 
@@ -473,7 +485,7 @@ func TestShareLimit(t *testing.T) {
 	allowed := domain.VoicePermissionsFor(false, false)
 	want := []fakes.MediaCall{
 		{Op: "permissions", Room: "vc_10", Identity: "4", Permissions: domain.VoicePermissions{
-			Publish: []domain.MediaSource{domain.SourceMicrophone}, Subscribe: true,
+			Publish: []domain.MediaSource{domain.SourceMicrophone, domain.SourceCamera}, Subscribe: true,
 		}},
 		{Op: "permissions", Room: "vc_10", Identity: "4", Permissions: allowed},
 	}

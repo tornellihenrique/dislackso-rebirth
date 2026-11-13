@@ -24,6 +24,9 @@ export type LocalShareState =
       readonly audioCaptured: boolean;
     };
 
+/** This device's camera: starting while the browser opens it. */
+export type LocalCameraState = 'starting' | 'live';
+
 /** This device's own call. */
 export interface CallState {
   readonly status: CallStatus;
@@ -41,6 +44,9 @@ export interface CallState {
   /** Others' screen shares as the media server delivers them, by user id. */
   readonly shares: Readonly<Record<string, RemoteShare>>;
   readonly localShare: LocalShareState | null;
+  /** Others whose camera video arrives here. */
+  readonly cameras: readonly string[];
+  readonly localCamera: LocalCameraState | null;
 }
 
 export type CallEvent =
@@ -54,7 +60,9 @@ export type CallEvent =
   | { readonly type: 'audioBlocked'; readonly blocked: boolean }
   | { readonly type: 'micError'; readonly failure: MicFailure | null }
   | { readonly type: 'shares'; readonly shares: readonly RemoteShare[] }
-  | { readonly type: 'localShare'; readonly share: LocalShareState | null };
+  | { readonly type: 'localShare'; readonly share: LocalShareState | null }
+  | { readonly type: 'cameras'; readonly userIds: readonly string[] }
+  | { readonly type: 'localCamera'; readonly camera: LocalCameraState | null };
 
 export const idleCall: CallState = {
   status: 'idle',
@@ -68,6 +76,8 @@ export const idleCall: CallState = {
   micError: null,
   shares: {},
   localShare: null,
+  cameras: [],
+  localCamera: null,
 };
 
 function sameIds(a: readonly string[], b: readonly string[]): boolean {
@@ -135,6 +145,12 @@ export function reduceCall(state: CallState, event: CallEvent): CallState {
     }
     case 'localShare':
       return state.status === 'idle' ? state : { ...state, localShare: event.share };
+    case 'cameras': {
+      const ids = [...event.userIds].sort();
+      return sameIds(state.cameras, ids) ? state : { ...state, cameras: ids };
+    }
+    case 'localCamera':
+      return state.status === 'idle' ? state : { ...state, localCamera: event.camera };
   }
 }
 

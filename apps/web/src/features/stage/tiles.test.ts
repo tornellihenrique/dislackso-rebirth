@@ -30,6 +30,7 @@ describe('stageTiles', () => {
     selfSharing: true,
     selfPreview: true,
     hideNoVideo: false,
+    cameras: [],
   };
 
   it('puts shares first, mine after the others, then people, each sorted by name', () => {
@@ -54,6 +55,8 @@ describe('stageTiles', () => {
     expect(early.map((t) => t.key)).toContain('share:dee');
     const shown = stageTiles({ ...base, selfPreview: false, hideNoVideo: true });
     expect(shown.map((t) => t.key)).toEqual(['share:ana', 'share:cy']);
+    const cameras = stageTiles({ ...base, selfPreview: false, hideNoVideo: true, cameras: ['me'] });
+    expect(cameras.map((t) => t.key)).toEqual(['share:ana', 'share:cy', 'user:me']);
     expect(autoFocusable(stageTiles(base))).toEqual(['share:ana', 'share:cy']);
   });
 });

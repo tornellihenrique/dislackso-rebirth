@@ -61,7 +61,7 @@ func TestJoinToken(t *testing.T) {
 	if !v.GetCanPublish() || !v.GetCanSubscribe() || !v.GetCanPublishData() || v.GetCanUpdateOwnMetadata() {
 		t.Errorf("video = %+v", v)
 	}
-	if !cmp.Equal(v.CanPublishSources, []string{"screen_share", "screen_share_audio"}) {
+	if !cmp.Equal(v.CanPublishSources, []string{"camera", "screen_share", "screen_share_audio"}) {
 		t.Errorf("sources = %v, want no microphone", v.CanPublishSources)
 	}
 
@@ -179,7 +179,7 @@ func TestRoomAPI(t *testing.T) {
 	update, ok := fake.requests[2].(*lkproto.UpdateParticipantRequest)
 	wantPerm := &lkproto.ParticipantPermission{
 		CanSubscribe: false, CanPublish: true, CanPublishData: true,
-		CanPublishSources: []lkproto.TrackSource{lkproto.TrackSource_SCREEN_SHARE, lkproto.TrackSource_SCREEN_SHARE_AUDIO},
+		CanPublishSources: []lkproto.TrackSource{lkproto.TrackSource_CAMERA, lkproto.TrackSource_SCREEN_SHARE, lkproto.TrackSource_SCREEN_SHARE_AUDIO},
 	}
 	if !ok || update.GetRoom() != "vc_10" || update.GetIdentity() != "4" {
 		t.Fatalf("update = %v", fake.requests[2])

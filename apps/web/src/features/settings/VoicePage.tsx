@@ -21,6 +21,7 @@ import { CheckboxField, RangeField, SelectField } from '@/ui/Fields';
 
 import { SettingsSection } from './SettingsLayout';
 import { useMicTest } from './use-mic-test';
+import { VideoSection } from './VideoSection';
 
 const NOISE_MODES: readonly NoiseReduction[] = ['off', 'browser', 'ai'];
 
@@ -297,6 +298,8 @@ export function VoicePage() {
           }}
         />
       </SettingsSection>
+
+      <VideoSection />
     </>
   );
 }

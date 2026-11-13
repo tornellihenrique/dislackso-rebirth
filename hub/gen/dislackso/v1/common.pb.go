@@ -718,7 +718,9 @@ type VoiceState struct {
 	// False until the media server confirms the connection.
 	Connected bool `protobuf:"varint,10,opt,name=connected,proto3" json:"connected,omitempty"`
 	// Unix ms.
-	JoinedAt      int64 `protobuf:"varint,11,opt,name=joined_at,json=joinedAt,proto3" json:"joined_at,omitempty"`
+	JoinedAt int64 `protobuf:"varint,11,opt,name=joined_at,json=joinedAt,proto3" json:"joined_at,omitempty"`
+	// Sending their camera, as the media server reports it.
+	Video         bool `protobuf:"varint,12,opt,name=video,proto3" json:"video,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -830,6 +832,13 @@ func (x *VoiceState) GetJoinedAt() int64 {
 	return 0
 }
 
+func (x *VoiceState) GetVideo() bool {
+	if x != nil {
+		return x.Video
+	}
+	return false
+}
+
 var File_dislackso_v1_common_proto protoreflect.FileDescriptor
 
 const file_dislackso_v1_common_proto_rawDesc = "" +
@@ -873,7 +882,7 @@ const file_dislackso_v1_common_proto_rawDesc = "" +
 	"\x05field\x18\x01 \x01(\tR\x05field\x12\x16\n" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\"3\n" +
 	"\vRateLimited\x12$\n" +
-	"\x0eretry_after_ms\x18\x01 \x01(\x03R\fretryAfterMs\"\xde\x02\n" +
+	"\x0eretry_after_ms\x18\x01 \x01(\x03R\fretryAfterMs\"\xf4\x02\n" +
 	"\n" +
 	"VoiceState\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x19\n" +
@@ -890,7 +899,8 @@ const file_dislackso_v1_common_proto_rawDesc = "" +
 	"\tstreaming\x18\t \x01(\bR\tstreaming\x12\x1c\n" +
 	"\tconnected\x18\n" +
 	" \x01(\bR\tconnected\x12\x1b\n" +
-	"\tjoined_at\x18\v \x01(\x03R\bjoinedAt*\xab\x01\n" +
+	"\tjoined_at\x18\v \x01(\x03R\bjoinedAt\x12\x14\n" +
+	"\x05video\x18\f \x01(\bR\x05video*\xab\x01\n" +
 	"\x10StatusPreference\x12!\n" +
 	"\x1dSTATUS_PREFERENCE_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18STATUS_PREFERENCE_ONLINE\x10\x01\x12\x1a\n" +

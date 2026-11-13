@@ -175,6 +175,7 @@ func VoiceState(v domain.VoiceState) *dislacksov1.VoiceState {
 		ServerMute:     v.ServerMute,
 		ServerDeaf:     v.ServerDeaf,
 		Streaming:      v.Streaming,
+		Video:          v.Video,
 		Connected:      v.Connected,
 		JoinedAt:       v.JoinedAt.UnixMilli(),
 	}

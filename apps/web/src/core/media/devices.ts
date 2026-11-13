@@ -28,6 +28,16 @@ export async function listAudioDevices(
   return { inputs: pick('audioinput'), outputs: pick('audiooutput') };
 }
 
+/** Lists cameras. Labels are empty until a camera permission was granted. */
+export async function listCameras(
+  md: MediaDevicesLike = navigator.mediaDevices,
+): Promise<readonly AudioDevice[]> {
+  const all = await md.enumerateDevices();
+  return all
+    .filter((d) => d.kind === 'videoinput' && d.deviceId !== '')
+    .map((d) => ({ id: d.deviceId, label: d.label }));
+}
+
 /** The device to use: the chosen one while it is plugged in, else the default. */
 export function resolveDevice(chosen: string, available: readonly AudioDevice[]): string {
   return chosen !== '' && available.some((d) => d.id === chosen) ? chosen : DEFAULT_DEVICE;

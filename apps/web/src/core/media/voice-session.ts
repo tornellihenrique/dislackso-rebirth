@@ -2,13 +2,16 @@ import {
   ConnectionQuality,
   ConnectionState,
   createLocalAudioTrack,
+  createLocalVideoTrack,
   DisconnectReason,
   MediaDeviceFailure,
   Room,
   RoomEvent,
   Track,
+  VideoPresets,
   type LocalAudioTrack,
   type LocalTrackPublication,
+  type LocalVideoTrack,
   type Participant,
   type RemoteParticipant,
   type RemoteTrack,
@@ -34,7 +37,7 @@ import {
 } from './screen-share';
 import { ShareError } from './share-error';
 import type { ShareCodec, SharePreset } from './share-presets';
-import { SELF_SHARE, type ShareViews } from './share-views';
+import { cameraView, SELF_CAMERA, SELF_SHARE, type ShareViews } from './share-views';
 import { SPEAKING_POLL_MS, SPEAKING_THRESHOLD_DB } from './speaking';
 import {
   readConnection,
@@ -50,7 +53,8 @@ import {
 
 /** Why a call ended without the user leaving. */
 export type CallEnd = 'replaced' | 'removed' | 'closed' | 'failed';
-export type MicFailure = 'denied' | 'not_found' | 'in_use' | 'other';
+export type DeviceFailure = 'denied' | 'not_found' | 'in_use' | 'other';
+export type MicFailure = DeviceFailure;
 export type Quality = 'excellent' | 'good' | 'poor' | 'lost' | 'unknown';
 /** Why this device's share ended without stopShare: the browser's control, or the media server. */
 export type ShareEnd = 'ended' | 'removed';
@@ -105,6 +109,10 @@ export interface VoiceSessionListener {
   onMicFilter?(state: FilterState): void;
   onShares?(shares: readonly RemoteShare[]): void;
   onShareEnded?(reason: ShareEnd): void;
+  /** Who else sends camera video that arrives here. */
+  onCameras?(identities: readonly string[]): void;
+  /** The media server dropped this device's camera. */
+  onCameraEnded?(): void;
   /** A data packet someone in the call sent. */
   onData?(topic: string, payload: Uint8Array, identity: string): void;
   onPeerJoined?(identity: string): void;
@@ -154,25 +162,33 @@ function endReason(reason: DisconnectReason | undefined): CallEnd {
   return (reason === undefined ? undefined : ends[reason]) ?? 'failed';
 }
 
-const micFailures: Partial<Record<MediaDeviceFailure, MicFailure>> = {
+const deviceFailures: Partial<Record<MediaDeviceFailure, DeviceFailure>> = {
   [MediaDeviceFailure.PermissionDenied]: 'denied',
   [MediaDeviceFailure.NotFound]: 'not_found',
   [MediaDeviceFailure.DeviceInUse]: 'in_use',
 };
 
-function micFailure(err: unknown): MicFailure {
+function deviceFailure(err: unknown): DeviceFailure {
   const f = MediaDeviceFailure.getFailure(err);
-  return (f === undefined ? undefined : micFailures[f]) ?? 'other';
+  return (f === undefined ? undefined : deviceFailures[f]) ?? 'other';
 }
 
 function deviceConstraint(id: string): ConstrainDOMString | undefined {
   return id === '' || id === DEFAULT_DEVICE ? undefined : { ideal: id };
 }
 
+function cameraOptions(id: string) {
+  const deviceId = deviceConstraint(id);
+  return {
+    ...(deviceId !== undefined ? { deviceId } : {}),
+    resolution: VideoPresets.h720.resolution,
+  };
+}
+
 /**
  * One voice connection: a LiveKit room, the local microphone with its
  * processing chain, remote audio playback, this device's screen share and
- * everyone else's. It knows nothing about the hub; the caller joins through
+ * camera and everyone else's. It knows nothing about the hub; the caller joins through
  * the hub and hands over the token.
  */
 export class VoiceSession {
@@ -187,12 +203,15 @@ export class VoiceSession {
   /** The room a microphone is being published to. */
   private publishing: Room | undefined;
   private share: LocalShare | undefined;
+  private camera: LocalVideoTrack | undefined;
   /** Preset changes run one at a time: each reads and writes the senders. */
   private retuning = Promise.resolve();
   private selfLevel: MicLevel | undefined;
   private speakingTimer: ReturnType<typeof setInterval> | undefined;
   /** Identities whose share has a view. */
   private shareOwners = new Set<string>();
+  /** Identities whose camera has a view. */
+  private cameraOwners = new Set<string>();
   /** Shares the user stopped watching, by track. */
   private readonly unwatched = new Set<string>();
   private readonly inCounters = new Map<string, Counter>();
@@ -240,7 +259,7 @@ export class VoiceSession {
     );
     if (this.room !== room) return;
     this.listener.onAudioBlocked(!room.canPlaybackAudio);
-    this.emitShares(room);
+    this.emitVideo(room);
     this.watchSpeaking(room);
     await this.publishMic(room);
   }
@@ -388,6 +407,48 @@ export class VoiceSession {
     if (this.room) await stopShare(this.room, share);
   }
 
+  /** Publishes the camera; resolves with why it could not start. */
+  async startCamera(deviceId: string): Promise<DeviceFailure | undefined> {
+    const room = this.room;
+    if (!room) return 'other';
+    if (this.camera) return undefined;
+    let track: LocalVideoTrack;
+    try {
+      track = await createLocalVideoTrack(cameraOptions(deviceId));
+    } catch (err) {
+      return deviceFailure(err);
+    }
+    try {
+      if (this.room !== room) throw new Error('left the call');
+      await room.localParticipant.publishTrack(track, {
+        source: Track.Source.Camera,
+        simulcast: true,
+        videoEncoding: VideoPresets.h720.encoding,
+      });
+      if (this.room !== room) throw new Error('left the call');
+    } catch {
+      track.stop();
+      return 'other';
+    }
+    this.camera = track;
+    this.views.setTrack(SELF_CAMERA, track);
+    return undefined;
+  }
+
+  /** Moves the camera, when it is on, to another device. */
+  async setCameraDevice(deviceId: string): Promise<void> {
+    await this.camera?.restartTrack(cameraOptions(deviceId)).catch(() => undefined);
+  }
+
+  async stopCamera(): Promise<void> {
+    const track = this.camera;
+    if (!track) return;
+    this.camera = undefined;
+    this.views.setTrack(SELF_CAMERA, undefined);
+    await this.room?.localParticipant.unpublishTrack(track).catch(() => undefined);
+    track.stop();
+  }
+
   /** Sends bytes to everyone else in the call, or only to the given identities. */
   sendData(topic: string, payload: Uint8Array, reliable: boolean, to?: readonly string[]): void {
     const room = this.room;
@@ -412,7 +473,7 @@ export class VoiceSession {
     else this.unwatched.add(video.trackSid);
     video.setSubscribed(watching);
     p.getTrackPublication(Track.Source.ScreenShareAudio)?.setSubscribed(watching);
-    this.emitShares(room);
+    this.emitVideo(room);
   }
 
   async shareStats(identity: string): Promise<RemoteShareStats | undefined> {
@@ -455,7 +516,7 @@ export class VoiceSession {
   /** The latest readings of the sending and the receiving peer connection. */
   async transportReadings(): Promise<ReadonlyMap<'publisher' | 'subscriber', TransportReading>> {
     const out = new Map<'publisher' | 'subscriber', TransportReading>();
-    const sent = await (this.mic ?? this.share?.video)?.getRTCStatsReport();
+    const sent = await (this.mic ?? this.share?.video ?? this.camera)?.getRTCStatsReport();
     const publisher = sent ? readTransport(sent) : undefined;
     if (publisher) out.set('publisher', publisher);
     for (const p of this.room?.remoteParticipants.values() ?? []) {
@@ -553,7 +614,7 @@ export class VoiceSession {
       this.mic = track;
       this.processor = processor;
     } catch (err) {
-      if (this.room === room) this.listener.onMicError(micFailure(err));
+      if (this.room === room) this.listener.onMicError(deviceFailure(err));
     } finally {
       if (this.publishing === room) this.publishing = undefined;
     }
@@ -571,16 +632,20 @@ export class VoiceSession {
     this.share = undefined;
     share?.video.stop();
     share?.audio?.stop();
+    this.camera?.stop();
+    this.camera = undefined;
     this.remote.clear();
     this.views.detachAll();
     this.shareOwners = new Set();
+    this.cameraOwners = new Set();
     this.unwatched.clear();
     this.inCounters.clear();
     this.listener.onShares?.([]);
+    this.listener.onCameras?.([]);
   }
 
-  /** Reports everyone's screen shares and gives each its video. */
-  private emitShares(room: Room): void {
+  /** Reports everyone's screen shares and cameras and gives each its video. */
+  private emitVideo(room: Room): void {
     const shares: RemoteShare[] = [];
     const owners = new Set<string>();
     for (const p of room.remoteParticipants.values()) {
@@ -601,9 +666,30 @@ export class VoiceSession {
     for (const id of this.shareOwners) if (!owners.has(id)) this.views.setTrack(id, undefined);
     this.shareOwners = owners;
     this.listener.onShares?.(shares);
+
+    const cameras = new Set<string>();
+    for (const p of room.remoteParticipants.values()) {
+      const pub = p.getTrackPublication(Track.Source.Camera);
+      const track = pub && !pub.isMuted ? pub.videoTrack : undefined;
+      if (!track) continue;
+      cameras.add(p.identity);
+      this.views.setTrack(cameraView(p.identity), track);
+    }
+    for (const id of this.cameraOwners)
+      if (!cameras.has(id)) this.views.setTrack(cameraView(id), undefined);
+    this.cameraOwners = cameras;
+    this.listener.onCameras?.([...cameras]);
   }
 
   private localUnpublished(room: Room, pub: LocalTrackPublication): void {
+    const camera = this.camera;
+    if (pub.source === Track.Source.Camera && camera && pub.track === camera) {
+      this.camera = undefined;
+      this.views.setTrack(SELF_CAMERA, undefined);
+      camera.stop();
+      this.listener.onCameraEnded?.();
+      return;
+    }
     if (pub.source === Track.Source.Microphone) {
       // The media server dropped the mic (server mute).
       this.mic = undefined;
@@ -621,7 +707,7 @@ export class VoiceSession {
   private listen(room: Room): void {
     const l = this.listener;
     const shares = () => {
-      if (this.room === room) this.emitShares(room);
+      if (this.room === room) this.emitVideo(room);
     };
     room
       .on(RoomEvent.Reconnecting, () => {
@@ -653,7 +739,7 @@ export class VoiceSession {
         l.onAudioBlocked(!room.canPlaybackAudio);
       })
       .on(RoomEvent.MediaDevicesError, (err: Error) => {
-        l.onMicError(micFailure(err));
+        l.onMicError(deviceFailure(err));
       })
       .on(RoomEvent.LocalTrackUnpublished, (pub) => {
         this.localUnpublished(room, pub);

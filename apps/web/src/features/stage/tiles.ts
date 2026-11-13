@@ -24,7 +24,10 @@ export interface TileInput {
   readonly myId: string;
   readonly selfSharing: boolean;
   readonly selfPreview: boolean;
+  /** Hides the people without a camera on. */
   readonly hideNoVideo: boolean;
+  /** Who has a camera on, this device's user included. */
+  readonly cameras: readonly string[];
 }
 
 /**
@@ -53,10 +56,9 @@ export function stageTiles(input: TileInput): StageTile[] {
   if (input.selfSharing && input.selfPreview) {
     out.push({ key: shareKey(myId), kind: 'share', userId: myId, self: true });
   }
-  if (!input.hideNoVideo) {
-    for (const o of occupants) {
-      out.push({ key: userKey(o.userId), kind: 'user', userId: o.userId, self: o.userId === myId });
-    }
+  for (const o of occupants) {
+    if (input.hideNoVideo && !input.cameras.includes(o.userId)) continue;
+    out.push({ key: userKey(o.userId), kind: 'user', userId: o.userId, self: o.userId === myId });
   }
   return out;
 }

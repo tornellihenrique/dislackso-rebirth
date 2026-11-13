@@ -374,14 +374,14 @@ Online while ≥ 1 gateway session; `idle` reported by client after 10 min witho
 ### 9.1 Voice state (in-memory, hub-owned)
 ```
 VoiceState{ user_id, guild_id, channel_id, voice_session_id, self_mute, self_deaf, server_mute, server_deaf,
-            streaming /*from LiveKit track events*/, camera /*opt*/, connected /*false until LiveKit confirms*/, joined_at }
+            streaming /*from LiveKit track events*/, video /*camera, the same way*/, connected /*false until LiveKit confirms*/, joined_at }
 ```
 Broadcast via `VOICE_STATE_UPDATE` to all guild members (sidebar shows occupants of every voice channel in every guild, live).
 
 ### 9.2 Join / switch / leave flow
 1. Client calls `VoiceService.Join(channelId)`.
 2. Hub checks: member, not banned, channel is voice, `user_limit`, instance limits.
-3. Hub atomically: removes user's previous voice state (any guild), assigns new state (pending), mints LiveKit token (identity = userId, room = `vc_<channelId>`, grants: publish sources `[microphone, screen_share, screen_share_audio]` (+`camera` if enabled), subscribe, publish data; metadata = the voice session id; TTL 10 min — LiveKit refreshes tokens for connected clients), issues ICE servers from `IceServerProvider` (TTL 12 h). If the previous state was in another room, the hub removes that participant: LiveKit replaces duplicate identities only within one room.
+3. Hub atomically: removes user's previous voice state (any guild), assigns new state (pending), mints LiveKit token (identity = userId, room = `vc_<channelId>`, grants: publish sources `[microphone, camera, screen_share, screen_share_audio]`, subscribe, publish data; metadata = the voice session id; TTL 10 min — LiveKit refreshes tokens for connected clients), issues ICE servers from `IceServerProvider` (TTL 12 h). If the previous state was in another room, the hub removes that participant: LiveKit replaces duplicate identities only within one room.
 4. Client disconnects any previous room, then `room.connect(url, token, { rtcConfig: { iceServers } })`.
 5. LiveKit webhook `participant_joined` → state confirmed. No confirmation within 30 s → state cleared.
 6. `participant_left` / `participant_connection_aborted` → state cleared (ignore if `voiceSessionId` differs: user already moved). Track webhooks carry only the participant SID, which the hub remembers when it confirms the connection. A participant whose session is not the user's current one is removed; one the hub has no state for is adopted if the user is a member (after a hub restart) and removed otherwise. Server mute and deafen are re-applied on every confirmation.
@@ -436,8 +436,8 @@ Room options: `adaptiveStream: true`, `dynacast: true`.
 - Stats overlay (toggle `Ctrl+Shift+S` or tile menu): resolution, fps, codec, scalability layer, bitrate, packet loss, jitter, RTT, candidate type (host/srflx/prflx/relay), quality limitation reason. On the sharer's own preview it lists each sent layer and whether dynacast paused it.
 - Measurements and the per-mode codec defaults: [ADR 0002](adr/0002-screen-share-codecs.md); `task bench:share` repeats them.
 
-### 9.6 Camera (optional, cheap)
-Same pipeline; `camera` source; default 720p30, simulcast. Off by default in instance settings.
+### 9.6 Camera
+Same pipeline; `camera` source; 720p30 with simulcast (360p, 180p), no quality choice. Allowed in every voice channel; the camera device is a per-device setting, switchable while on. The hub sets `video` in voice state from LiveKit's track events. It shows in the person's user tile, mirrored for themselves.
 
 ---
 

@@ -1,5 +1,5 @@
 import type { VoiceState } from '@dislackso/contracts/gen/dislackso/v1/common_pb';
-import { HeadphoneOff, MicOff } from 'lucide-react';
+import { HeadphoneOff, MicOff, Video } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Tooltip } from '@/ui/Tooltip';
@@ -8,7 +8,7 @@ interface VoiceStateIconsProps {
   state: VoiceState;
 }
 
-/** Mute, deafen and LIVE markers for someone in voice; server ones in red. */
+/** Mute, deafen, camera and LIVE markers for someone in voice; server ones in red. */
 export function VoiceStateIcons({ state }: VoiceStateIconsProps) {
   const { t } = useTranslation();
   const mic = state.serverMute
@@ -27,6 +27,13 @@ export function VoiceStateIcons({ state }: VoiceStateIconsProps) {
         <span className="rounded-sm bg-danger px-1 text-[10px] leading-4 font-bold text-accent-fg">
           {t('voice.occupant.live')}
         </span>
+      )}
+      {state.video && (
+        <Tooltip label={t('voice.occupant.video')}>
+          <span role="img" aria-label={t('voice.occupant.video')} className="text-fg-muted">
+            <Video aria-hidden className="size-4" />
+          </span>
+        </Tooltip>
       )}
       {mic && (
         <Tooltip label={mic.label}>

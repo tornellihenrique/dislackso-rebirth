@@ -7,6 +7,7 @@ import { useMyVoiceState } from '@/features/voice/hooks';
 import { useVoiceSettings } from '@/stores/voice-settings';
 import { Tooltip } from '@/ui/Tooltip';
 
+import { CameraButton } from './CameraButton';
 import { ShareButton } from './ShareButton';
 
 interface StageControlsProps {
@@ -63,6 +64,7 @@ export function StageControls({ channelId, fullscreen, onFullscreen }: StageCont
           <Headphones aria-hidden className="size-6" />
         )}
       </RoundButton>
+      <CameraButton round />
       <ShareButton channelId={channelId} round />
       <RoundButton label={fullLabel} pressed={fullscreen} onClick={onFullscreen}>
         {fullscreen ? (
