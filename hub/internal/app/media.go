@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"os"
 	"os/exec"
@@ -30,15 +31,23 @@ const (
 	secretLiveKitKey    = "livekit.api_key"    //nolint:gosec // a key name, not a credential
 	secretLiveKitSecret = "livekit.api_secret" //nolint:gosec // a key name, not a credential
 	healthProbeTimeout  = 2 * time.Second
+	// addressCheckEvery is how often the hub looks at its public address.
+	addressCheckEvery = time.Minute
 )
 
 // mediaServer is the LiveKit sidecar: its keys, its supervisor once the hub
 // listens, and the provider services use.
 type mediaServer struct {
 	cfg config.LiveKit
-	// nodeIP is the public IPv4 at which the router keeps the media port's
-	// number, found before starting LiveKit; empty behind other routers.
-	nodeIP   string
+	// findNodeIP finds, before each start, the public IPv4 at which the router
+	// keeps the media port's number; empty behind other routers. It stays nil
+	// on hosts told not to look up their public address.
+	findNodeIP func(ctx context.Context) string
+	// publicIP is this host's public IPv4 now, wherever it listens.
+	publicIP   func(ctx context.Context) (netip.Addr, error)
+	checkEvery time.Duration
+	// nodeIP is what LiveKit advertises since its last start.
+	nodeIP   atomic.Pointer[string]
 	dataDir  string
 	logLevel string
 	logger   *slog.Logger
@@ -51,7 +60,10 @@ type mediaServer struct {
 }
 
 func newMediaServer(ctx context.Context, cfg config.Config, secrets ports.SecretStore, logger *slog.Logger) (*mediaServer, error) {
-	m := &mediaServer{cfg: cfg.LiveKit, dataDir: cfg.DataDir, logLevel: cfg.Log.Level, logger: logger}
+	m := &mediaServer{
+		cfg: cfg.LiveKit, checkEvery: addressCheckEvery,
+		dataDir: cfg.DataDir, logLevel: cfg.Log.Level, logger: logger,
+	}
 	key, err := ensureSecret(ctx, secrets, secretLiveKitKey, func() string { return "API" + rand.Text()[:12] })
 	if err != nil {
 		return nil, err
@@ -137,8 +149,8 @@ func (m *mediaServer) Check(context.Context) error {
 	return fmt.Errorf("media server %s", state)
 }
 
-// start writes livekit.yaml and supervises the sidecar until ctx is done.
-// hubAddr is where the hub listens, for the webhook URL.
+// start supervises the sidecar until ctx is done, writing livekit.yaml before
+// each of its starts. hubAddr is where the hub listens, for the webhook URL.
 func (m *mediaServer) start(ctx context.Context, wg *sync.WaitGroup, hubAddr net.Addr, onReady func(ctx context.Context, restarts int)) error {
 	if m.binary == "" {
 		return nil
@@ -148,23 +160,28 @@ func (m *mediaServer) start(ctx context.Context, wg *sync.WaitGroup, hubAddr net
 		return errors.New("hub address is not TCP")
 	}
 	path := filepath.Join(m.dataDir, "livekit.yaml")
-	err := livekit.WriteServerConfig(path, livekit.ServerOptions{
-		Port: m.cfg.Port, UDPPort: m.cfg.UDPPort, TCPPort: m.cfg.TCPPort, APIKey: m.key,
-		WebhookURL: "http://" + net.JoinHostPort("127.0.0.1", strconv.Itoa(tcp.Port)) + media.WebhookPath,
-		NodeIP:     m.nodeIP, LogLevel: m.logLevel,
-	})
-	if err != nil {
-		return err
+	writeConfig := func(ctx context.Context) error {
+		nodeIP := ""
+		if m.findNodeIP != nil {
+			nodeIP = m.findNodeIP(ctx)
+		}
+		m.nodeIP.Store(&nodeIP)
+		return livekit.WriteServerConfig(path, livekit.ServerOptions{
+			Port: m.cfg.Port, UDPPort: m.cfg.UDPPort, TCPPort: m.cfg.TCPPort, APIKey: m.key,
+			WebhookURL: "http://" + net.JoinHostPort("127.0.0.1", strconv.Itoa(tcp.Port)) + media.WebhookPath,
+			NodeIP:     nodeIP, LogLevel: m.logLevel,
+		})
 	}
 	health := m.apiURL().String() + "/"
 	sup := sidecar.New(sidecar.Spec{
-		Name:    "livekit",
-		Path:    m.binary,
-		Args:    []string{"--config", path},
-		Env:     []string{livekit.KeysEnv(m.key, m.secret)},
-		LogPath: filepath.Join(m.dataDir, "logs", "livekit.log"),
-		Health:  func(ctx context.Context) error { return probe(ctx, health) },
-		OnReady: onReady,
+		Name:        "livekit",
+		Path:        m.binary,
+		Args:        []string{"--config", path},
+		Env:         []string{livekit.KeysEnv(m.key, m.secret)},
+		LogPath:     filepath.Join(m.dataDir, "logs", "livekit.log"),
+		BeforeStart: writeConfig,
+		Health:      func(ctx context.Context) error { return probe(ctx, health) },
+		OnReady:     onReady,
 	}, m.logger)
 	m.sup.Store(sup)
 	wg.Go(func() {
@@ -172,7 +189,59 @@ func (m *mediaServer) start(ctx context.Context, wg *sync.WaitGroup, hubAddr net
 			m.logger.ErrorContext(ctx, "voice is unavailable", slog.Any("error", err))
 		}
 	})
+	if m.publicIP != nil {
+		wg.Go(func() { m.followPublicAddress(ctx, sup) })
+	}
 	return nil
+}
+
+// followPublicAddress restarts the media server when the address it
+// advertises stops being this host's, which sends every caller to a dead
+// address: the provider changed it, or the hub started behind a VPN since
+// turned off. Connections already up break with the old address anyway.
+func (m *mediaServer) followPublicAddress(ctx context.Context, sup *sidecar.Supervisor) {
+	var watch addressWatch
+	tick := time.NewTicker(m.checkEvery)
+	defer tick.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-tick.C:
+		}
+		advertised := m.nodeIP.Load()
+		if advertised == nil {
+			continue
+		}
+		seen := ""
+		if ip, err := m.publicIP(ctx); err == nil {
+			seen = ip.String()
+		}
+		if watch.moved(*advertised, seen) {
+			m.logger.InfoContext(ctx, "the public address changed; restarting the media server",
+				slog.String("advertised", *advertised), slog.String("public", seen))
+			sup.Restart()
+		}
+	}
+}
+
+// addressWatch tells a moved public address from a passing odd answer: the
+// same other address has to show twice in a row. Without an advertised
+// address nothing can go stale, as LiveKit finds it per connection; and no
+// answer (offline) says nothing about it.
+type addressWatch struct{ pending string }
+
+func (w *addressWatch) moved(advertised, seen string) bool {
+	if advertised == "" || seen == "" || seen == advertised {
+		w.pending = ""
+		return false
+	}
+	if seen != w.pending {
+		w.pending = seen
+		return false
+	}
+	w.pending = ""
+	return true
 }
 
 // probe passes once LiveKit answers its health check with 200.

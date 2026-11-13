@@ -123,6 +123,76 @@ func TestSupervisorRestartsAndStops(t *testing.T) {
 	}
 }
 
+func TestSupervisorRestartsOnRequest(t *testing.T) {
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr := freeAddr(t)
+	var mu sync.Mutex
+	prepared := 0
+	var readies []int
+	s := New(Spec{
+		Name: "helper", Path: exe, Env: []string{"HELPER_LISTEN=" + addr},
+		LogPath: filepath.Join(t.TempDir(), "helper.log"),
+		BeforeStart: func(context.Context) error {
+			mu.Lock()
+			defer mu.Unlock()
+			prepared++
+			return nil
+		},
+		Health: dialHealth(addr),
+		OnReady: func(_ context.Context, restarts int) {
+			mu.Lock()
+			defer mu.Unlock()
+			readies = append(readies, restarts)
+		},
+	}, slog.New(slog.DiscardHandler))
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	go func() { _ = s.Run(ctx) }()
+
+	waitFor(t, "first start", s.Ready)
+	first := s.Status().PID
+	started := time.Now()
+	s.Restart()
+	waitFor(t, "restart", func() bool { st := s.Status(); return st.State == StateRunning && st.PID != first })
+	// Asked for, so without the backoff that follows a crash.
+	if took := time.Since(started); took >= stopTimeout {
+		t.Errorf("restart took %s", took)
+	}
+	if st := s.Status(); st.Restarts != 1 || st.LastError != "" {
+		t.Errorf("status after restart = %+v", st)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if prepared != 2 {
+		t.Errorf("BeforeStart ran %d times, want 2", prepared)
+	}
+	if len(readies) != 2 || readies[1] != 1 {
+		t.Errorf("OnReady calls = %v", readies)
+	}
+}
+
+func TestSupervisorRetriesWhenBeforeStartFails(t *testing.T) {
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := New(Spec{
+		Name: "helper", Path: exe, LogPath: filepath.Join(t.TempDir(), "helper.log"),
+		BeforeStart: func(context.Context) error { return errors.New("no config") },
+		Health:      func(context.Context) error { return nil },
+	}, slog.New(slog.DiscardHandler))
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	go func() { _ = s.Run(ctx) }()
+	waitFor(t, "a failed start", func() bool { return s.Status().Restarts > 0 })
+	if st := s.Status(); st.State != StateRestarting || st.PID != 0 {
+		t.Errorf("status = %+v", st)
+	}
+}
+
 func TestSupervisorReportsCrashes(t *testing.T) {
 	exe, err := os.Executable()
 	if err != nil {

@@ -161,6 +161,8 @@ The API key pair is generated once and kept in `secrets.yaml`; the sidecar recei
 
 Before starting LiveKit the hub probes UDP 7882 with STUN (§4.4). When the router keeps the port's number outside (or there is no NAT), `node_ip` is the public IPv4 and LiveKit advertises 7882 there. Otherwise `node_ip` stays empty, and LiveKit then hands the STUN servers to its own ICE agent: each connection gathers a **server-reflexive candidate** on a port of its own, with the outside port the router really gave it ([ADR 0004](adr/0004-server-reflexive-candidates.md)). `livekit.external_ip: false` (offline or LAN-only hosts) skips the probe and the port forwarding.
 
+The probe runs before every LiveKit start, and `livekit.yaml` is written then. A pinned `node_ip` goes stale when the provider changes the address or the hub started behind a VPN since turned off, which leaves everyone outside the LAN stuck connecting while the site still works. So the hub looks at its public IPv4 every minute, and when the same other address shows twice in a row it restarts LiveKit (`sidecar.Supervisor.Restart`). The restart takes a few seconds; as after a crash, clients reconnect by themselves and the hub adopts them. Without a pinned address nothing can go stale.
+
 Connection paths, in order of preference:
 1. **LAN host candidate** (same office network).
 2. **IPv6** global address (common on Brazilian fiber; stateful firewalls are opened by full-ICE checks from both sides).
