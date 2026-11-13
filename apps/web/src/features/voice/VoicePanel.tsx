@@ -3,6 +3,7 @@ import { PhoneOff, Signal, SignalHigh, SignalLow, SignalMedium, Volume2 } from '
 import { useTranslation } from 'react-i18next';
 
 import { useServices } from '@/app/services';
+import { CameraButton } from '@/features/stage/CameraButton';
 import { ShareButton } from '@/features/stage/ShareButton';
 import type { Quality } from '@/core/media/voice-session';
 import { useCall } from '@/stores/call';
@@ -82,6 +83,7 @@ export function VoicePanel() {
             </Link>
           )}
         </span>
+        <CameraButton />
         <ShareButton channelId={call.channelId} />
         <Tooltip label={t('voice.panel.disconnect')}>
           <IconButton

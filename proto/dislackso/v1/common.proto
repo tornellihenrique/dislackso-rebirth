@@ -114,4 +114,6 @@ message VoiceState {
   bool connected = 10;
   // Unix ms.
   int64 joined_at = 11;
+  // Sending their camera, as the media server reports it.
+  bool video = 12;
 }

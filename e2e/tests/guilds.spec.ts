@@ -266,7 +266,7 @@ test('closing settings goes back to the channel they were opened from', async ()
   await expect(page).toHaveURL(/\/channels\/\d+\/\d+$/);
   const channel = page.url();
   await page.getByRole('link', { name: 'User settings' }).click();
-  await page.getByRole('link', { name: 'Voice & audio' }).click();
+  await page.getByRole('link', { name: 'Voice & video' }).click();
   await expect(page).toHaveURL('/settings/voice');
   await page.keyboard.press('Escape');
   await expect(page).toHaveURL(channel);

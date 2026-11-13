@@ -1,6 +1,7 @@
 import type { VoiceState } from '@dislackso/contracts/gen/dislackso/v1/common_pb';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
+import { listCameras, watchDevices, type AudioDevice } from '@/core/media/devices';
 import { useCall } from '@/stores/call';
 import { useSession } from '@/stores/session';
 import { channelOccupants, useVoiceStates } from '@/stores/voice-states';
@@ -29,4 +30,26 @@ export function useMyVoiceState(): VoiceState | undefined {
 /** Whether userId speaks now; known only for people in this device's call. */
 export function useSpeaking(userId: string): boolean {
   return useCall((s) => s.speaking.includes(userId));
+}
+
+/** The cameras plugged in, reloaded when one is plugged in or removed and when `reload` changes. */
+export function useCameras(reload?: unknown): readonly AudioDevice[] {
+  const [cameras, setCameras] = useState<readonly AudioDevice[]>([]);
+  useEffect(() => {
+    let live = true;
+    const load = () => {
+      void listCameras()
+        .then((list) => {
+          if (live) setCameras(list);
+        })
+        .catch(() => undefined);
+    };
+    load();
+    const unwatch = watchDevices(load);
+    return () => {
+      live = false;
+      unwatch();
+    };
+  }, [reload]);
+  return cameras;
 }

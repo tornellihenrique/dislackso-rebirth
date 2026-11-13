@@ -154,6 +154,37 @@ test('the microphone sends as much audio as time passes', async () => {
   expect(rate).toBeLessThan(1.05);
 });
 
+test('a camera turned on shows in its tile for everyone, next to a screen share', async () => {
+  const tile = (page: Page, name: string) =>
+    page.getByTestId('voice-tile').filter({ hasText: name });
+  const width = (page: Page, name: string) =>
+    tile(page, name)
+      .getByTestId('camera-view')
+      .locator('video')
+      .evaluate((v: HTMLVideoElement) => v.videoWidth);
+
+  await panel(ana.page).getByRole('button', { name: 'Turn on camera' }).click();
+  await expect(
+    occupant(admin.page, MEMBER.username).getByRole('img', { name: 'Camera on' }),
+  ).toBeVisible(CONNECT);
+  await expect.poll(() => width(admin.page, MEMBER.username), CONNECT).toBeGreaterThan(0);
+  await expect.poll(() => width(ana.page, MEMBER.username), CONNECT).toBeGreaterThan(0);
+
+  // Sharing the screen keeps the camera on.
+  await panel(ana.page).getByRole('button', { name: 'Share your screen' }).click();
+  await expect(occupant(admin.page, MEMBER.username)).toContainText('LIVE', CONNECT);
+  await expect(
+    occupant(admin.page, MEMBER.username).getByRole('img', { name: 'Camera on' }),
+  ).toBeVisible();
+  await panel(ana.page).getByRole('button', { name: 'Stop sharing' }).click();
+
+  await panel(ana.page).getByRole('button', { name: 'Turn off camera' }).click();
+  await expect(
+    occupant(admin.page, MEMBER.username).getByRole('img', { name: 'Camera on' }),
+  ).toBeHidden(CONNECT);
+  await expect(tile(admin.page, MEMBER.username).getByTestId('camera-view')).toBeHidden(CONNECT);
+});
+
 test('mute and deafen show live, and undeafening restores the mute from before', async () => {
   const row = () => occupant(admin.page, MEMBER.username);
   await userPanel(ana.page).getByRole('button', { name: 'Mute', exact: true }).click();

@@ -20,6 +20,7 @@ type VoiceState struct {
 	ServerMute bool
 	ServerDeaf bool
 	Streaming  bool
+	Video      bool
 	// Connected is false until the media server reports the participant.
 	Connected bool
 	JoinedAt  time.Time
@@ -63,7 +64,7 @@ func VoicePermissionsFor(serverMute, serverDeaf bool) VoicePermissions {
 	if !serverMute {
 		p.Publish = append(p.Publish, SourceMicrophone)
 	}
-	p.Publish = append(p.Publish, SourceScreenShare, SourceScreenShareAudio)
+	p.Publish = append(p.Publish, SourceCamera, SourceScreenShare, SourceScreenShareAudio)
 	return p
 }
 

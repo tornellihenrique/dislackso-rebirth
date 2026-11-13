@@ -453,6 +453,10 @@ func (s *Service) track(ctx context.Context, channelID, userID domain.ID, ev por
 		e.state.Streaming = published
 		s.publish(ctx, e.state)
 	}
+	if ev.Source == domain.SourceCamera && e.state.Video != published {
+		e.state.Video = published
+		s.publish(ctx, e.state)
+	}
 	s.mu.Unlock()
 	if published && ev.Source == domain.SourceMicrophone && mute {
 		s.enforce(ctx, channelID, userID, mute, deaf)
@@ -526,9 +530,10 @@ func (s *Service) confirm(ctx context.Context, channelID, userID domain.ID, p po
 
 func (s *Service) connected(ctx context.Context, e *entry, p ports.MediaParticipant) domain.VoiceState {
 	streaming := slices.Contains(p.Sources, domain.SourceScreenShare)
+	video := slices.Contains(p.Sources, domain.SourceCamera)
 	e.sid = p.SID
-	if !e.state.Connected || e.state.Streaming != streaming {
-		e.state.Connected, e.state.Streaming = true, streaming
+	if !e.state.Connected || e.state.Streaming != streaming || e.state.Video != video {
+		e.state.Connected, e.state.Streaming, e.state.Video = true, streaming, video
 		e.pendingSince, e.moved = time.Time{}, false
 		s.publish(ctx, e.state)
 	}

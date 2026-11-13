@@ -156,6 +156,11 @@ export const ptBR: Messages = {
       micNotFound: 'Nenhum microfone encontrado. Você ainda pode ouvir.',
       micInUse: 'Outro aplicativo está usando o microfone.',
       micFailed: 'Não foi possível iniciar o microfone.',
+      cameraDenied: 'O acesso à câmera está bloqueado. Permita no navegador para ligá-la.',
+      cameraNotFound: 'Nenhuma câmera encontrada.',
+      cameraInUse: 'Outro app está usando a câmera.',
+      cameraFailed: 'Não foi possível ligar a câmera.',
+      cameraStopped: 'Sua câmera foi desligada.',
       filterOverload:
         'Este computador não deu conta do filtro de ruído forte, então um mais leve roda agora.',
       filterFailed: 'O filtro de ruído não carregou; sua voz sai sem filtro.',
@@ -182,6 +187,11 @@ export const ptBR: Messages = {
       undeafen: 'Ativar áudio',
       serverMuted: 'Silenciado por um moderador',
       serverDeafened: 'Áudio desativado por um moderador',
+      camera: 'Ligar câmera',
+      cameraOff: 'Desligar câmera',
+      cameraOptions: 'Opções da câmera',
+      cameraChoose: 'Câmera',
+      cameraMore: 'Configurações de vídeo',
     },
     occupant: {
       muted: 'Microfone desativado',
@@ -189,6 +199,7 @@ export const ptBR: Messages = {
       serverMuted: 'Silenciado no servidor',
       serverDeafened: 'Áudio desativado no servidor',
       live: 'AO VIVO',
+      video: 'Câmera ligada',
       connecting: 'Conectando',
     },
     stage: {
@@ -214,7 +225,7 @@ export const ptBR: Messages = {
     },
   },
   stage: {
-    noVideo: 'Ninguém está compartilhando a tela.',
+    noVideo: 'Ninguém está compartilhando a tela ou a câmera.',
     notices: {
       shareLimit_one: 'Este canal permite {{count}} compartilhamento de tela por vez.',
       shareLimit_other: 'Este canal permite {{count}} compartilhamentos de tela por vez.',
@@ -248,7 +259,7 @@ export const ptBR: Messages = {
     layout: {
       grid: 'Grade',
       focus: 'Foco',
-      hideNoVideo: 'Mostrar só telas',
+      hideNoVideo: 'Mostrar só vídeo',
       showEveryone: 'Mostrar todos',
     },
     filmstrip: {
@@ -675,7 +686,7 @@ export const ptBR: Messages = {
     close: 'Fechar configurações',
     instanceSection: 'Instância',
     nav: {
-      voice: 'Voz e áudio',
+      voice: 'Voz e vídeo',
       share: 'Compartilhamento de tela',
       account: 'Minha conta',
       profile: 'Perfil',
@@ -707,7 +718,7 @@ export const ptBR: Messages = {
       },
     },
     voice: {
-      title: 'Voz e áudio',
+      title: 'Voz e vídeo',
       devices: 'Dispositivos',
       inputDevice: 'Dispositivo de entrada',
       outputDevice: 'Dispositivo de saída',
@@ -715,6 +726,11 @@ export const ptBR: Messages = {
       outputUnsupported: 'Este navegador toca o áudio pela saída padrão do sistema.',
       inputVolume: 'Volume de entrada',
       outputVolume: 'Volume de saída',
+      video: 'Vídeo',
+      camera: 'Câmera',
+      cameraTest: 'Testar vídeo',
+      cameraTestStop: 'Parar teste',
+      cameraTestHint: 'Só você vê esta prévia. As chamadas a enviam em até 720p e 30 fps.',
       micTest: 'Teste de microfone',
       micTestStart: 'Vamos testar',
       micTestStop: 'Parar o teste',
@@ -785,7 +801,7 @@ export const ptBR: Messages = {
         keybinds: 'Abrir os atalhos',
         statsOverlay: 'Mostrar ou ocultar as estatísticas da transmissão',
       },
-      pttOff: 'Usado quando o modo de entrada é aperte para falar (Voz e áudio).',
+      pttOff: 'Usado quando o modo de entrada é aperte para falar (Voz e vídeo).',
       none: 'Sem atalho',
       recording: 'Aperte as teclas…',
       change: 'Alterar',

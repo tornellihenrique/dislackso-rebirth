@@ -154,6 +154,11 @@ export const en = {
       micNotFound: 'No microphone found. You can still listen.',
       micInUse: 'Another app is using the microphone.',
       micFailed: "Couldn't start the microphone.",
+      cameraDenied: 'Camera access is blocked. Allow it in the browser to turn it on.',
+      cameraNotFound: 'No camera found.',
+      cameraInUse: 'Another app is using the camera.',
+      cameraFailed: "Couldn't start the camera.",
+      cameraStopped: 'Your camera was turned off.',
       filterOverload:
         'This computer could not keep up with the strong noise filter, so a lighter one runs now.',
       filterFailed: 'The noise filter did not load; your voice goes out unfiltered.',
@@ -180,6 +185,11 @@ export const en = {
       undeafen: 'Undeafen',
       serverMuted: 'Muted by a moderator',
       serverDeafened: 'Deafened by a moderator',
+      camera: 'Turn on camera',
+      cameraOff: 'Turn off camera',
+      cameraOptions: 'Camera options',
+      cameraChoose: 'Camera',
+      cameraMore: 'Video settings',
     },
     occupant: {
       muted: 'Muted',
@@ -187,6 +197,7 @@ export const en = {
       serverMuted: 'Server muted',
       serverDeafened: 'Server deafened',
       live: 'LIVE',
+      video: 'Camera on',
       connecting: 'Connecting',
     },
     stage: {
@@ -212,7 +223,7 @@ export const en = {
     },
   },
   stage: {
-    noVideo: 'Nobody is sharing their screen.',
+    noVideo: 'Nobody is sharing their screen or camera.',
     notices: {
       shareLimit_one: 'This channel allows {{count}} screen share at a time.',
       shareLimit_other: 'This channel allows {{count}} screen shares at a time.',
@@ -246,7 +257,7 @@ export const en = {
     layout: {
       grid: 'Grid',
       focus: 'Focus',
-      hideNoVideo: 'Show only screens',
+      hideNoVideo: 'Show only video',
       showEveryone: 'Show everyone',
     },
     filmstrip: {
@@ -672,7 +683,7 @@ export const en = {
     close: 'Close settings',
     instanceSection: 'Instance',
     nav: {
-      voice: 'Voice & audio',
+      voice: 'Voice & video',
       share: 'Screen share',
       account: 'My account',
       profile: 'Profile',
@@ -704,7 +715,7 @@ export const en = {
       },
     },
     voice: {
-      title: 'Voice & audio',
+      title: 'Voice & video',
       devices: 'Devices',
       inputDevice: 'Input device',
       outputDevice: 'Output device',
@@ -712,6 +723,11 @@ export const en = {
       outputUnsupported: 'This browser plays audio through the system default output.',
       inputVolume: 'Input volume',
       outputVolume: 'Output volume',
+      video: 'Video',
+      camera: 'Camera',
+      cameraTest: 'Test video',
+      cameraTestStop: 'Stop testing',
+      cameraTestHint: 'Only you see this preview. Calls send it at up to 720p and 30 fps.',
       micTest: 'Mic test',
       micTestStart: "Let's check",
       micTestStop: 'Stop testing',
@@ -780,7 +796,7 @@ export const en = {
         keybinds: 'Open keybinds',
         statsOverlay: 'Show or hide share stats',
       },
-      pttOff: 'Used when the input mode is push to talk (Voice & audio).',
+      pttOff: 'Used when the input mode is push to talk (Voice & video).',
       none: 'Not set',
       recording: 'Press keys…',
       change: 'Change',

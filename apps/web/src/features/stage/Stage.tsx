@@ -49,6 +49,12 @@ export function Stage({ guildId, channelId }: StageProps) {
   const myId = useSession((s) => s.me?.user?.id ?? '');
   const shares = useCall((s) => s.shares);
   const selfSharing = useCall((s) => s.localShare?.status === 'live');
+  const remoteCameras = useCall((s) => s.cameras);
+  const selfCamera = useCall((s) => s.localCamera === 'live');
+  const cameras = useMemo(
+    () => (selfCamera ? [...remoteCameras, myId] : remoteCameras),
+    [remoteCameras, selfCamera, myId],
+  );
   const settings = useShareSettings((s) => s);
   const users = useEntities((s) => s.users);
   const stage = useChannelStage(channelId);
@@ -66,8 +72,18 @@ export function Stage({ guildId, channelId }: StageProps) {
         selfSharing,
         selfPreview: settings.selfPreview,
         hideNoVideo: settings.hideNoVideo,
+        cameras,
       }),
-    [occupants, users, shares, myId, selfSharing, settings.selfPreview, settings.hideNoVideo],
+    [
+      occupants,
+      users,
+      shares,
+      myId,
+      selfSharing,
+      settings.selfPreview,
+      settings.hideNoVideo,
+      cameras,
+    ],
   );
   const keys = useMemo(() => tiles.map((tile) => tile.key), [tiles]);
   const keyList = keys.join('|');
