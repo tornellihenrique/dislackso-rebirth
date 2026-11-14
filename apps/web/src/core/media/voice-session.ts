@@ -19,7 +19,7 @@ import {
   type RoomOptions,
 } from 'livekit-client';
 
-import { DEFAULT_DEVICE } from './devices';
+import { DEFAULT_DEVICE, deviceConstraint, deviceMissing } from './devices';
 import {
   browserNoiseSuppression,
   MicProcessor,
@@ -171,10 +171,6 @@ const deviceFailures: Partial<Record<MediaDeviceFailure, DeviceFailure>> = {
 function deviceFailure(err: unknown): DeviceFailure {
   const f = MediaDeviceFailure.getFailure(err);
   return (f === undefined ? undefined : deviceFailures[f]) ?? 'other';
-}
-
-function deviceConstraint(id: string): ConstrainDOMString | undefined {
-  return id === '' || id === DEFAULT_DEVICE ? undefined : { ideal: id };
 }
 
 function cameraOptions(id: string) {
@@ -335,9 +331,12 @@ export class VoiceSession {
       await this.remote.setOutput(prefs.outputDevice || DEFAULT_DEVICE);
     }
     if (prev.inputDevice !== prefs.inputDevice) {
-      await room
-        .switchActiveDevice('audioinput', prefs.inputDevice || DEFAULT_DEVICE, false)
+      const exact = deviceConstraint(prefs.inputDevice) !== undefined;
+      const switched = await room
+        .switchActiveDevice('audioinput', exact ? prefs.inputDevice : DEFAULT_DEVICE, exact)
         .catch(() => false);
+      if (!switched && exact)
+        await room.switchActiveDevice('audioinput', DEFAULT_DEVICE, false).catch(() => false);
     }
     const captureChanged =
       prev.echoCancellation !== prefs.echoCancellation ||
@@ -346,6 +345,15 @@ export class VoiceSession {
         browserNoiseSuppression(prefs.mic.noiseReduction);
     if (captureChanged && this.mic)
       await this.mic.restartTrack(this.captureOptions(prefs)).catch(() => undefined);
+  }
+
+  /**
+   * Opens the microphone again, for a system default that moved to another
+   * device: the browser keeps the one that was the default when it opened.
+   */
+  async reopenMic(): Promise<void> {
+    const prefs = this.prefs;
+    if (prefs) await this.mic?.restartTrack(this.captureOptions(prefs)).catch(() => undefined);
   }
 
   /** Retries audio after the browser blocked it; call from a user gesture. */
@@ -414,7 +422,10 @@ export class VoiceSession {
     if (this.camera) return undefined;
     let track: LocalVideoTrack;
     try {
-      track = await createLocalVideoTrack(cameraOptions(deviceId));
+      track = await createLocalVideoTrack(cameraOptions(deviceId)).catch((err: unknown) => {
+        if (deviceId === '' || !deviceMissing(err)) throw err;
+        return createLocalVideoTrack(cameraOptions(''));
+      });
     } catch (err) {
       return deviceFailure(err);
     }
@@ -437,7 +448,11 @@ export class VoiceSession {
 
   /** Moves the camera, when it is on, to another device. */
   async setCameraDevice(deviceId: string): Promise<void> {
-    await this.camera?.restartTrack(cameraOptions(deviceId)).catch(() => undefined);
+    const camera = this.camera;
+    await camera
+      ?.restartTrack(cameraOptions(deviceId))
+      .catch(() => camera.restartTrack(cameraOptions('')))
+      .catch(() => undefined);
   }
 
   async stopCamera(): Promise<void> {
@@ -577,7 +592,12 @@ export class VoiceSession {
     if (!prefs || !this.local.micAllowed || this.mic || this.publishing === room) return;
     this.publishing = room;
     try {
-      const track = await createLocalAudioTrack(this.captureOptions(prefs));
+      const track = await createLocalAudioTrack(this.captureOptions(prefs)).catch(
+        (err: unknown) => {
+          if (deviceConstraint(prefs.inputDevice) === undefined || !deviceMissing(err)) throw err;
+          return createLocalAudioTrack(this.captureOptions({ ...prefs, inputDevice: '' }));
+        },
+      );
       if (this.room !== room) {
         track.stop();
         return;

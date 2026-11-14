@@ -1,6 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
-import { DEFAULT_DEVICE } from '@/core/media/devices';
+import { deviceConstraint, deviceMissing } from '@/core/media/devices';
 import {
   browserNoiseSuppression,
   MicProcessor,
@@ -50,17 +50,19 @@ class MicTest {
     const mic = this.mic;
     if (!mic) return;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          ...(capture.inputDevice !== '' && capture.inputDevice !== DEFAULT_DEVICE
-            ? { deviceId: { ideal: capture.inputDevice } }
-            : {}),
-          echoCancellation: capture.echoCancellation,
-          autoGainControl: capture.autoGainControl,
-          noiseSuppression: browserNoiseSuppression(mic.noiseReduction),
-          channelCount: 1,
-        },
-      });
+      const audio = {
+        echoCancellation: capture.echoCancellation,
+        autoGainControl: capture.autoGainControl,
+        noiseSuppression: browserNoiseSuppression(mic.noiseReduction),
+        channelCount: 1,
+      };
+      const deviceId = deviceConstraint(capture.inputDevice);
+      const stream = await navigator.mediaDevices
+        .getUserMedia({ audio: deviceId ? { ...audio, deviceId } : audio })
+        .catch((err: unknown) => {
+          if (!deviceId || !deviceMissing(err)) throw err;
+          return navigator.mediaDevices.getUserMedia({ audio });
+        });
       const [track] = stream.getAudioTracks();
       if (!track) throw new Error('no audio track');
       const p = new MicProcessor(

@@ -18,6 +18,7 @@ export function VideoSection() {
   const [failed, setFailed] = useState(false);
   // Labels show only once a camera was allowed, so the list reloads when the preview starts.
   const cameras = useCameras(stream);
+  const camera = cameras.some((c) => c.id === chosen) ? chosen : '';
   /** Bumped by every start and on leaving, so a camera that opens late is closed. */
   const gen = useRef(0);
 
@@ -39,7 +40,7 @@ export function VideoSection() {
     try {
       const next = await navigator.mediaDevices.getUserMedia({
         video: {
-          ...(deviceId !== '' ? { deviceId: { ideal: deviceId } } : {}),
+          ...(deviceId !== '' ? { deviceId: { exact: deviceId } } : {}),
           width: { ideal: 1280 },
           height: { ideal: 720 },
         },
@@ -73,7 +74,7 @@ export function VideoSection() {
       <div className="grid gap-4 sm:grid-cols-2">
         <SelectField
           label={t('settings.voice.camera')}
-          value={cameras.some((c) => c.id === chosen) ? chosen : ''}
+          value={camera}
           onChange={(e) => {
             voice.setPrefs({ cameraDevice: e.target.value });
             if (stream) void start(e.target.value);
@@ -100,7 +101,7 @@ export function VideoSection() {
         ) : (
           <Button
             onClick={() => {
-              void start(chosen);
+              void start(camera);
             }}
           >
             {t('settings.voice.cameraTest')}

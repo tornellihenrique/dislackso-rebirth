@@ -188,6 +188,17 @@ merged and in use.
 
 ## Done
 
+### Phase 7 — Microphone choice
+
+- **Fixed: the chosen microphone was ignored**, on joining and when changed in a call. Chromium
+  takes a device id given as a preference (`ideal`, or bare as LiveKit passes it) as a hint only,
+  and opened the default microphone. A chosen device is now required exactly (`exact`), for the
+  microphone, the camera and the settings tests, with the default as fallback when the device
+  was unplugged in between.
+- **Following the Windows default works in a call**: Chromium keeps recording from the device
+  that was the default when the microphone opened, so the app reopens it when the default
+  moves to another device, while the input device is Default.
+
 ### Phase 7 — Camera
 
 - **Camera in calls**, next to the screen share: anyone can have both on. The camera button
@@ -1072,6 +1083,16 @@ merged and in use.
 - **DuckDNS gets an IPv4 record only,** which every client can reach.
 
 ## Manual test script
+
+### Microphone choice
+
+Prerequisites: two microphones (a headset and the webcam's, say), someone else in the call.
+
+1. Settings → Voice & video → Input device: pick the second microphone and join a call. The other
+   person hears you through it (tap each mic to tell).
+2. Pick the first microphone during the call: within a second they hear you through it.
+3. Set Input device to Default, then change the default in Windows (Sound settings → Input):
+   within a few seconds the call uses the new default.
 
 ### Camera
 

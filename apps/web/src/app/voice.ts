@@ -14,7 +14,13 @@ import type { HubClients } from '@/core/api/clients';
 import { toApiError } from '@/core/api/errors';
 import { errorText } from '@/core/i18n/error-text';
 import { matches, shortcut, typingTarget } from '@/core/keys/shortcut';
-import { listAudioDevices, listCameras, resolveDevice, watchDevices } from '@/core/media/devices';
+import {
+  DEFAULT_DEVICE,
+  listAudioDevices,
+  listCameras,
+  resolveDevice,
+  watchDevices,
+} from '@/core/media/devices';
 import { startPushToTalk, type PushToTalk } from '@/core/media/push-to-talk';
 import { ShareError } from '@/core/media/share-error';
 import { capPreset, type SharePreset } from '@/core/media/share-presets';
@@ -156,6 +162,15 @@ function rtcIceServers(servers: readonly IceServer[]): RTCIceServer[] {
   }));
 }
 
+/** The device behind the browser's default microphone; undefined where there is no such entry. */
+async function systemInputLabel(): Promise<string | undefined> {
+  try {
+    return (await listAudioDevices()).inputs.find((d) => d.id === DEFAULT_DEVICE)?.label;
+  } catch {
+    return undefined;
+  }
+}
+
 function audioPrefs(s: VoiceSettings, inputDevice: string): AudioPrefs {
   return {
     inputDevice,
@@ -190,6 +205,8 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
   /** Sessions this device started; any other session of the user is another device. */
   private readonly mine = new Set<string>();
   private inputDevice = '';
+  /** The system default microphone's label, to notice the default moving to another device. */
+  private systemInput: string | undefined;
   private ptt: PushToTalk | undefined;
   /** The desktop shell watches the voice keys system-wide, so the window leaves them alone. */
   private globalKeys = false;
@@ -355,6 +372,7 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
       dispatchCall({ type: 'joined', sessionId });
       this.gateway?.setVoiceSelf(sessionId, s.selfMute, s.selfDeaf);
       this.inputDevice = await this.effectiveInput(s);
+      this.systemInput = await systemInputLabel();
       const current = voiceSettingsStore.getState();
       const session = await this.loadSession();
       if (gen !== this.generation) return;
@@ -999,9 +1017,15 @@ export class VoiceController implements VoiceActions, VoiceGatewayHooks, DataLin
     if (callStore.getState().status === 'idle') return;
     const s = voiceSettingsStore.getState();
     const input = await this.effectiveInput(s);
-    if (input === this.inputDevice) return;
-    this.inputDevice = input;
-    await this.session?.updatePrefs(audioPrefs(s, input));
+    const system = await systemInputLabel();
+    const moved = system !== this.systemInput;
+    this.systemInput = system;
+    if (input !== this.inputDevice) {
+      this.inputDevice = input;
+      await this.session?.updatePrefs(audioPrefs(s, input));
+    } else if (moved && (input === '' || input === DEFAULT_DEVICE)) {
+      await this.session?.reopenMic();
+    }
   }
 
   private updateSpeaking(ids: readonly string[]): void {
